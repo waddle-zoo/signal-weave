@@ -1,6 +1,6 @@
 {
   "protocol": "frontier-publication-v1",
-  "execution_status": "planned",
+  "execution_status": "closed",
   "scope": "One formative end-to-end historical Northstar workflow: actual raw-source frontier analysis and publication, scripted source/card consent, one native Jev judgment, fresh frontier human-message author. Known development fixture, no paired baseline, comparative benefit, human usability, schedule or external send claim.",
   "source_url": "http://127.0.0.1:18089",
   "owner_reference": "evaluations/data/raw-northstar-onboarding-v1.json",

@@ -23,7 +23,7 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 from evaluations.bootstrap_agent_trial import Audit, RequestBudget, calculate, function
-from evaluations.codex_trial_transport import codex_episode
+from evaluations.codex_trial_transport import codex_episode, verify_trial_registry
 from evaluations.domain_context_onboarding_trial import pinned_codex
 from evaluations.explicit_owner_conversation import AuditedNative
 from evaluations.installed_trial_transport import (
@@ -59,24 +59,26 @@ def write_private(path, value):
     path.chmod(0o600)
 
 
-def admit(protocol):
-    ADMISSION.parent.mkdir(parents=True, exist_ok=True)
-    descriptor = os.open(ADMISSION, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+def admit(protocol, manifest_path=None, admission_path=None):
+    manifest_path = manifest_path or MANIFEST
+    admission_path = admission_path or ADMISSION
+    admission_path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor = os.open(admission_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
     with os.fdopen(descriptor, "w") as stream:
-        stream.write(PROTOCOL + "\n")
-    assert json.loads(MANIFEST.read_text()) == protocol
-    descriptor, name = tempfile.mkstemp(dir=MANIFEST.parent, prefix=".frontier-publication-")
+        stream.write(protocol["protocol"] + "\n")
+    assert json.loads(manifest_path.read_text()) == protocol
+    descriptor, name = tempfile.mkstemp(dir=manifest_path.parent, prefix=".frontier-publication-")
     try:
         with os.fdopen(descriptor, "w") as stream:
             json.dump({**protocol, "execution_status": "closed"}, stream, indent=2)
             stream.write("\n")
             stream.flush()
             os.fsync(stream.fileno())
-        os.replace(name, MANIFEST)
+        os.replace(name, manifest_path)
     finally:
         if os.path.exists(name):
             os.unlink(name)
-    assert json.loads(MANIFEST.read_text())["execution_status"] == "closed"
+    assert json.loads(manifest_path.read_text())["execution_status"] == "closed"
 
 
 def fingerprints(binary, codex, protocol):
@@ -150,8 +152,9 @@ class Analyst:
     treatment = False
     setup_complete = False
 
-    def __init__(self, sources, path, audit):
+    def __init__(self, sources, path, audit, protocol_id=PROTOCOL):
         self.sources, self.path, self.audit = sources, path, audit
+        self.protocol_id = protocol_id
         self.submission = None
         self.reads = []
 
@@ -221,7 +224,7 @@ class Analyst:
             "source_key": "published-sales", **SOURCE, "title": arguments["title"],
             "source_captured_at": captured, "contract": {"tenant_id": "local", "authorized": True},
             "evidence": evidence,
-            "metadata": {"publication_schema_version": 1, "publication_id": PROTOCOL, "revision": 1,
+            "metadata": {"publication_schema_version": 1, "publication_id": self.protocol_id, "revision": 1,
                          "published_at": datetime.now(timezone.utc).isoformat(),
                          "publication_authority": "Caller-delegated frontier analyst in a synthetic historical trial",
                          "source_scope": "Analyst report from saved queries actually read; upstream warehouse/cache freshness is not established",
@@ -279,7 +282,7 @@ class Writer:
 
 
 @asynccontextmanager
-async def native(binary, output, key_file, audit, budget):
+async def native(binary, output, key_file, audit, budget, protocol_id=PROTOCOL):
     dummy = output / "dummy.key"
     dummy.write_text("frontier-publication-dummy-no-provider-key")
     dummy.chmod(0o600)
@@ -288,7 +291,7 @@ async def native(binary, output, key_file, audit, budget):
     now = datetime.now(timezone.utc).isoformat()
     write_private(publication, {"source_key": "published-sales", **SOURCE, "title": "Awaiting analyst",
         "source_captured_at": now, "contract": {"tenant_id": "local", "authorized": True},
-        "metadata": {"publication_schema_version": 1, "publication_id": PROTOCOL,
+        "metadata": {"publication_schema_version": 1, "publication_id": protocol_id,
         "revision": 1, "published_at": now, "publication_authority": "Scripted protocol setup",
         "source_scope": "Pending analyst report"}, "evidence": []})
     manifest = json.loads(READER.with_name("manifest.example.json").read_text())
@@ -326,7 +329,12 @@ async def native(binary, output, key_file, audit, budget):
 
 
 async def run(args):
-    protocol = json.loads(MANIFEST.read_text())
+    manifest_path = args.protocol.resolve()
+    protocol = json.loads(manifest_path.read_text())
+    protocol_id = protocol["protocol"]
+    if (manifest_path.parent != MANIFEST.parent or manifest_path.name != f"{protocol_id}.json"
+            or protocol_id not in {PROTOCOL, "frontier-publication-v2"}):
+        raise ValueError("Use an explicitly registered local protocol manifest")
     if protocol["execution_status"] != "planned":
         raise ValueError("Cohort closed: no retries or allowance transfer")
     binary = args.binary.resolve()
@@ -350,12 +358,28 @@ async def run(args):
     audit = Audit(path=output / "trace.jsonl", episode=PROTOCOL)
     audit.path.touch(mode=0o600)
     budget = RequestBudget(0)
-    record = {"protocol": PROTOCOL, "scope": protocol["scope"], "preflight": args.preflight,
+    record = {"protocol": protocol_id, "scope": protocol["scope"], "preflight": args.preflight,
               "completed": False, "fingerprints": frozen, "frontier_invocations": 0, "episodes": []}
+    if prior_attempt := protocol.get("prior_censored_attempt"):
+        original = ROOT / prior_attempt["report_path"]
+        if (sha(original) != prior_attempt["report_sha256"]
+                or sha(ROOT / prior_attempt["trace_path"]) != prior_attempt["trace_sha256"]):
+            raise ValueError("The censored original must remain unchanged")
+        original_report = json.loads(original.read_text())
+        assert original_report["protocol_closed"] and not original_report["completed"]
+        assert original_report["frontier_invocations"] == 1 and original_report["jev_attempts"] == 0
+        assert not original_report["usage"]["known"]
+        record["prior_censored_attempt"] = {**prior_attempt, "usage_known": False}
+        record["combined_series_usage_known"] = False
     sources = RawSupersetTools(FreshSavedClient(protocol["source_url"]), enable_aggregation=True)
     writer = None
     try:
-        async with native(binary, output, args.key_file if not args.preflight else None, audit, budget) as (server, publication):
+        if protocol.get("allow_trial_resource_discovery"):
+            with tempfile.TemporaryDirectory(prefix="signalweave-registry-check-") as cwd:
+                record["registry_isolation"] = await verify_trial_registry(codex["path"], cwd, "http://127.0.0.1:59999/registry-only")
+            if not args.preflight:
+                assert record["registry_isolation"]["registry_sha256"] == prior["registry_isolation"]["registry_sha256"]
+        async with native(binary, output, args.key_file if not args.preflight else None, audit, budget, protocol_id) as (server, publication):
             _, draft = await server.call_tool("onboard_insight_card", {
                 "title": "Historical sales publication check", "what_to_watch": "Executive net sales and channel contribution",
                 "why_watch": "Explain apparent online-sales movement and route the established calendar policy correctly.",
@@ -379,21 +403,23 @@ async def run(args):
             else:
                 for key in ("returned_rows_sha256", "query_definition", "columns", "returned_rowcount"):
                     assert record["source_probe"][key] == prior["source_probe"][key]
-                admit(protocol)
+                admit(protocol, manifest_path, ROOT / "artifacts" / f"{protocol_id}.claimed")
                 record["closed_before_inference"] = True
-                analyst = Analyst(sources, publication, audit)
+                analyst = Analyst(sources, publication, audit, protocol_id)
                 limit = protocol["limits"]
 
                 async def episode(session, stage, prompt, instructions, tools, seconds):
-                    assert json.loads(MANIFEST.read_text())["execution_status"] == "closed"
+                    assert json.loads(manifest_path.read_text())["execution_status"] == "closed"
                     assert fingerprints(binary, await pinned_codex(args.codex), protocol) == frozen
                     assert record["frontier_invocations"] < 2
                     record["frontier_invocations"] += 1
-                    audit.episode = f"{PROTOCOL}:{stage}"
+                    audit.episode = f"{protocol_id}:{stage}"
                     result = await codex_episode(session, key=None, effort=limit["effort"], budget=RequestBudget(2), audit=audit,
                         max_turns=1, max_tool_calls=tools, max_output_tokens=1, timeout_seconds=seconds,
                         instructions_override=instructions, prompt_override=prompt, model=limit["model"],
-                        codex_executable=codex["path"], accounting_drain=True)
+                        codex_executable=codex["path"], accounting_drain=True,
+                        allow_trial_resource_discovery=protocol.get("allow_trial_resource_discovery", False),
+                        expected_registry_sha256=record.get("registry_isolation", {}).get("registry_sha256"))
                     record["episodes"].append({"stage": stage, "episode": result, "submission": session.submission})
                     observed = usage_snapshot(audit.events, record["frontier_invocations"])
                     record["usage"] = observed
@@ -410,7 +436,7 @@ async def run(args):
                 if usage["input_tokens"] >= limit["between_invocation_input_stop"] or usage["uncached_input_tokens"] >= limit["between_invocation_uncached_stop"]:
                     raise ValueError("Between-invocation stop reached; no writer allowance transfer")
                 budget.limit = 1
-                _, packet = await server.call_tool("evaluate_insight_card", {"card_id": card_id, "idempotency_key": f"{PROTOCOL}:report", "response_mode": "full"})
+                _, packet = await server.call_tool("evaluate_insight_card", {"card_id": card_id, "idempotency_key": f"{protocol_id}:report", "response_mode": "full"})
                 record["packet"] = packet
                 assert budget.used == 1 and packet["result"]["context"] is None
                 assert not packet["receipt"]["delivery_enabled"] and packet["replayed"] is False
@@ -435,6 +461,8 @@ async def run(args):
         record["completed"] = True
     finally:
         record["jev_attempts"] = budget.used
+        record["series_frontier_attempts"] = record["frontier_invocations"] + protocol.get("prior_censored_attempt", {}).get("frontier_invocations", 0)
+        assert record["series_frontier_attempts"] <= (3 if protocol.get("prior_censored_attempt") else 2)
         accounting = jev_accounting(audit, budget)
         record["jev_responses"] = accounting["responses"]
         record["errors"] = accounting["errors"]
@@ -445,7 +473,7 @@ async def run(args):
         if writer is not None:
             record["writer_source_telemetry"] = writer.sources.telemetry
             record["writer_source_reads"] = writer.reads
-        record["protocol_closed"] = json.loads(MANIFEST.read_text())["execution_status"] == "closed"
+        record["protocol_closed"] = json.loads(manifest_path.read_text())["execution_status"] == "closed"
         record["jev_usage_known"] = accounting["known"]
         if not record["usage"]["known"] or not accounting["known"] or (not args.preflight and not record["protocol_closed"]):
             record["completed"] = False
@@ -460,6 +488,7 @@ def main():
     parser.add_argument("--key-file", type=Path)
     parser.add_argument("--preflight", action="store_true")
     parser.add_argument("--preflight-report", type=Path)
+    parser.add_argument("--protocol", type=Path, default=MANIFEST)
     asyncio.run(run(parser.parse_args()))
 
 

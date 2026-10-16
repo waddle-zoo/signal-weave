@@ -8,6 +8,44 @@ Updated 2026-10-16. Feature branch: `feat/domain-context-memory`; [draft PR #19]
 
 The [public excerpt](../../evaluations/data/retained-context-courier-summary.json) preserves the four unchanged prepared messages, final chat acknowledgements, source facts, actual retrieved definition, native results, usage, review findings and artifact hashes. These are two observations of one known fictional company—not four companies, a precision estimate, customer validation or a repaired onboarding result.
 
+## Actual frontier publisher attempt: stopped by the harness
+
+The [closed attempt](../../evaluations/data/frontier-publication-v1-summary.json)
+started one real Luna-xhigh analyst through Codex. It made five successful BI
+calls: found the Executive dashboard, listed its charts and profiled the monthly
+and daily queries. It then requested Codex's built-in
+`list_mcp_resource_templates`. The research transport treated its `codex` server
+label as foreign and terminated the CLI before a completed metadata response.
+
+**No publication, Jev judgment, writer or human report completed.** Aggregate
+frontier usage is unknown because termination preceded `turn.completed`; missing
+usage is not zero cost. The actor ran 12.58s before termination. Native setup and
+scripted card approval succeeded, but neither proves this workflow. The warm
+daily-chart coordinator probe and two source query requests are recorded, not
+marketed as a cold-start or query-saving result.
+
+This is a censored harness attempt, not a result about analytical quality or
+SignalWeave's advantage. Its protocol, artifacts and unused allowance remain
+closed. The [method](../../evaluations/frontier_publication.py) and input
+fingerprints identify the run at `2eff1b5`; the compact record retains artifact
+hashes without committing full tool results.
+
+The forward transport fix is opt-in: recognize only bounded MCP metadata listing
+for the isolated trial connection and audit those calls separately. Resource
+reads, unrelated servers and other built-ins still terminate the actor; this
+event monitor is not a pre-dispatch security firewall. The old runner does not
+enable it. [Official Codex MCP documentation](https://developers.openai.com/codex/mcp)
+informed the configuration review; the internal event name comes from the actual
+trace, not a claimed documented API contract. A new, reviewed live protocol is
+still required to test the corrected workflow, with this unknown-cost invocation
+retained. No speed, cost, alert-quality or customer-readiness conclusion follows.
+
+Before inference, review also found that `force=True` did not prove a fresh
+provider result. The publication example now permits explicitly acknowledged
+unknown capture time without inventing a timestamp; the reason survives in
+receipts. The current historical trial disables a freshness SLA explicitly.
+This repair preserves uncertainty; it is not proof that any data is fresh.
+
 ## Native analyst-publication handoff
 
 The [closed three-revision record](../../evaluations/data/analysis-publication-native-v1-summary.json)

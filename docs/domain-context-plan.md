@@ -86,6 +86,24 @@ cache age stays unknown in receipt-visible provenance, without a freshness SLA.
 Source reconstruction follows the existing production client and is labeled,
 not a modified fixture. This is not a comparison or a human onboarding study.
 
+It is now closed after a harness stop: the analyst made five successful BI calls,
+then the transport killed its built-in MCP resource-template listing. No
+publication/Jev/writer completed and frontier usage is unknown. Preserve that
+attempt and do not reuse its unused allowance. The separately opt-in metadata
+discovery repair needs a new reviewed protocol; the original runner stays strict.
+See the [retained censored record](evidence/domain-context-preview-2026-10-14.md#actual-frontier-publisher-attempt-stopped-by-the-harness).
+
+The distinct [`v2 method`](../evaluations/data/frontier-publication-v2.json)
+retains that unknown-cost invocation and permits at most two fresh actors (three
+attempts across both methods), not a pooled cost claim or another retry loop.
+Before enabling metadata discovery, the actual pinned CLI must list only the
+trial connection as enabled. An empty MCP table merged rather than clearing user
+entries; credential-free overrides now explicitly disable peers and are passed
+unchanged to `exec`. Inventory fingerprints must still match before each actor.
+The native CLI's configuration-only check also accepted those overrides with
+user config ignored; it stopped on a deliberately missing output schema with a
+loopback-only dummy provider, without model inference.
+
 ## Raw Northstar onboarding forward study
 
 The running local Superset now has 48 dashboards, including long-tail catalog

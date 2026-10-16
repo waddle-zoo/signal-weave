@@ -1,0 +1,37 @@
+{
+  "protocol": "frontier-publication-v2",
+  "execution_status": "planned",
+  "scope": "Corrected-method feasibility check after the retained v1 harness termination, not an independent business observation or rescore. Two fresh real Codex analysts: raw source analyst/publisher then human-message author, one native Jev attempt. Known historical Northstar; no paired baseline, enterprise readiness or human onboarding claim.",
+  "source_url": "http://127.0.0.1:18089",
+  "owner_reference": "evaluations/data/raw-northstar-onboarding-v1.json",
+  "owner_reference_sha256": "2aa2750d9a57d46fd47ad7abe1cee52a6d1ddc9ad88b90644bf8648e389ce8cf",
+  "scripted_owner_directory": "Shadow-only configured routes: Leadership=agent://leadership, Analytics=agent://analytics, Data Trust=agent://data-trust. Scripted approval of report source and policy is not actual human consent or permission to send.",
+  "prior_censored_attempt": {
+    "protocol": "frontier-publication-v1",
+    "report_path": "artifacts/frontier-publication-v1-live/report.json",
+    "report_sha256": "690b8fea8eb7a1ab985bb9fde5546ac01a02252e07f1fdc1efed3400a788968b",
+    "trace_path": "artifacts/frontier-publication-v1-live/trace.jsonl",
+    "trace_sha256": "b9de66b596872df2e53539ae39819c16686b8d27c2f93ec58f9744a5dd8cb666",
+    "frontier_invocations": 1,
+    "note": "Unknown usage is retained, not treated as free or charged to this cohort's known subtotal. No combined token/dollar or comparative cost claim is permitted. This corrected method adds at most two fresh invocations, three attempted invocations across both methods; this is not an unused-allowance transfer. No further corrected invocation is authorized by this protocol."
+  },
+  "allow_trial_resource_discovery": true,
+  "metadata_discovery": "At most four admitted unique built-in list_mcp_resources/templates calls scoped to server trial or the isolated configured set. No resource reads, unrelated servers or other built-ins. Requests, admitted listings and any over-cap attempt are audited separately from company tools; the first excess attempt terminates the actor. These metadata calls are not source evidence. Both command isolation and the opt-in parser require independent review before inference.",
+  "limits": {
+    "frontier_invocations": 2,
+    "model": "gpt-6-luna",
+    "effort": "xhigh",
+    "analyst_tools": 36,
+    "analyst_seconds": 360,
+    "writer_tools": 12,
+    "writer_seconds": 180,
+    "jev_attempts": 1,
+    "between_invocation_input_stop": 500000,
+    "between_invocation_uncached_stop": 100000,
+    "automatic_retries": 0
+  },
+  "admission": "Require independent method/code GO, complete current verification, matching zero-inference native setup/card/source preflight, exact native/Codex/source/method fingerprints and unchanged original censored artifact. Exclusive one-shot closure precedes the first model invocation. Stop on incomplete actor, unknown current usage, changed inputs, provider failure or accounting limit; do not start the writer if Jev usage is unknown. No in-cohort repair/retry. Token stops are between-invocation, not hard within-turn caps; CLI turn/output-token limits are not available.",
+  "analysis_request": "Explain the apparent online-sales hit and its contribution to net sales. Establish historical coverage from the source, report the approved calendar-month comparison, and separately investigate the latest month versus the prior month through the same observed day-of-month. Discover actual saved assets; publish compact, source-linked findings and a useful next check, not an invented cause. Preserve actual units, measurement windows and uncertainty. No scheduling or sending.",
+  "freshness": "Use production saved-context or explicitly labeled saved-params reconstruction, force=True requests, no arbitrary SQL or dashboard-filter claim. Per-chart request bounds, exact executed-context, saved-definition and row hashes and provider cache flags survive as provenance evidence. Source capture remains null unless all inputs explicitly confirm uncached; warehouse freshness is unknown regardless. No card freshness SLA is enabled for this historical study.",
+  "acceptance": "An actual analyst-produced publication, independently checked calculations and valid comparable periods/units; native receipt preserving source hash/unknown capture and unchanged reviewed policy; configured route justified by that calendar policy, not the separate matched-day diagnostic; fresh concise human message with inspectable sources, uncertainty and useful next step. Require post-run independent process and human-message review; transport completion alone is insufficient. No notification, schedule, causal diagnosis, comparative advantage or full onboarding claim."
+}

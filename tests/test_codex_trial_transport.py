@@ -8,6 +8,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+import tomllib
 
 from evaluations import bootstrap_agent_trial as trial
 from evaluations import codex_trial_transport as transport
@@ -265,6 +266,10 @@ def fake_episode(monkeypatch):
     monkeypatch.setattr(transport, "serve_trial", serve)
     monkeypatch.setattr(transport.asyncio, "create_subprocess_exec", state.spawn)
     monkeypatch.setattr(transport, "child_environment", lambda: {"PATH": "/offline"})
+    monkeypatch.setattr(transport, "verify_trial_registry", AsyncMock(return_value={
+        "overrides": ["mcp_servers.trial.enabled=true"], "enabled_servers": ["trial"],
+        "registry": [{"name": "trial", "enabled": True}], "registry_sha256": "offline",
+    }))
 
     async def run(events=(), **kwargs):
         episode_model = kwargs.pop("model", None)
@@ -691,6 +696,96 @@ async def test_episode_rejects_failure_and_foreign_tools_even_after_submission(f
     assert fake.closed
     assert fake.audit.events[-1]["kind"] == "api.error"
     assert fake.audit.events[-1]["usage_known"] is False
+
+
+@pytest.mark.parametrize("tool", ["list_mcp_resources", "list_mcp_resource_templates"])
+async def test_scoped_builtin_resource_discovery_is_explicit_and_counted_once(fake_episode, tool):
+    fake = fake_episode
+    fake.session.submission = {"summary": "Synthetic completed result"}
+    item = {"type": "mcp_tool_call", "server": "codex", "tool": tool, "id": "metadata-1", "arguments": {}}
+    result = await fake.run([
+        {"type": "item.started", "item": item}, {"type": "item.completed", "item": item},
+        {"type": "turn.completed", "usage": {"input_tokens": 10, "output_tokens": 2, "cached_input_tokens": 0}},
+    ], allow_trial_resource_discovery=True)
+    assert result["status"] == "complete" and not result["foreign_tools"]
+    assert result["resource_discovery_calls"] == 1
+    assert len([e for e in fake.audit.events if e["kind"] == "codex.resource_discovery"]) == 1
+    fake.process.terminate.assert_not_called()
+
+
+async def test_valid_resource_discovery_still_requires_explicit_protocol_opt_in(fake_episode):
+    item = {"type": "mcp_tool_call", "server": "codex", "tool": "list_mcp_resources", "id": "one", "arguments": {}}
+    result = await fake_episode.run([{"type": "item.started", "item": item}])
+    assert result["status"] == "failed" and result["foreign_tools"] == ["codex"]
+    assert result["resource_discovery_calls"] == 0
+
+
+@pytest.mark.parametrize("change", [
+    {"tool": "read_mcp_resource"}, {"tool": "arbitrary_builtin"}, {"server": "other"},
+    {"arguments": {"server": "other"}}, {"arguments": {"uri": "private://data"}},
+    {"arguments": {"server": {}}}, {"arguments": None}, {"id": None},
+])
+async def test_discovery_opt_in_does_not_allow_foreign_resources_or_other_builtin_tools(fake_episode, change):
+    item = {"type": "mcp_tool_call", "server": "codex", "tool": "list_mcp_resources", "id": "one", "arguments": {}}
+    item.update(change)
+    result = await fake_episode.run([{"type": "item.started", "item": item}], allow_trial_resource_discovery=True)
+    assert result["status"] == "failed" and result["resource_discovery_calls"] == 0
+    fake_episode.process.terminate.assert_called_once()
+
+
+async def test_resource_discovery_has_a_separate_small_audited_budget(fake_episode):
+    events = [{"type": "item.started", "item": {"type": "mcp_tool_call", "server": "codex",
+              "tool": "list_mcp_resources", "id": f"metadata-{n}", "arguments": {}}}
+              for n in range(transport.MAX_RESOURCE_DISCOVERY_CALLS + 1)]
+    result = await fake_episode.run(events, allow_trial_resource_discovery=True)
+    assert result["status"] == "failed"
+    assert result["foreign_tools"] == ["resource_discovery_budget_exhausted"]
+    assert result["resource_discovery_calls"] == transport.MAX_RESOURCE_DISCOVERY_CALLS
+    assert result["resource_discovery_attempts"] == transport.MAX_RESOURCE_DISCOVERY_CALLS + 1
+    assert result["observed_tool_calls_including_discovery"] == transport.MAX_RESOURCE_DISCOVERY_CALLS + 1
+
+
+async def test_registry_probe_disables_merged_entries_without_leaking_credentials(monkeypatch):
+    outputs = [json.dumps([{"name": "company.private", "enabled": True, "secret": "never-log-this", "transport": {"type": "stdio"}}]).encode(),
+               json.dumps([{"name": "company.private", "enabled": False, "transport": {"type": "stdio"}}, {"name": "trial", "enabled": True, "transport": {"type": "streamable_http"}}]).encode()]
+    calls = []
+
+    async def spawn(*command, **kwargs):
+        calls.append(command)
+        return SimpleNamespace(returncode=0, communicate=AsyncMock(return_value=(outputs.pop(0), None)))
+
+    monkeypatch.setattr(transport.asyncio, "create_subprocess_exec", spawn)
+    proof = await transport.verify_trial_registry("/offline/codex", "/offline", "http://127.0.0.1:1/trial")
+    assert '"company.private"={enabled=false,command="signalweave-disabled-no-launch"}' in proof["overrides"][0]
+    assert proof["overrides"][0] in calls[1]
+    assert proof["enabled_servers"] == ["trial"]
+    assert "never-log-this" not in json.dumps(proof)
+    configured = tomllib.loads(proof["overrides"][0])["mcp_servers"]
+    assert configured["company.private"]["enabled"] is False
+    assert configured["trial"]["required"] is True
+    assert configured["trial"]["default_tools_approval_mode"] == "approve"
+
+
+@pytest.mark.parametrize("first,second", [
+    ([{"name": "trial", "enabled": True, "transport": {"type": "stdio"}}], []),
+    ([{"name": "other", "enabled": True, "transport": {"type": "stdio"}}], [{"name": "other", "enabled": True, "transport": {"type": "stdio"}}, {"name": "trial", "enabled": True, "transport": {"type": "streamable_http"}}]),
+    ([{"name": "other", "enabled": "yes"}], []),
+])
+async def test_registry_probe_rejects_collisions_or_nonisolated_effective_state(monkeypatch, first, second):
+    outputs = [json.dumps(first).encode(), json.dumps(second).encode()]
+
+    async def spawn(*command, **kwargs):
+        return SimpleNamespace(returncode=0, communicate=AsyncMock(return_value=(outputs.pop(0), None)))
+
+    monkeypatch.setattr(transport.asyncio, "create_subprocess_exec", spawn)
+    with pytest.raises(ValueError):
+        await transport.verify_trial_registry("/offline/codex", "/offline", "http://127.0.0.1:1/trial")
+
+
+async def test_changed_registry_fails_before_any_frontier_process_is_spawned(fake_episode):
+    with pytest.raises(ValueError, match="changed after preflight"):
+        await fake_episode.run([], allow_trial_resource_discovery=True, expected_registry_sha256="different")
+    fake_episode.spawn.assert_not_awaited()
 
 
 @pytest.mark.parametrize("exit_code,error", [(0, "no_structured_submission"), (7, "codex_exit")])

@@ -7,6 +7,7 @@ The parent retains private labels, credentials and mutable trial state.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import os
 import secrets
@@ -32,6 +33,27 @@ DISABLED_FEATURES = (
 # Opt-in accounting uses a bounded window; the third rejection requests termination.
 ACCOUNTING_DRAIN_SECONDS = 5.0
 ACCOUNTING_DRAIN_ABORT_AFTER_REJECTIONS = 3
+MAX_RESOURCE_DISCOVERY_CALLS = 4
+
+
+def scoped_resource_discovery(item: dict) -> bool:
+    """Recognize only metadata listing for this command's sole configured MCP.
+
+    This is an opt-in research control, not permission to read resources or use
+    other built-in tools. Keep legacy/closed protocols on their strict default.
+    """
+    arguments = item.get("arguments")
+    identifier = item.get("id")
+    return (
+        item.get("server") == "codex"
+        and isinstance(item.get("tool"), str)
+        and item.get("tool") in {"list_mcp_resources", "list_mcp_resource_templates"}
+        and isinstance(identifier, str) and 0 < len(identifier) <= 200
+        and isinstance(arguments, dict) and set(arguments) <= {"server", "cursor"}
+        and (arguments.get("server") is None or arguments.get("server") == "trial")
+        and (arguments.get("cursor") is None or isinstance(arguments["cursor"], str)
+             and len(arguments["cursor"]) <= 4096)
+    )
 
 
 def normalized_codex_usage(usage: object) -> dict | None:
@@ -73,6 +95,62 @@ def child_environment() -> dict[str, str]:
     return {key: value for key, value in os.environ.items()
             if key in {"HOME", "PATH", "TMPDIR", "CODEX_HOME", "LANG", "LC_ALL",
                        "SSL_CERT_FILE", "SSL_CERT_DIR"}}
+
+
+async def verify_trial_registry(executable, cwd, url):
+    """Inspect configuration without inference; explicitly disable merged peers.
+
+    `mcp_servers={}` is not a deletion operator in the pinned CLI. Never expose
+    full inventory output: entries can contain configured credential material.
+    """
+    base = [str(executable), "mcp", "list", "--json", "--disable", "apps", "--disable", "plugins"]
+
+    async def inventory(settings):
+        command = list(base)
+        for setting in settings:
+            command.extend(["-c", setting])
+        process = await asyncio.create_subprocess_exec(*command, cwd=cwd, env=child_environment(),
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL)
+        try:
+            stdout, _ = await asyncio.wait_for(process.communicate(), 30)
+        finally:
+            if process.returncode is None:
+                process.kill()
+                await process.wait()
+        if process.returncode:
+            raise ValueError("Cannot verify configured MCP registry; no inference admitted")
+        rows = json.loads(stdout)
+        if not isinstance(rows, list) or any(not isinstance(row, dict)
+                or not isinstance(row.get("name"), str) or not row["name"] or len(row["name"]) > 256
+                or type(row.get("enabled")) is not bool for row in rows):
+            raise ValueError("Invalid MCP registry inventory; no inference admitted")
+        if len({row["name"] for row in rows}) != len(rows):
+            raise ValueError("Ambiguous configured MCP names; no inference admitted")
+        if any(row.get("transport", {}).get("type") not in {"stdio", "streamable_http"} for row in rows):
+            raise ValueError("Unknown MCP transport kind; no inference admitted")
+        return [{"name": row["name"], "enabled": row["enabled"],
+                 "transport_type": row["transport"]["type"]} for row in rows]
+
+    original = await inventory([])
+    if any(row["name"] == "trial" for row in original):
+        raise ValueError("Existing trial configuration could retain credentials; no inference admitted")
+    # Use a TOML value rather than quoted dotted CLI paths, and give disabled
+    # peers inert transports so the same override also parses with user config
+    # ignored. Never copy a peer's command, URL or credentials to process args.
+    entries = []
+    for row in sorted(original, key=lambda row: row["name"]):
+        transport = ('command="signalweave-disabled-no-launch"' if row["transport_type"] == "stdio"
+                     else 'url="http://127.0.0.1:9/disabled"')
+        entries.append(f'{json.dumps(row["name"])}={{enabled=false,{transport}}}')
+    entries.append(f'trial={{enabled=true,url={json.dumps(url)},required=true,tool_timeout_sec=120,default_tools_approval_mode="approve"}}')
+    overrides = ["mcp_servers={" + ",".join(entries) + "}"]
+    checked = await inventory(["mcp_servers={}", f"mcp_servers.trial.url={json.dumps(url)}", *overrides])
+    if [row["name"] for row in checked if row["enabled"]] != ["trial"]:
+        raise ValueError("Configured discovery registry is not isolated; no inference admitted")
+    checked.sort(key=lambda row: row["name"])
+    return {"overrides": overrides, "registry": checked,
+            "registry_sha256": hashlib.sha256(json.dumps(checked, sort_keys=True).encode()).hexdigest(),
+            "enabled_servers": ["trial"], "scope": "Configured MCP inventory, not proof of analytical correctness"}
 
 
 class TrialMCP:
@@ -213,7 +291,9 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                         timeout_seconds=360, instructions_override=None,
                         prompt_override=None, model: str | None = None,
                         codex_executable: str = "codex",
-                        accounting_drain: bool = False) -> dict:
+                        accounting_drain: bool = False,
+                        allow_trial_resource_discovery: bool = False,
+                        expected_registry_sha256: str | None = None) -> dict:
     from evaluations.bootstrap_agent_trial import (
         COMMON_SYSTEM,
         MODEL,
@@ -317,12 +397,22 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
     usage = None
     error = None
     foreign_tools = []
+    resource_discovery_ids = set()
+    resource_discovery_attempt_ids = set()
+    registry_isolation = None
     final_message = ""
     exit_code = None
     with tempfile.TemporaryDirectory(prefix="signalweave-agent-") as cwd:
         async with serve_trial(bridge) as url:
             command = codex_command(cwd, url, model=selected_model, effort=effort)
             command[0] = codex_executable
+            if allow_trial_resource_discovery:
+                registry_isolation = await verify_trial_registry(codex_executable, cwd, url)
+                if expected_registry_sha256 and registry_isolation["registry_sha256"] != expected_registry_sha256:
+                    raise ValueError("Configured MCP inventory changed after preflight; no inference admitted")
+                for override in registry_isolation["overrides"]:
+                    command[-1:-1] = ["-c", override]
+                audit.emit("codex.registry_isolation", **registry_isolation)
             process = await asyncio.create_subprocess_exec(
                 *command,
                 env=child_environment(), stdin=asyncio.subprocess.PIPE,
@@ -347,7 +437,21 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                 if item.get("type") == "agent_message" and isinstance(item.get("text"), str):
                     final_message = item["text"]
                 if item.get("type") == "mcp_tool_call" and item.get("server") != "trial":
-                    foreign_tools.append(str(item.get("server")))
+                    if registry_isolation and scoped_resource_discovery(item):
+                        identifier = item["id"]
+                        if identifier not in resource_discovery_attempt_ids:
+                            resource_discovery_attempt_ids.add(identifier)
+                            if len(resource_discovery_ids) >= MAX_RESOURCE_DISCOVERY_CALLS:
+                                foreign_tools.append("resource_discovery_budget_exhausted")
+                                audit.emit("codex.resource_discovery_rejected", name=item["tool"],
+                                           item_id=identifier, reason="metadata_budget_exhausted")
+                            else:
+                                resource_discovery_ids.add(identifier)
+                                audit.emit("codex.resource_discovery", name=item["tool"],
+                                           arguments=item["arguments"], item_id=identifier,
+                                           meaning="metadata only; not a company tool or source read")
+                    else:
+                        foreign_tools.append(str(item.get("server")))
                 return event
 
             errors_task = asyncio.create_task(read_errors())
@@ -459,6 +563,12 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
             error or ("codex_exit" if exit_code else "no_structured_submission"),
             "final_message": audit.redact(final_message[:12000]),
             "tool_calls": bridge.calls, "seconds": elapsed,
+            "resource_discovery_calls": len(resource_discovery_ids),
+            "resource_discovery_attempts": len(resource_discovery_attempt_ids),
+            "registry_isolation": registry_isolation,
+            "observed_tool_calls_including_discovery": (
+                bridge.ingress_calls if accounting_drain else bridge.calls
+            ) + len(resource_discovery_attempt_ids),
             "response_timeout_seconds": timeout_seconds,
             "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
             "wall_time_overrun_seconds": max(0., elapsed - timeout_seconds),
