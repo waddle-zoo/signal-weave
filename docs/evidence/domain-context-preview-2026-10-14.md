@@ -1,6 +1,6 @@
 # Domain-context preview evidence
 
-Updated 2026-10-15. Feature branch: `feat/domain-context-memory`; [draft PR #19](https://github.com/waddle-zoo/signal-weave/pull/19). Main and the published download are unchanged.
+Updated 2026-10-16. Feature branch: `feat/domain-context-memory`; [draft PR #19](https://github.com/waddle-zoo/signal-weave/pull/19). Main and the published download are unchanged.
 
 ## What is now proven
 
@@ -34,7 +34,17 @@ All four calls completed within the fixed cap: 329,903 agent input / 96,303 unca
 
 That stopped study remains terminal: two agent calls, 181,076 input / 39,252 uncached / 2,630 output, zero Jev. Report/trace SHA-256: `b0047231c1825dbe9fdb01a64a90f7ec876401000d4599ddc09f2883b0a0ec7d` / `192d2c795eb2c4b5a4426053e7d9fb66713d3e23fce460795f9a360c3f38e9b3`. Its copied live key was subsequently replaced with the preflight dummy through the native CLI. This is incomplete onboarding/context-and-rubric evidence, not SignalWeave inferiority or a new-company success.
 
-Current full offline verification: 3,662 passed / 11 skipped in 234.32s. These are software checks, not business trials. No production source changed in this expansion; both studies used the verified `ae97380` native build described below. The next gate is a real owner/delegate clarification flow, independent arm completion, and cross-domain/multi-step usefulness—not inventing more unrelated policy requirements to block a first readout.
+### Clarified courier setup: still no reporting result
+
+A new, separately frozen `courier-owner-clarified-v7` pair supplied the same additional fictional owner guidance to both arms: overall-only alerts, explicit incomplete-week handling, optional tier detail and delivery-disabled scope. This was a new simulation input, not continuation of v6 or a real owner conversation. The current native preflight passed with zero inference before this one live run.
+
+Both agents authored reusable setups and correct historical readouts (90% SLA in both weeks, twice the parcel volume). Both model policy reviews rejected; neither later reporter ran. Baseline left below-threshold quiet behavior unresolved after a free-form owner question received references rather than an answer. Treatment's reviewer called its comparison binding unverified even though the exact key, rate/ratio descriptor and `numeric_bindings_verified_against_inspection=true` were supplied. That objection contradicts the captured review input; it is not a demonstrated product/provider failure. The saved treatment card also has no context pins, despite a separately reviewed definition. Neither saving the definition nor scripted consent proves reusable memory worked.
+
+Terminal: four Luna calls, 554,551 input / 462,336 cached / 92,215 uncached / 8,253 output; **zero Jev calls, zero later reports, no paired performance result**. No retries or rescoring. The [public excerpt](../../evaluations/data/courier-owner-v7-summary.json) retains both untouched messages, setup gaps, review objections, actual card fields, comparison descriptors and raw-artifact hashes. The copied live key was replaced with the preflight dummy through the native CLI. This exposes incomplete simulated clarification and an erroneous review objection, not an enterprise success or SignalWeave inferiority.
+
+A separate Luna-xhigh trace reviewer confirmed the false comparison-key objection and found no demonstrated production runtime bug. It also distinguished the baseline's unanswered quiet question from an explicit owner refusal: `reference_only` is not an owner answer. This independent internal audit does not override the stopped cohort or establish report quality. A separate code audit identified an instruction mismatch: the general MCP introduction omits the existing context-binding step, although the dynamic guide explains it. Saving/reviewing a definition alone does not attach it to a card or retrieve it for later interpretation.
+
+The final post-trial suite at the frozen v7 code passed **3,673 tests / 11 skipped in 244.75s**; the protocol's 72 targeted checks also passed. These are software checks, not business trials. Paid trials still used the verified `ae97380` native build described below. The next gate is useful source-grounded investigation with actual shared-context retrieval—not another approval-only canary or unrelated policy demands.
 
 ## Latest trial: public-explicit-owner-v5
 

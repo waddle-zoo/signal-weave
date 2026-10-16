@@ -9,7 +9,7 @@ Feature branch: `feat/domain-context-memory`, based on main `e8842ac`.
 | Local and hosted context lifecycle | Native stdio/signed HTTP checks cover review/reuse/restart/change; latest read-only native restart recovered the actual approved v2 card, definition history and saved Jev receipt. Hosted issuer remains synthetic |
 | Card-bound meaning and staleness | Contract tests cover exact pins, reapproval, deferred policy and historical receipts; no automatic notification service is claimed |
 | Approved cards with live decisions | V5 authored/approved its own card and evaluated the adverse case with live Jev. A separate retained series reused it for missing-data and quiet observations: both native and final routes matched policy, card unchanged. Not a continuous company history |
-| Human-first, agent-led onboarding | One V5 scripted-owner pair completed; no imported cards. Fresh courier study stopped at baseline policy review before treatment, with mixed genuine future-gap and unnecessary tier questions. No courier success/inferiority or real-human installer/usability rate. V4 stays failed |
+| Human-first, agent-led onboarding | One V5 scripted-owner pair completed; no imported cards. V6 courier stopped before treatment. New clarified v7 authored both setups but both model reviews rejected; treatment's comparison-key objection contradicts its supplied descriptor. No later reports or courier/real-human usability success. V4 stays failed |
 | Useful recurring reports and investigations | Both arms' two retained-period report pairs usable; reader preferences split. Four reports cover two observations of one workflow, not four companies. Reviewed context still not bound/retrieved for reporting. Parcel-volume errors and multi-step/diverse-connector/changed-context gaps remain |
 | Comparative business value | No overall lift established: V5 used fewer reporter tools but the same source reads and more total time/tokens. The two single-pair reader preferences differ and are not pooled. Noise/recall, repeated-use savings, memory reuse and complete costs remain open |
 
@@ -287,6 +287,18 @@ New series cap: six Luna-medium calls maximum, at most one Jev request;
 zero-model preflight before live inference. v6 remains terminal after its two
 calls; no unused allowance is transferred. Separate actual message/numerical
 review must assess whatever reports are produced. No scheduling or sending.
+
+Terminal: zero-inference preflight passed. Four live Luna calls completed,
+554,551 input / 92,215 uncached / 8,253 output; zero Jev requests and no later
+reports. Both model reviews rejected. Baseline left the below-threshold quiet
+branch unresolved; treatment's comparison-key objection contradicts its exact
+supplied source descriptor and checked numeric binding. Preserve that erroneous
+objection as observed, not a repaired pass or a product/provider failure. The
+actual treatment card remained unbound to its reviewed context. Both complete
+historical readouts were numerically correct; this is not a successful recurring
+pair. The [public excerpt](../evaluations/data/courier-owner-v7-summary.json)
+matches the original messages, setups, objections, card fields and usage. The
+series is closed, with no retry, rescore or unused allowance transferred.
 
 Follow-up investigation gate: the optional `examples/investigation_agent`
 currently demonstrates a bounded Jev-handoff/evidence-tool loop, not a general
