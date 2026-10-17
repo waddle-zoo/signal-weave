@@ -112,6 +112,16 @@ that resource; they cannot rewrite its SQL. Both baseline and treatment retain
 all the raw tools. Source-owned metric views are available to both, not hidden
 evaluation answers.
 
+If a shared context definition depends on a saved query, declare the exact
+query's SHA-256 in `descriptor.contract.lineage` as
+`saved-sql-sha256:<digest>` and refresh it whenever the reviewed SQL changes.
+`evaluations.harbor_onboarding.export_resource` builds this entry from the same
+SQL it registers as the fixed tool argument. Display metadata alone is not
+tracked by context pins. Declare upstream view revisions separately when their
+meaning can change; this example does not discover those revisions. A changed
+declaration makes a previously pinned definition need review, while ordinary
+new measurement values do not change the definition's identity.
+
 This company MCP is separate example code, not part of the native binary.
 Connecting raw tools does not automatically configure a SignalWeave source.
 Routine cards can use configured SQL exports directly; a delegated

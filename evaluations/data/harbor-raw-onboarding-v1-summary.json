@@ -76,6 +76,23 @@
     },
     "scope": "Offline regression and transport checks only; no new analyst output, Jev result, approved card, business-quality score or cost comparison."
   },
+  "declared_query_revision_repair": {
+    "scope": "Post-closure offline example-manifest repair only, not a new onboarding, policy or business observation. No production source or binary change.",
+    "before": "A real MCPSourceAdapter and ContextDependencies check reproduced a changed fixed SQL query leaving the original required context pin current when its SHA was only display metadata.",
+    "after": "The example builder derives declared contract lineage and display metadata from the exact same SQL passed as the fixed tool argument. Existing context pin checks then mark a query revision source_changed. Operators must still declare upstream view or business-definition revisions; an exact query-text hash does not discover them or establish semantic equivalence.",
+    "controls": "Metadata-only capture, health and measurement changes stay current; changing another registered resource leaves the selected source current; explicitly declared upstream revisions invalidate it. No source transport or inference is used.",
+    "focused_checks": {"passed": 46, "seconds": 11.38},
+    "python_311_targeted": {"version": "3.11.6", "passed": 7, "seconds": 0.88, "scope": "New pin checks only; not the full suite."},
+    "full_suite": {"python": "3.12.10", "passed": 4239, "opt_in_skipped": 12, "seconds": 266.43},
+    "review": "Independent internal scoped code-review GO; no actionable finding. Not external peer review or enterprise acceptance.",
+    "artifacts": {
+      "artifacts/query-definition-pin-repro.log": "0260023b856a573d991ba2c5aa5eda1c1a1d39aef77ebbd848cba2422d043c11",
+      "artifacts/query-lineage-focused.log": "4e7c762fd9011e8d9b4a14d95b2a6f4e088b06702ee3c613fb0bf103027c099d",
+      "artifacts/query-lineage-python311.log": "a3f3508bc9164111f39999bba941874f272407a0210feb4f3762e2cf7fb9f5b4",
+      "artifacts/query-lineage-python311-runtime.log": "8a2da232672a7771bfe273f2c28708654373f8abe5fdadc6176f3dfdc65358a9",
+      "artifacts/query-lineage-full-verify.log": "2146ea06c3a2da6345047ba04747ae10b3f3b17be6ca69c8b723939b7d24720c"
+    }
+  },
   "artifacts": {
     "artifacts/harbor-raw-onboarding-v1-source-preflight/report.json": "09929dfd324d127d9e328b45fc5110965ea8ea7d6d72e2bccfec02c52dab1740",
     "artifacts/harbor-raw-onboarding-v1-live/report.json": "5cec0f1de63c508f74f92645aa5be4debe0a39b016abd112f0ee08d38f46163a",

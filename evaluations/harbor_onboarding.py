@@ -150,6 +150,18 @@ def pending_publication():
                 "capture_reason": "Pending analyst report; no source-capture attestation"}, "evidence": []}
 
 
+def export_resource(definition):
+    """Build the operator-reviewed source entry for one fixed query."""
+    sql_sha256 = hashlib.sha256(definition["sql"].encode()).hexdigest()
+    return {"descriptor": {"adapter": "company_sql", "resource": definition["resource"],
+        "kind": "saved_query", "title": definition["title"], "description": "Inspectable source-owned SQL export; no alert outcome or causal analysis",
+        "metadata": {"sql_sha256": sql_sha256},
+        "contract": {"tenant_id": "local", "authorized": True, "domain": "support", "scope": definition["title"],
+            "lineage": [f"saved-sql-sha256:{sql_sha256}"], "freshness_sla_hours": None}},
+        "source_key": definition["key"], "tool": "export_query", "arguments": {"sql": definition["sql"],
+            "resource": definition["resource"], "source_key": definition["key"], "title": definition["title"]}, "snapshot_pointer": ""}
+
+
 @asynccontextmanager
 async def native(binary, output, audit, budget, database):
     publication = output / "publication.json"
@@ -167,12 +179,7 @@ async def native(binary, output, audit, budget, database):
         "read_only": True, "transport": {"type": "stdio", "command": [sys.executable, str(ROOT / "examples/harbor_help/company_mcp.py"), str(database)]},
         "timeout_seconds": 30, "max_response_bytes": 1000000, "resources": []}
     for definition in export_definitions():
-        exports["resources"].append({"descriptor": {"adapter": "company_sql", "resource": definition["resource"],
-            "kind": "saved_query", "title": definition["title"], "description": "Inspectable source-owned SQL export; no alert outcome or causal analysis",
-            "metadata": {"sql_sha256": hashlib.sha256(definition["sql"].encode()).hexdigest()},
-            "contract": {"tenant_id": "local", "authorized": True, "domain": "support", "scope": definition["title"], "freshness_sla_hours": None}},
-            "source_key": definition["key"], "tool": "export_query", "arguments": {"sql": definition["sql"],
-                "resource": definition["resource"], "source_key": definition["key"], "title": definition["title"]}, "snapshot_pointer": ""})
+        exports["resources"].append(export_resource(definition))
     manifest["connections"].append(exports)
     write_private(manifest_path, manifest)
     dummy.write_text("synthetic-onboarding-no-inference")

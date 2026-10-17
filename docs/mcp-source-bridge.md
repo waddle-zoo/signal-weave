@@ -221,6 +221,29 @@ namespace when that routing changes. `None` means identity continuity cannot be
 proven for context binding; it does not disable otherwise authorized source
 reads.
 
+### Saved-query definition revisions
+
+For a fixed SQL export, put a stable, non-secret definition revision in
+`resources[].descriptor.contract.lineage`, for example:
+
+```json
+{"lineage": ["saved-sql-sha256:<sha256-of-the-exact-reviewed-sql>"]}
+```
+
+Update that declaration when the query changes. Context pins fingerprint this
+lineage; a changed declaration marks the old source binding `source_changed`
+and requires review before a card can use it as current required context.
+A hash in `descriptor.metadata` alone does **not** provide that check.
+The [SQL export example](../examples/harbor_help/README.md) constructs both from
+the same query text.
+
+This is declared definition continuity, not automatic SQL lineage discovery.
+An exact-text hash conservatively changes even for formatting-only edits; it
+does not detect changes to an underlying view or business definition unless
+their revisions are also declared in the contract. Normal measurement updates,
+capture timestamps and health metadata are not definition revisions. Context
+currency does not establish measurement freshness or analytical correctness.
+
 `SourceRef.parameters` must be empty. Even apparently harmless limits are
 rejected, since this version declares no caller argument bounds. The caller
 cannot override tools, arguments, commands, headers, URLs, or JSON pointers.

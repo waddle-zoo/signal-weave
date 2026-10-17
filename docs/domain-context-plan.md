@@ -60,10 +60,14 @@ from a true weekly comparison and retain current facts with a null delta.
 The deadline repair includes a final response-boundary check for late exits;
 the forward runner opts in. Neither repair rescored the censored attempt.
 
-Before claiming full source-definition drift coverage, verify that saved SQL
-revisions enter the declared source contract (for example, lineage). Context
-pins fingerprint selected contract fields, not arbitrary metadata; a SQL hash
-in display metadata alone is not evidence that changed queries invalidate pins.
+Offline review reproduced another source-definition gap: a saved SQL revision
+in display metadata alone left a pinned definition current. The example's
+manifest builder now derives contract lineage from the exact registered SQL.
+Real-adapter pin checks cover query revisions, explicitly declared upstream
+revisions and unchanged measurement metadata, without executing source tools.
+This is not automatic upstream lineage discovery, semantic SQL equivalence,
+source freshness or new business evidence. Operators still need to declare
+upstream definition changes and review affected context.
 
 Before new paid expansion:
 
