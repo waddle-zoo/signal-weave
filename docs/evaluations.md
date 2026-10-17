@@ -6,6 +6,8 @@ limitations before reusing a result.
 
 Next study: [human and agent workflow research plan](workflow-research-plan.md).
 This is a prospective design, not a completed benchmark or an additional result.
+Its first [operational-history source checkpoint](evidence/harbor-operational-history-2026-10-17.md)
+validates historical inputs and native extraction, not agent or human outcomes.
 
 ## Current product-path evidence
 

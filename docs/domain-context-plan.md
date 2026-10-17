@@ -6,8 +6,10 @@ Feature branch: `feat/domain-context-memory`, based on main `e8842ac`.
 
 The next cross-company study follows the
 [human and agent workflow research plan](workflow-research-plan.md). Its proposed
-large-scale counts are not executed results; paid admission, raw temporal
-fixtures, review and real-human usability evidence remain separate gates.
+large-scale counts are not executed results. The first
+[Harbor operational-history source checkpoint](evidence/harbor-operational-history-2026-10-17.md)
+now validates historical extraction; paid admission, business-workflow review,
+other company histories and real-human usability remain separate gates.
 
 | Requirement | Evidence and remaining work |
 | --- | --- |
@@ -92,11 +94,12 @@ Before new paid expansion:
   capabilities. Retain setup cost, queries, tokens, failures and actual messages;
   an internal decision score is not the primary outcome.
 
-Harbor currently supports retrospective cohort checks only. A genuine daily or
-multi-month operational replay still needs explicit time-varying snapshots,
-including ticket-state transitions and ingestion availability. Do not relabel
-old cohorts as what was known then, rebase capture times to imply freshness, or
-count these engineering tests as new company/onboarding observations.
+The original Harbor source supports retrospective cohort checks only. A separate
+[operational-history development fixture](evidence/harbor-operational-history-2026-10-17.md)
+now materializes knowable ticket-state transitions and ingestion availability.
+It has not yet run a complete recurring business-agent workflow. Do not relabel
+the old cohorts as what was known then, rebase capture times to imply freshness,
+or count the new engineering tests as company/onboarding observations.
 
 Keep frontier analysis in the connected tools: [Hex's MCP](https://learn.hex.tech/docs/api-integrations/mcp-server)
 already supports analytical Threads, while [dbt's MCP](https://docs.getdbt.com/docs/dbt-ai/about-mcp)

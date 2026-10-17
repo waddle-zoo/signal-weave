@@ -204,7 +204,8 @@ Operational recurrence requires event time **and availability time**. Append
 state/definition revisions and expose only information available at each run.
 Resolution, refunds, ingestion and ownership changes must become visible when
 known, not when the final warehouse eventually contains them. The current Harbor
-fixture is retrospective and cannot establish that property by filtering cohorts.
+retrospective fixture cannot establish that property by filtering cohorts. The
+separate operational-history development fixture below begins to cover it.
 Keep immutable input/result hashes for each observation; cache state and query
 settings must be comparable between arms or the affected comparison is unqualified.
 Publish the same explicit business/run clock to both arms. Enforce the visible
@@ -406,7 +407,26 @@ Ignored local evidence logs (SHA-256):
 - `artifacts/workflow-history-reviewed-focused.log`: `d7496add7c3c373a00ae5a811b6aae596608dce6c740cdae5635b85bcb4b1a97`
 - `artifacts/workflow-history-reviewed-full-verify.log`: `615888f5ea625af4ba75a179cb29891f96d5bddd5c310b61242758995aaa1aad`
 
-No new business-agent trial, Jev judgment or human session has run under this
-plan. Raw company histories, source-boundary enforcement, independent business
-references, the actual workflow runner and execution admission remain work to do.
-No production code, native build or product scope changed in this checkpoint.
+No new business-agent trial, Jev judgment or human session ran in that checkpoint.
+No production code, native build or product scope changed.
+
+### Operational-history source checkpoint
+
+The [Harbor source report](evidence/harbor-operational-history-2026-10-17.md)
+records the next prerequisite: one known support-company history with late
+events/corrections, independent raw-record arithmetic, 36 reconciled historical
+snapshots, and actual default-profile native extraction at three cutoffs.
+The first native diagnostic failed a harness assertion; a separate corrected
+preflight matched nine exports on identical inputs with zero provider attempts.
+Neither is a business-agent trial or human-onboarding result. The older
+retrospective cohort and its paid-work stop remain unchanged.
+Final `make verify` passed lint and 4,287 tests with 12 opt-in skips in 279.51s;
+19 reference/preflight contracts separately passed on Python 3.11.6 in 11.08s.
+The report records identities and reproduction commands; these counts are
+software checks, not completed workflows.
+
+Internal DE review rejects interpreting the latest/prior completed-ticket rates
+as age-matched performance. Future workflow admission requires a suitable
+owner-confirmed population/comparison; the exported warning is not a remedy for
+that missing analytical definition. Other domains, the complete workflow runner,
+frozen protocol/budgets, real final messages and real-human sessions remain open.
