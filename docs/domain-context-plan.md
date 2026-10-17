@@ -46,6 +46,14 @@ source preparation is disclosed; this is not inventing every metric from raw
 tables or proof of fresh human setup. Approval, Jev evaluation, recurrence and
 delivery are excluded until expert review of the actual saved artifacts.
 
+This cohort is now [closed and environment-censored](../evaluations/data/harbor-raw-onboarding-v1-summary.json):
+one analyst attempted 21 calls but the Mac slept repeatedly and no completion
+usage or human readout arrived. The response timeout fired; baseline was not
+started. Source and method stayed unchanged, no Jev request occurred, and no
+card approval or onboarding-success claim is made. Unknown usage is not zero.
+Keep that attempt intact. New paid work requires a stable host and a separate
+reviewed protocol; a later clock-guard repair is not a rescore or retry.
+
 Before new paid expansion:
 
 - Prove the normal binary's local setup, optional context enablement, reconnect

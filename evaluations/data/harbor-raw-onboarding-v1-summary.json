@@ -1,0 +1,74 @@
+{
+  "protocol": "harbor-raw-onboarding-v1",
+  "closed": true,
+  "classification": "Environment-censored authoring attempt; not a product pass, product accuracy failure, completed onboarding or comparative result.",
+  "method_commit": "9d5972a",
+  "source": {
+    "kind": "Synthetic support company, fixed retrospective SQLite state",
+    "sha256": "18af769cc9610a7f6d06c321e738767f64ef84ba249b74c0d3182f1b8ffd3db6",
+    "scope": "Raw tables, source-owned metric views and three disclosed operator-configured saved SQL exports. Both arms had the same saved-query definitions and company tools. Not raw-schema-only metric invention or point-in-time history."
+  },
+  "software_before_attempt": {
+    "normal_suite": {"passed": 4218, "opt_in_skipped": 12, "seconds": 327.81},
+    "focused_checks": {"passed": 38, "scope": "Includes independent raw-row reconciliation of exported counts/rates across seeds; not business observations."},
+    "preflight": "Matching source/native/method fingerprints, required native tools, real raw SQL query and three native SQL exports; zero inference.",
+    "review": "Independent internal method reviewer cleared the bounded authoring study after native inventory checks and explicit disclosure of source-owned views/source preparation. Not external peer review."
+  },
+  "attempt": {
+    "frontier_attempts": 1,
+    "model": "gpt-6-luna",
+    "effort": "xhigh",
+    "treatment": {
+      "status": "failed",
+      "error": "episode_timeout",
+      "reported_monotonic_seconds": 480.9641042079893,
+      "admitted_tool_calls": 21,
+      "completed_source_queries": 4,
+      "native_calls": 7,
+      "first_readout": null,
+      "working_notes": null,
+      "publication": null,
+      "submitted_draft_ids": null
+    },
+    "baseline_attempted": false,
+    "decision_provider_attempts": 0,
+    "model_usage_known": false,
+    "input_tokens": null,
+    "output_tokens": null,
+    "billing": "Unknown, not zero. No valid completion usage record was returned.",
+    "source_unchanged": true,
+    "method_unchanged": true,
+    "outer_failure": "ExceptionGroup during the incomplete workflow; the retained episode and audit identify episode_timeout.",
+    "processes": "Original study parent, analyst and its source/native children were verified terminal. No replacement actor or comparator was started."
+  },
+  "environment_evidence": {
+    "clock": "Python reported mach_absolute_time() for its monotonic clock.",
+    "clock_documentation": "https://developer.apple.com/documentation/driverkit/mach_absolute_time",
+    "observations": [
+      "A recorded source query returned at 2026-10-16T23:52:55.611624Z; the local power log records maintenance sleep at 19:52:55 -0400.",
+      "The power log records dark wake at 20:00:51 -0400, sleep again at 20:01:36, and dark wake at 21:01:51 during the broader attempt window."
+    ],
+    "interpretation": "Host suspension invalidates elapsed-time interpretation and prevents clean assessment of this attempt. These logs do not identify every source of latency or prove the analyst would otherwise have succeeded.",
+    "action": "Keep cohort closed and unknown usage retained. Require a stable host before new paid work; no power setting was changed."
+  },
+  "engineering_lesson": "Do not force routine cards to depend on a frontier-written publication. The example now offers operator-fixed SQL exports that supply compact source facts directly; first-readout publications remain available for investigation. This path passed native preflight but has not yet produced a reviewed agent-authored card in this cohort.",
+  "follow_up": "A separate opt-in wall-clock response guard was added after closure, with deterministic clock-jump and episode-integration tests. It does not repair this result, recover missing usage, prevent sleep or establish business value. Any future cohort needs a new manifest, method review and matching preflight; this cohort cannot resume.",
+  "after_closure_software_checks": {
+    "full_suite": {"passed": 4224, "opt_in_skipped": 12, "seconds": 251.81},
+    "focused_transport": {"passed": 86, "seconds": 1.36},
+    "guard_review_status": "Independent clock-guard review pending at this checkpoint; no forward paid validation or retry.",
+    "scope": "Research-only optional guard, disabled by default. Fake clocks verify forward jumps, backward jumps and actual episode cleanup/accounting branches without pretending usage is known. Tests are not new business cases.",
+    "artifacts": {
+      "artifacts/harbor-clock-guard-full-verify.log": "c1ab89a12667994746e4221fbcabfdfbf28561b2427eeb34fe98c9879b21fe28",
+      "artifacts/codex-response-clock-reviewed-focused.log": "5fc180a07535b04c1ffe3082d98ea7612a54f1460b0b673017e16ced8eff6ed6"
+    }
+  },
+  "artifacts": {
+    "artifacts/harbor-raw-onboarding-v1-source-preflight/report.json": "09929dfd324d127d9e328b45fc5110965ea8ea7d6d72e2bccfec02c52dab1740",
+    "artifacts/harbor-raw-onboarding-v1-live/report.json": "5cec0f1de63c508f74f92645aa5be4debe0a39b016abd112f0ee08d38f46163a",
+    "artifacts/harbor-raw-onboarding-v1-live/trace.jsonl": "7eae7942cf4ac6179cc83cf32906f9c619e31b5a965cf2d0e13e2b836bbff127",
+    "artifacts/harbor-source-sleep-correlation.log": "c92f12a9de41271f6dad89f395bac188b9bb66c50d481dbf244d594eea95e3e2",
+    "artifacts/harbor-onboarding-reviewed-full-verify.log": "1eb1cd839a366557016c01e9916e17959c5c1d53a1233d3b93aa9cbc2435ba36"
+  },
+  "limits": "No completed analyst output, semantic expert sign-off, approved card, Jev decision, recurring workflow, notification or quality/cost/speed comparison. Earlier negative studies remain unchanged."
+}

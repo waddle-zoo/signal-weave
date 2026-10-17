@@ -830,6 +830,34 @@ async def test_episode_timeout_kills_process_and_closes_server(fake_episode):
     assert fake_episode.audit.events[-1]["error_type"] == "episode_timeout"
 
 
+@pytest.mark.parametrize("accounting_drain", [False, True])
+async def test_opt_in_wall_deadline_reaches_episode_result_without_inventing_usage(fake_episode, monkeypatch, accounting_drain):
+    killed = asyncio.Event()
+    fake_episode.process.kill.side_effect = killed.set
+    actual_guard = transport._wall_response_guard
+
+    async def jumped_guard(process, seconds, audit):
+        wall, monotonic = iter([0.0, 1000.0]), iter([10.0, 10.5])
+        return await actual_guard(process, seconds, audit,
+            wall_clock=lambda: next(wall), monotonic_clock=lambda: next(monotonic))
+
+    async def output_after_kill():
+        await killed.wait()
+        return b""
+
+    monkeypatch.setattr(transport, "_wall_response_guard", jumped_guard)
+    result = await fake_episode.run(output_after_kill, timeout_seconds=90,
+        accounting_drain=accounting_drain, enforce_wall_response_timeout=True)
+    assert result["status"] == "failed" and result["error"] == "wall_episode_timeout"
+    assert result["wall_response_censoring"]["wall_elapsed_seconds"] == 1000
+    assert result["wall_response_censoring"]["monotonic_elapsed_seconds"] == .5
+    assert result["wall_response_timeout_enabled"] is True
+    assert result["completion_usage_reports"] == []
+    assert fake_episode.audit.events[-1]["usage_known"] is False
+    fake_episode.process.kill.assert_called_once()
+    assert fake_episode.closed
+
+
 async def test_exhausted_jev_budget_does_not_abort_codex_agent(fake_episode):
     fake_episode.budget.exhausted = True
     fake_episode.session.phase = "onboarding"

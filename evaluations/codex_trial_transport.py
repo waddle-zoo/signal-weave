@@ -292,6 +292,32 @@ async def serve_trial(bridge: TrialMCP):
         sock.close()
 
 
+async def _wall_response_guard(process, seconds, audit, *, wall_clock=None,
+                               monotonic_clock=None, poll_seconds=1.0):
+    """Opt-in response deadline that expires across host sleep as well.
+
+    A backwards wall-clock jump is also censored. This does not prevent sleep,
+    attest to its cause, bound startup/cleanup, or recover provider billing.
+    """
+    wall_clock = wall_clock or time.time
+    monotonic_clock = monotonic_clock or time.monotonic
+    wall_start, monotonic_start = wall_clock(), monotonic_clock()
+    while process.returncode is None:
+        wall_elapsed = wall_clock() - wall_start
+        if wall_elapsed < 0 or wall_elapsed >= seconds:
+            reason = "wall_clock_reversed" if wall_elapsed < 0 else "wall_episode_timeout"
+            record = {"reason": reason, "wall_elapsed_seconds": wall_elapsed,
+                      "monotonic_elapsed_seconds": monotonic_clock() - monotonic_start}
+            audit.emit("codex.response_clock_censored", **record)
+            try:
+                process.kill()
+            except ProcessLookupError:
+                pass
+            return record
+        await asyncio.sleep(min(poll_seconds, seconds - wall_elapsed))
+    return None
+
+
 async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                         max_tool_calls, max_output_tokens, bundle=None,
                         timeout_seconds=360, instructions_override=None,
@@ -301,7 +327,8 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                         allow_trial_resource_discovery: bool = False,
                         expected_registry_sha256: str | None = None,
                         report_remaining_budget: bool = False,
-                        strict_single_turn_usage: bool = False) -> dict:
+                        strict_single_turn_usage: bool = False,
+                        enforce_wall_response_timeout: bool = False) -> dict:
     from evaluations.bootstrap_agent_trial import (
         COMMON_SYSTEM,
         MODEL,
@@ -470,7 +497,12 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
             errors_task = asyncio.create_task(read_errors())
             output_task = None
             signal_tasks = []
+            wall_guard = None
+            wall_censoring = None
             try:
+                if enforce_wall_response_timeout:
+                    wall_guard = asyncio.create_task(_wall_response_guard(process, timeout_seconds, audit))
+                    signal_tasks.append(wall_guard)
                 async with asyncio.timeout(timeout_seconds):
                     process.stdin.write(prompt.encode())
                     await process.stdin.drain()
@@ -557,6 +589,10 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                                  if task is not None]
                 if pending_tasks:
                     await asyncio.gather(*pending_tasks, return_exceptions=True)
+                if wall_guard is not None and wall_guard.done() and not wall_guard.cancelled():
+                    wall_censoring = wall_guard.result()
+                    if wall_censoring:
+                        error = wall_censoring["reason"]
                 await errors_task
                 exit_code = process.returncode
     normalized_usage = normalized_codex_usage(usage)
@@ -587,6 +623,8 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                 bridge.ingress_calls if accounting_drain else bridge.calls
             ) + len(resource_discovery_attempt_ids),
             "response_timeout_seconds": timeout_seconds,
+            "wall_response_timeout_enabled": enforce_wall_response_timeout,
+            "wall_response_censoring": wall_censoring,
             "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
             "wall_time_overrun_seconds": max(0., elapsed - timeout_seconds),
             "transport": "codex_cli", "model": selected_model, "effort": effort,
