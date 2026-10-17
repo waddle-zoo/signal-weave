@@ -56,12 +56,25 @@
   "after_closure_software_checks": {
     "full_suite": {"passed": 4224, "opt_in_skipped": 12, "seconds": 251.81},
     "focused_transport": {"passed": 86, "seconds": 1.36},
-    "guard_review_status": "Independent clock-guard review pending at this checkpoint; no forward paid validation or retry.",
+    "guard_review_status": "Pending at dc4d81d. Follow-up review found a late-exit escape and the runner not opting in; both were repaired and received scoped code-review GO. No forward paid validation or retry.",
     "scope": "Research-only optional guard, disabled by default. Fake clocks verify forward jumps, backward jumps and actual episode cleanup/accounting branches without pretending usage is known. Tests are not new business cases.",
     "artifacts": {
       "artifacts/harbor-clock-guard-full-verify.log": "c1ab89a12667994746e4221fbcabfdfbf28561b2427eeb34fe98c9879b21fe28",
       "artifacts/codex-response-clock-reviewed-focused.log": "5fc180a07535b04c1ffe3082d98ea7612a54f1460b0b673017e16ced8eff6ed6"
     }
+  },
+  "forward_repairs_not_rescoring": {
+    "calendar_week": "Two offline repros showed a missing preceding week was replaced by an older observed cohort. Saved queries now select the exact preceding calendar week, expose the previous observed date separately, and return null change/unavailable comparison across a gap or zero denominator. Current cohort facts remain available.",
+    "response_deadline": "The opt-in watchdog now checks elapsed time even for an exited process, and the episode rechecks its response boundary independently of watchdog scheduling. The forward Harbor runner explicitly enables it. On-time results remain accepted; known usage is retained for censored late results.",
+    "review": "Independent internal scoped code-review GO for these repairs, conditional on verification. The executed study stays at 9d5972a, closed and censored.",
+    "focused_checks": {"passed": 115, "seconds": 11.52},
+    "full_suite": {"passed": 4232, "opt_in_skipped": 12, "seconds": 250.57},
+    "artifacts": {
+      "artifacts/harbor-calendar-gap-before.log": "6d7436700f72568175aef952141d72e9bf04ad2fdd109fd6b07c5368e504ff19",
+      "artifacts/calendar-clock-reviewed-focused.log": "69e8818931655163b20315038de90e9a2a5a17d6e4ccd248a6d9f3333ea87bae",
+      "artifacts/calendar-clock-reviewed-full-verify.log": "5e449879de196351a484bbb11dc59c9d01f54ee9ce346e0cf31e88ebc355e487"
+    },
+    "scope": "Offline regression and transport checks only; no new analyst output, Jev result, approved card, business-quality score or cost comparison."
   },
   "artifacts": {
     "artifacts/harbor-raw-onboarding-v1-source-preflight/report.json": "09929dfd324d127d9e328b45fc5110965ea8ea7d6d72e2bccfec02c52dab1740",

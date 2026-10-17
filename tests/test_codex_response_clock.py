@@ -34,3 +34,12 @@ async def test_exit_race_keeps_clock_record_without_changing_usage():
     result = await _wall_response_guard(process, 1, audit, wall_clock=lambda: next(wall))
     assert result["reason"] == "wall_episode_timeout"
     assert not any(event["kind"].startswith("api.") for event in audit.events)
+
+
+async def test_late_exited_process_is_censored_without_being_killed():
+    process = SimpleNamespace(returncode=0, kill=Mock())
+    audit = Audit()
+    result = await _wall_response_guard(process, 480, audit, started_at=(0.0, 10.0),
+        wall_clock=lambda: 1000.0, monotonic_clock=lambda: 10.5)
+    assert result["reason"] == "wall_episode_timeout"
+    process.kill.assert_not_called()

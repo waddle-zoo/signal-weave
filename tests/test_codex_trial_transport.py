@@ -836,7 +836,7 @@ async def test_opt_in_wall_deadline_reaches_episode_result_without_inventing_usa
     fake_episode.process.kill.side_effect = killed.set
     actual_guard = transport._wall_response_guard
 
-    async def jumped_guard(process, seconds, audit):
+    async def jumped_guard(process, seconds, audit, **_kwargs):
         wall, monotonic = iter([0.0, 1000.0]), iter([10.0, 10.5])
         return await actual_guard(process, seconds, audit,
             wall_clock=lambda: next(wall), monotonic_clock=lambda: next(monotonic))
@@ -856,6 +856,45 @@ async def test_opt_in_wall_deadline_reaches_episode_result_without_inventing_usa
     assert fake_episode.audit.events[-1]["usage_known"] is False
     fake_episode.process.kill.assert_called_once()
     assert fake_episode.closed
+
+
+@pytest.mark.parametrize("accounting_drain", [False, True])
+async def test_late_completion_is_censored_even_if_watchdog_never_polled(fake_episode, monkeypatch, accounting_drain):
+    stamps = iter([(0.0, 10.0), (1000.0, 10.5)])
+    monkeypatch.setattr(transport, "_response_clock_stamp", lambda: next(stamps))
+
+    async def unscheduled_guard(*args, **kwargs):
+        await asyncio.Event().wait()
+
+    monkeypatch.setattr(transport, "_wall_response_guard", unscheduled_guard)
+    result = await fake_episode.run([{"type": "turn.completed", "usage": {
+        "input_tokens": 5, "output_tokens": 2, "cached_input_tokens": 0,
+    }}], enforce_wall_response_timeout=True, accounting_drain=accounting_drain)
+    assert result["status"] == "failed" and result["error"] == "wall_episode_timeout"
+    assert result["wall_response_censoring"]["wall_elapsed_seconds"] == 1000
+    assert len(result["completion_usage_reports"]) == 1
+    assert fake_episode.audit.events[-1]["kind"] == "api.response"
+    assert fake_episode.audit.events[-1]["usage"]["input_tokens"] == 5
+    assert fake_episode.closed
+
+
+@pytest.mark.parametrize("accounting_drain", [False, True])
+async def test_on_time_completion_is_not_censored_by_final_clock_check(fake_episode, monkeypatch, accounting_drain):
+    stamps = iter([(100.0, 10.0), (101.0, 11.0)])
+    monkeypatch.setattr(transport, "_response_clock_stamp", lambda: next(stamps))
+
+    async def unscheduled_guard(*args, **kwargs):
+        await asyncio.Event().wait()
+
+    fake_episode.session.submission = {"outcome": "ignore"}
+    monkeypatch.setattr(transport, "_wall_response_guard", unscheduled_guard)
+    result = await fake_episode.run([{"type": "turn.completed", "usage": {
+        "input_tokens": 5, "output_tokens": 2, "cached_input_tokens": 0,
+    }}], timeout_seconds=90, enforce_wall_response_timeout=True, accounting_drain=accounting_drain)
+    assert result["status"] == "complete" and result["error"] is None
+    assert result["wall_response_censoring"] is None
+    assert len(result["completion_usage_reports"]) == 1
+    fake_episode.process.kill.assert_not_called()
 
 
 async def test_exhausted_jev_budget_does_not_abort_codex_agent(fake_episode):

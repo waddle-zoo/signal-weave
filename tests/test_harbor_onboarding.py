@@ -1,6 +1,7 @@
 """Harness contract checks, not business or onboarding success evidence."""
 
 import json
+import sqlite3
 from copy import deepcopy
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -167,6 +168,62 @@ def test_saved_source_exports_reconcile_to_independent_raw_reference(tmp_path, s
                 assert row["overdue_open_priority_tickets"] == raw["overdue_open_priority_count"]
                 assert row["unanswered_tickets"] == raw["unanswered_count"]
     current = exports["resolution"]["evidence"][-1]["values"]
+    assert current["comparison_available"] == 1
+    assert current["comparison_week_start_utc"] == latest[-2]["week_start_utc"]
+    assert current["previous_observed_week_start_utc"] == latest[-2]["week_start_utc"]
     assert current["change_percentage_points"] == pytest.approx(
         100 * (latest[-1]["late_resolution_rate"] - latest[-2]["late_resolution_rate"])
     )
+
+
+@pytest.mark.parametrize("keep_missing_ledger", [False, True])
+def test_missing_calendar_week_is_not_replaced_by_an_older_observed_week(tmp_path, keep_missing_ledger):
+    from contextlib import closing
+
+    from examples.harbor_help.company_mcp import export_query
+    from examples.harbor_help.seed import generate_database
+
+    database = generate_database(tmp_path / "gap.sqlite3")
+    with closing(sqlite3.connect(database)) as connection, connection:
+        weeks = [row[0] for row in connection.execute(
+            "SELECT DISTINCT week_start_utc FROM source_ingestion_ledger ORDER BY week_start_utc DESC LIMIT 3"
+        )]
+        current, missing, older = weeks
+        connection.execute("DELETE FROM tickets WHERE week_start_utc = ?", (missing,))
+        if keep_missing_ledger:
+            connection.execute("UPDATE source_ingestion_ledger SET received_ticket_count = 0, "
+                               "ingestion_status = 'missing', ingested_at_utc = NULL WHERE week_start_utc = ?", (missing,))
+        else:
+            connection.execute("DELETE FROM source_ingestion_ledger WHERE week_start_utc = ?", (missing,))
+    exports = {item["key"]: export_query(database, item["sql"], item["resource"], item["key"], item["title"])
+               for item in trial.export_definitions()}
+    for packet in exports.values():
+        rows = [evidence["values"] for evidence in packet["evidence"]]
+        assert any(row["week_start_utc"] == current for row in rows)
+        assert all(row["week_start_utc"] != older for row in rows)
+    latest = exports["resolution"]["evidence"][-1]["values"]
+    assert latest["eligible_resolved_tickets"] > 0
+    assert latest["change_percentage_points"] is None
+    assert latest["previous_observed_week_start_utc"] == older
+    assert latest["comparison_week_start_utc"] == missing
+    assert latest["comparison_available"] == 0
+
+
+def test_zero_previous_denominator_keeps_current_facts_without_a_fake_change(tmp_path):
+    from contextlib import closing
+
+    from examples.harbor_help.company_mcp import export_query
+    from examples.harbor_help.seed import generate_database
+
+    database = generate_database(tmp_path / "empty-population.sqlite3")
+    with closing(sqlite3.connect(database)) as connection, connection:
+        previous = connection.execute("SELECT DISTINCT week_start_utc FROM source_ingestion_ledger "
+                                      "ORDER BY week_start_utc DESC LIMIT 1 OFFSET 1").fetchone()[0]
+        connection.execute("UPDATE tickets SET priority = 0 WHERE week_start_utc = ?", (previous,))
+    definition = next(item for item in trial.export_definitions() if item["key"] == "resolution")
+    packet = export_query(database, definition["sql"], definition["resource"], definition["key"], definition["title"])
+    prior, current = [evidence["values"] for evidence in packet["evidence"]]
+    assert prior["eligible_resolved_tickets"] == 0 and prior["miss_rate_fraction"] is None
+    assert current["eligible_resolved_tickets"] > 0 and current["miss_rate_fraction"] is not None
+    assert current["comparison_week_start_utc"] == previous
+    assert current["comparison_available"] == 0 and current["change_percentage_points"] is None

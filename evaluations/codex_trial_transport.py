@@ -292,8 +292,21 @@ async def serve_trial(bridge: TrialMCP):
         sock.close()
 
 
+def _response_clock_stamp():
+    return time.time(), time.monotonic()
+
+
+def _response_clock_result(started_at, ended_at, seconds):
+    wall_elapsed = ended_at[0] - started_at[0]
+    if wall_elapsed < 0 or wall_elapsed >= seconds:
+        return {"reason": "wall_clock_reversed" if wall_elapsed < 0 else "wall_episode_timeout",
+                "wall_elapsed_seconds": wall_elapsed,
+                "monotonic_elapsed_seconds": ended_at[1] - started_at[1]}
+    return None
+
+
 async def _wall_response_guard(process, seconds, audit, *, wall_clock=None,
-                               monotonic_clock=None, poll_seconds=1.0):
+                               monotonic_clock=None, poll_seconds=1.0, started_at=None):
     """Opt-in response deadline that expires across host sleep as well.
 
     A backwards wall-clock jump is also censored. This does not prevent sleep,
@@ -301,21 +314,22 @@ async def _wall_response_guard(process, seconds, audit, *, wall_clock=None,
     """
     wall_clock = wall_clock or time.time
     monotonic_clock = monotonic_clock or time.monotonic
-    wall_start, monotonic_start = wall_clock(), monotonic_clock()
-    while process.returncode is None:
-        wall_elapsed = wall_clock() - wall_start
-        if wall_elapsed < 0 or wall_elapsed >= seconds:
-            reason = "wall_clock_reversed" if wall_elapsed < 0 else "wall_episode_timeout"
-            record = {"reason": reason, "wall_elapsed_seconds": wall_elapsed,
-                      "monotonic_elapsed_seconds": monotonic_clock() - monotonic_start}
+    started_at = started_at or (wall_clock(), monotonic_clock())
+    while True:
+        ended_at = wall_clock(), monotonic_clock()
+        record = _response_clock_result(started_at, ended_at, seconds)
+        if record:
             audit.emit("codex.response_clock_censored", **record)
-            try:
-                process.kill()
-            except ProcessLookupError:
-                pass
+            if process.returncode is None:
+                try:
+                    process.kill()
+                except ProcessLookupError:
+                    pass
             return record
+        if process.returncode is not None:
+            return None
+        wall_elapsed = ended_at[0] - started_at[0]
         await asyncio.sleep(min(poll_seconds, seconds - wall_elapsed))
-    return None
 
 
 async def codex_episode(session, *, key, effort, budget, audit, max_turns,
@@ -499,9 +513,12 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
             signal_tasks = []
             wall_guard = None
             wall_censoring = None
+            response_clock_start = None
             try:
                 if enforce_wall_response_timeout:
-                    wall_guard = asyncio.create_task(_wall_response_guard(process, timeout_seconds, audit))
+                    response_clock_start = _response_clock_stamp()
+                    wall_guard = asyncio.create_task(_wall_response_guard(
+                        process, timeout_seconds, audit, started_at=response_clock_start))
                     signal_tasks.append(wall_guard)
                 async with asyncio.timeout(timeout_seconds):
                     process.stdin.write(prompt.encode())
@@ -579,6 +596,9 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                     process.kill()
                 await process.wait()
             finally:
+                # Capture the response boundary before stderr/server cleanup;
+                # a late EOF can beat the watchdog's next scheduled poll.
+                response_clock_end = _response_clock_stamp() if enforce_wall_response_timeout else None
                 if process.returncode is None:
                     process.kill()
                     await process.wait()
@@ -591,8 +611,12 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                     await asyncio.gather(*pending_tasks, return_exceptions=True)
                 if wall_guard is not None and wall_guard.done() and not wall_guard.cancelled():
                     wall_censoring = wall_guard.result()
-                    if wall_censoring:
-                        error = wall_censoring["reason"]
+                if response_clock_start is not None and wall_censoring is None:
+                    wall_censoring = _response_clock_result(response_clock_start, response_clock_end, timeout_seconds)
+                    if wall_censoring is not None:
+                        audit.emit("codex.response_clock_censored", **wall_censoring)
+                if wall_censoring:
+                    error = wall_censoring["reason"]
                 await errors_task
                 exit_code = process.returncode
     normalized_usage = normalized_codex_usage(usage)

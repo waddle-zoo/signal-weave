@@ -57,9 +57,16 @@ def export_definitions():
         "resolution": "WITH rates AS (SELECT week_start_utc, SUM(observed_ticket_count) AS observed_ticket_count, "
             "SUM(eligible_resolved_tickets) AS eligible_resolved_tickets, SUM(resolution_sla_misses) AS resolution_sla_misses, "
             "1.0 * SUM(resolution_sla_misses) / NULLIF(SUM(eligible_resolved_tickets), 0) AS miss_rate_fraction "
-            "FROM weekly_resolution_sla GROUP BY week_start_utc), changes AS (SELECT *, "
-            "100.0 * (miss_rate_fraction - LAG(miss_rate_fraction) OVER (ORDER BY week_start_utc)) AS change_percentage_points "
-            "FROM rates) SELECT * FROM changes",
+            "FROM weekly_resolution_sla GROUP BY week_start_utc), history AS (SELECT *, "
+            "LAG(week_start_utc) OVER (ORDER BY week_start_utc) AS previous_observed_week_start_utc, "
+            "LAG(miss_rate_fraction) OVER (ORDER BY week_start_utc) AS previous_observed_miss_rate_fraction "
+            "FROM rates) SELECT *, date(week_start_utc, '-7 days') AS comparison_week_start_utc, "
+            "CASE WHEN previous_observed_week_start_utc = date(week_start_utc, '-7 days') "
+            "AND previous_observed_miss_rate_fraction IS NOT NULL AND miss_rate_fraction IS NOT NULL "
+            "THEN 1 ELSE 0 END AS comparison_available, "
+            "CASE WHEN previous_observed_week_start_utc = date(week_start_utc, '-7 days') "
+            "THEN 100.0 * (miss_rate_fraction - previous_observed_miss_rate_fraction) "
+            "ELSE NULL END AS change_percentage_points FROM history",
         "coverage": "SELECT week_start_utc, COUNT(*) AS represented_segments, SUM(expected_ticket_count) AS expected_ticket_count, "
             "SUM(observed_ticket_count) AS observed_ticket_count, SUM(missing_ticket_count) AS missing_ticket_count, "
             "SUM(CASE WHEN missing_ticket_count > 0 THEN 1 ELSE 0 END) AS segments_with_missing_tickets "
@@ -70,8 +77,8 @@ def export_definitions():
     }
     return [{"key": key, "title": title, "resource": f"metric:{key}",
              "sql": "SELECT * FROM (" + definitions[key] + ") WHERE week_start_utc IN "
-                    "(SELECT DISTINCT week_start_utc FROM source_ingestion_ledger "
-                    "ORDER BY week_start_utc DESC LIMIT 2) ORDER BY week_start_utc"}
+                    "(SELECT MAX(week_start_utc) FROM source_ingestion_ledger UNION "
+                    "SELECT date(MAX(week_start_utc), '-7 days') FROM source_ingestion_ledger) ORDER BY week_start_utc"}
             for key, (title, _view) in EXPORTS.items()]
 RULES = (
     "You are the fictional owner's data-expert analyst. Start with a useful first readout and clarify "
@@ -342,7 +349,9 @@ async def run(args):
                         prompt_override={"brief": protocol["brief"], "destinations": protocol["routes"],
                             "available_saved_source_queries": export_definitions()},
                         allow_trial_resource_discovery=True, expected_registry_sha256=prior["registry_sha256"],
-                        report_remaining_budget=True, accounting_drain=True, strict_single_turn_usage=True)
+                        report_remaining_budget=True, accounting_drain=True, strict_single_turn_usage=True,
+                        # Forward method only: executed v1 remains closed at 9d5972a.
+                        enforce_wall_response_timeout=True)
                     record["episodes"].append({"arm": arm, "episode": episode, "submission": actor.submission,
                         "notes": actor.notes, "publication": actor.publication, "queries": actor.queries, "native_calls": actor.native_calls})
                     if actor.treatment and actor.submission:

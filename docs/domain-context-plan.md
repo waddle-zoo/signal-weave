@@ -54,6 +54,17 @@ card approval or onboarding-success claim is made. Unknown usage is not zero.
 Keep that attempt intact. New paid work requires a stable host and a separate
 reviewed protocol; a later clock-guard repair is not a rescore or retry.
 
+Post-closure offline review also reproduced a misleading weekly delta when the
+preceding cohort was entirely missing. Source exports now distinguish that gap
+from a true weekly comparison and retain current facts with a null delta.
+The deadline repair includes a final response-boundary check for late exits;
+the forward runner opts in. Neither repair rescored the censored attempt.
+
+Before claiming full source-definition drift coverage, verify that saved SQL
+revisions enter the declared source contract (for example, lineage). Context
+pins fingerprint selected contract fields, not arbitrary metadata; a SQL hash
+in display metadata alone is not evidence that changed queries invalidate pins.
+
 Before new paid expansion:
 
 - Prove the normal binary's local setup, optional context enablement, reconnect
