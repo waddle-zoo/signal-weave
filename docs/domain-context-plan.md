@@ -4,6 +4,11 @@ Feature branch: `feat/domain-context-memory`, based on main `e8842ac`.
 
 ## Current acceptance ledger
 
+The next cross-company study follows the
+[human and agent workflow research plan](workflow-research-plan.md). Its proposed
+large-scale counts are not executed results; paid admission, raw temporal
+fixtures, review and real-human usability evidence remain separate gates.
+
 | Requirement | Evidence and remaining work |
 | --- | --- |
 | Local and hosted context lifecycle | Current native CLI opt-in persists without environment injection; stdio review/pins/history survive restart/disable/re-enable. Signed HTTP roles/tenant/restart checks pass with a synthetic issuer. Earlier approved-card/receipt recovery remains separate; customer SSO is unproven |

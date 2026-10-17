@@ -4,6 +4,9 @@ This is a map, not a leaderboard. Start with the [proof standard and
 reproduction guide](evaluation.md); read each linked report's protocol and
 limitations before reusing a result.
 
+Next study: [human and agent workflow research plan](workflow-research-plan.md).
+This is a prospective design, not a completed benchmark or an additional result.
+
 ## Current product-path evidence
 
 | Question | Start here | What it does—and does not—show |
