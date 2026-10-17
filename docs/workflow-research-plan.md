@@ -37,6 +37,8 @@ transport checks are not substitutes for those judgments.
 | [AI Agents That Matter](https://arxiv.org/html/2407.01502v1) | Use a strong inexpensive baseline, holdouts, and complete accuracy/cost/time accounting. Include setup and correction costs rather than only the narrow provider call. |
 | [Microsoft: trustworthy experiments](https://www.microsoft.com/en-us/research/articles/patterns-of-trustworthy-experimentation-pre-experiment-stage/) | Define falsifiable hypotheses, data-quality checks and the correct unit of comparison before execution. |
 | [NN/g: quantitative usability sample sizes](https://www.nngroup.com/articles/summary-quant-sample-sizes/) | Separate formative usability discovery from population-level success-rate claims; justify sample size against desired precision. |
+| [METR: early-2025 developer RCT](https://metr.org/blog/2025-07-10-early-2025-ai-experienced-os-dev-study/); [2026 method update](https://metr.org/blog/2026-02-24-uplift-update/) | Record measured task effort separately from perceived helpfulness; retain recruitment, task-selection and completion differences. These coding studies do not estimate SignalWeave's effect on BI work. |
+| [Amershi et al.: Human–AI Interaction, CHI 2019](https://www.microsoft.com/en-us/research/wp-content/uploads/2019/01/Guidelines-for-Human-AI-Interaction-camera-ready.pdf) | Observe understanding, correction, dismissal and clarification under uncertainty, not just whether a happy-path tool call succeeds. |
 
 These studies motivate the design; they do not validate SignalWeave or prescribe
 the counts and acceptance targets below. Those are proposed engineering/product
@@ -66,12 +68,18 @@ configured source. Record prerequisites and assistance; do not pretend a lead
 who needs an administrator's connection has completed self-service installation.
 This small purposive panel discovers friction, not an enterprise adoption rate.
 Recruitment and participant consent are still required; none are enrolled yet.
+Use the [blank session observation form](../evaluations/data/workflow-human-session-template.md)
+to retain prerequisites, assistance, actual comprehension and failed attempts.
+The form itself is not an additional session or result.
 
 Observe installation/help/health and credential repair; first useful readout;
 clarification and exact card review; then understanding a concise alert, an
 ordinary digest and a partial-data investigation. Ask recipients what changed,
 what is established versus hypothetical, who acts and what happens next.
 Record active effort, abandonment, mistaken assumptions and facilitator help.
+Record recruitment/task refusals separately from attempted-task failures, and
+perceived helpfulness separately from observed effort. Neither enthusiasm nor
+a selected participant/task mix establishes a causal productivity benefit.
 Do not guide them through undisclosed fixes or exclude assisted failures.
 For comparisons, counterbalance matched tasks/order and retain learning effects;
 do not call repeated sessions with one author independent participants.
@@ -430,3 +438,53 @@ as age-matched performance. Future workflow admission requires a suitable
 owner-confirmed population/comparison; the exported warning is not a remedy for
 that missing analytical definition. Other domains, the complete workflow runner,
 frozen protocol/budgets, real final messages and real-human sessions remain open.
+
+### Product and DE admission review of Harbor workflows
+
+Two further, separately tasked Luna-xhigh consultants used product/business-
+analysis and scoped data-quality skills to inspect the actual source contract,
+generator and independent arithmetic. They agree on formative source/readout
+coverage, not on admitting an alert-quality or business-benefit benchmark yet.
+They did not act as the trial analyst or run Jev. Their internal reviews are
+not a real owner interview, external peer review or human usability evidence.
+
+The next two development tasks should be ordinary business requests:
+
+- **Weekly support brief:** “Are we meeting our support commitments, and where
+  should I look?” Separate first response, resolution and open backlog. Obtain
+  the intended population/comparison, clock meaning, materiality and recipient;
+  show concise supported facts while unresolved questions remain explicit.
+- **Queue handoff:** “What open work needs attention now, and who should take
+  it?” Identify known overdue priority-flagged work by tier/region, ask about
+  escalation and ownership, and retain current evidence even when a partition
+  is incomplete. Do not call the queue clear or invent assignees/causes.
+
+Admission gaps to close before the new paired workflow cohort:
+
+1. **Business meaning:** priority and a clock breach alone do not establish
+   customer harm, urgency, named ownership or a cause. Supply bounded fictional
+   owner/expert knowledge about definitions, allowed disclosure and routing;
+   do not leak arithmetic answers through those replies.
+2. **Correct estimand:** resolved-ticket performance and all-ticket commitment
+   attainment are different questions. Counting still-open overdue work in a
+   denominator may answer the latter; it must not silently rewrite the former.
+   Confirm the owner's meaning and suitable observation horizon. Neither a
+   six-week wait nor an alternative denominator is a universal rule.
+3. **Source knowledge:** creation-count reconciliation does not establish
+   completeness of response/resolution events. The bounded history also omits
+   pre-start opening backlog. State the resulting scope; an increasing known
+   backlog is not by itself evidence of deteriorating service.
+4. **Business case roster:** random rate variation and a few data-timing/
+   correction stressors are not adjudicated adverse, quiet, recovery and ambiguity cases.
+   Independently author realistic positive/negative controls and policies before
+   actor execution. Keep labels and future history out of the source tools.
+5. **Useful uncertainty:** test an owner-authorized provisional warning about
+   established known work alongside a missing optional segment. Also test when
+   a missing required fact truly prevents the conclusion. Do not make a global
+   data-quality veto the standard for every workflow or demand perfect context
+   before providing a useful first answer.
+
+The product consultant also reviewed the blank human-session form. Its feedback
+added a distinct ordinary/no-alert observation and neutral comprehension prompts,
+so a useful quiet check is not confused with failed execution or forced action.
+These changes improve the experiment; they are not executed human sessions.
