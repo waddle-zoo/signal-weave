@@ -117,6 +117,59 @@ async def test_chart_data_rejects_malformed_cache_provenance():
         )
 
 
+@pytest.mark.parametrize("params", ["not JSON", "[]", None, ["not an object"]])
+@pytest.mark.parametrize("dashboard_fallback", [False, True])
+async def test_invalid_saved_params_cannot_send_an_unfiltered_reconstruction(params, dashboard_fallback):
+    requests = []
+    def handler(request):
+        requests.append(request)
+        return httpx.Response(400, text="Chart must have query context saved")
+    client = SupersetClient("https://superset.invalid", transport=httpx.MockTransport(handler))
+    with pytest.raises(ValueError, match="Cannot reconstruct"):
+        await client.chart_data({"id": 42, "datasource_id": 3, "params": params},
+                                dashboard_id=7 if dashboard_fallback else None,
+                                allow_unscoped_fallback=dashboard_fallback)
+    assert [request.method for request in requests] == (["GET"] if dashboard_fallback else [])
+
+
+@pytest.mark.parametrize("dashboard_fallback", [False, True])
+async def test_decoder_recursion_never_turns_into_a_reconstruction_post(monkeypatch, dashboard_fallback):
+    original = json.loads
+    def decoder(value, *args, **kwargs):
+        if value == "recursive decoder input":
+            raise RecursionError("synthetic interpreter limit")
+        return original(value, *args, **kwargs)
+    monkeypatch.setattr("signalweave.superset_client.json.loads", decoder)
+    requests = []
+    def handler(request):
+        requests.append(request)
+        return httpx.Response(400, text="Chart must have query context saved")
+    client = SupersetClient("https://superset.invalid", transport=httpx.MockTransport(handler))
+    with pytest.raises(ValueError, match="undecodable"):
+        await client.chart_data({"id": 42, "datasource_id": 3, "params": "recursive decoder input"},
+                                dashboard_id=7 if dashboard_fallback else None,
+                                allow_unscoped_fallback=dashboard_fallback)
+    assert [request.method for request in requests] == (["GET"] if dashboard_fallback else [])
+
+
+async def test_authoritative_saved_context_still_works_with_unreadable_visualization_params():
+    requests = []
+    def handler(request):
+        requests.append(request)
+        return httpx.Response(200, json={"result": [{"data": [{"score": 8.5}]}]})
+    client = SupersetClient("https://superset.invalid", transport=httpx.MockTransport(handler))
+    result = await client.chart_data({"id": 42, "params": "invalid visualization metadata",
+        "query_context": {"datasource": {"id": 3, "type": "table"}, "queries": [{
+            "time_range": "Last week", "metrics": ["score"],
+            "filters": [{"col": "region", "op": "==", "val": "west"}],
+        }]}})
+    assert result[0]["data"] == [{"score": 8.5}]
+    assert len(requests) == 1 and requests[0].method == "POST"
+    query = json.loads(requests[0].content)["queries"][0]
+    assert query["time_range"] == "Last week"
+    assert query["filters"] == [{"col": "region", "op": "==", "val": "west"}]
+
+
 def test_query_context_preserves_chart_time_grain_and_filters():
     chart = {
         "id": 42,

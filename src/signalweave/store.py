@@ -19,12 +19,65 @@ from .models import (
 )
 
 
+def _validate_card_version_transition(card: InsightCard, expected_version: int) -> None:
+    if (
+        not isinstance(expected_version, int)
+        or isinstance(expected_version, bool)
+        or expected_version < 1
+    ):
+        raise ValueError("expected_version must be an integer greater than or equal to 1")
+    if (
+        not isinstance(card.version, int)
+        or isinstance(card.version, bool)
+        or card.version != expected_version + 1
+    ):
+        raise ValueError("card.version must increment expected_version by exactly 1")
+
+
+def _validate_expected_card_identity(
+    card: InsightCard,
+    expected_version: int,
+    expected_card: InsightCard | None,
+) -> None:
+    if expected_card is not None and (
+        expected_card.id != card.id or expected_card.version != expected_version
+    ):
+        raise ValueError("expected_card must match card.id and expected_version")
+
+
+def _validate_expected_card_snapshot(card: InsightCard, expected_card: InsightCard) -> None:
+    if card.id != expected_card.id:
+        raise ValueError("expected_card must match card.id")
+    if card.version != expected_card.version:
+        raise ValueError("card.version must match expected_card.version")
+
+
+def _assert_expected_card_snapshot(current: InsightCard, expected_card: InsightCard) -> None:
+    if current.model_dump(mode="json") != expected_card.model_dump(mode="json"):
+        raise ValueError("insight card changed since expected snapshot")
+
+
 class InsightCardStore(Protocol):
     def get_card(self, card_id: str) -> InsightCard: ...
 
     def list_cards(self) -> list[InsightCard]: ...
 
     def save_card(self, card: InsightCard) -> None: ...
+
+    def save_card_if_version(
+        self,
+        card: InsightCard,
+        expected_version: int,
+        *,
+        expected_card: InsightCard | None = None,
+    ) -> None: ...
+
+    def save_card_if_unchanged(
+        self,
+        card: InsightCard,
+        *,
+        expected_card: InsightCard,
+    ) -> None: ...
 
     def set_card_status(self, card_id: str, status: InsightCardStatus) -> InsightCard: ...
 
@@ -193,15 +246,72 @@ class InMemoryCertificationReportStore:
 
 
 class JsonInsightCardStore:
-    """Small atomic catalog for user-authored insight card contracts."""
+    """Atomic JSON catalog with process-local thread-safe card version CAS.
+
+    Use the SQLite store when writers may run in multiple processes; this JSON
+    implementation does not claim cross-process locking.
+    """
+
+    _locks_guard = threading.Lock()
+    _path_locks: dict[Path, threading.RLock] = {}
 
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
+        lock_key = self.path.resolve()
+        with self._locks_guard:
+            self._lock = self._path_locks.setdefault(lock_key, threading.RLock())
 
     def save_card(self, card: InsightCard) -> None:
+        with self._lock:
+            cards = self._load()
+            cards[card.id] = card.model_dump(mode="json")
+            self._write_cards(cards)
+
+    def save_card_if_version(
+        self,
+        card: InsightCard,
+        expected_version: int,
+        *,
+        expected_card: InsightCard | None = None,
+    ) -> None:
+        _validate_card_version_transition(card, expected_version)
+        _validate_expected_card_identity(card, expected_version, expected_card)
+        with self._lock:
+            cards = self._load()
+            current_payload = cards.get(card.id)
+            if current_payload is None:
+                raise KeyError(f"Unknown insight card: {card.id}")
+            current = InsightCard.model_validate(current_payload)
+            if current.version != expected_version:
+                raise ValueError("insight card version conflict")
+            if (
+                expected_card is not None
+                and current.model_dump(mode="json") != expected_card.model_dump(mode="json")
+            ):
+                raise ValueError("insight card changed since expected snapshot")
+            cards[card.id] = card.model_dump(mode="json")
+            self._write_cards(cards)
+
+    def save_card_if_unchanged(
+        self,
+        card: InsightCard,
+        *,
+        expected_card: InsightCard,
+    ) -> None:
+        """Atomically replace one exact card snapshot without changing its version."""
+        _validate_expected_card_snapshot(card, expected_card)
+        with self._lock:
+            cards = self._load()
+            current_payload = cards.get(card.id)
+            if current_payload is None:
+                raise KeyError(f"Unknown insight card: {card.id}")
+            current = InsightCard.model_validate(current_payload)
+            _assert_expected_card_snapshot(current, expected_card)
+            cards[card.id] = card.model_dump(mode="json")
+            self._write_cards(cards)
+
+    def _write_cards(self, cards: dict[str, object]) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        cards = self._load()
-        cards[card.id] = card.model_dump(mode="json")
         temporary_path: str | None = None
         try:
             with tempfile.NamedTemporaryFile(
@@ -469,6 +579,67 @@ class SQLiteInsightCardStore:
                 "ON CONFLICT(id) DO UPDATE SET payload = excluded.payload",
                 (card.id, json.dumps(card.model_dump(mode="json"))),
             )
+
+    def save_card_if_version(
+        self,
+        card: InsightCard,
+        expected_version: int,
+        *,
+        expected_card: InsightCard | None = None,
+    ) -> None:
+        _validate_card_version_transition(card, expected_version)
+        _validate_expected_card_identity(card, expected_version, expected_card)
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                row = connection.execute(
+                    "SELECT payload FROM insight_cards WHERE id = ?", (card.id,)
+                ).fetchone()
+                if row is None:
+                    raise KeyError(f"Unknown insight card: {card.id}")
+                current = InsightCard.model_validate(json.loads(row[0]))
+                if current.version != expected_version:
+                    raise ValueError("insight card version conflict")
+                if (
+                    expected_card is not None
+                    and current.model_dump(mode="json") != expected_card.model_dump(mode="json")
+                ):
+                    raise ValueError("insight card changed since expected snapshot")
+                connection.execute(
+                    "UPDATE insight_cards SET payload = ? WHERE id = ?",
+                    (json.dumps(card.model_dump(mode="json")), card.id),
+                )
+                connection.commit()
+            except BaseException:
+                connection.rollback()
+                raise
+
+    def save_card_if_unchanged(
+        self,
+        card: InsightCard,
+        *,
+        expected_card: InsightCard,
+    ) -> None:
+        """Atomically replace one exact card snapshot without changing its version."""
+        _validate_expected_card_snapshot(card, expected_card)
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                row = connection.execute(
+                    "SELECT payload FROM insight_cards WHERE id = ?", (card.id,)
+                ).fetchone()
+                if row is None:
+                    raise KeyError(f"Unknown insight card: {card.id}")
+                current = InsightCard.model_validate(json.loads(row[0]))
+                _assert_expected_card_snapshot(current, expected_card)
+                connection.execute(
+                    "UPDATE insight_cards SET payload = ? WHERE id = ?",
+                    (json.dumps(card.model_dump(mode="json")), card.id),
+                )
+                connection.commit()
+            except BaseException:
+                connection.rollback()
+                raise
 
     def get_card(self, card_id: str) -> InsightCard:
         with self._connect() as connection:

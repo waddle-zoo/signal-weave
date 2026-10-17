@@ -7,6 +7,7 @@ The parent retains private labels, credentials and mutable trial state.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import os
 import secrets
@@ -29,6 +30,45 @@ DISABLED_FEATURES = (
     "memories", "skill_search", "workspace_dependencies", "shell_snapshot",
     "code_mode", "sleep_tool", "goals",
 )
+# Opt-in accounting uses a bounded window; the third rejection requests termination.
+ACCOUNTING_DRAIN_SECONDS = 5.0
+ACCOUNTING_DRAIN_ABORT_AFTER_REJECTIONS = 3
+MAX_RESOURCE_DISCOVERY_CALLS = 4
+
+
+def scoped_resource_discovery(item: dict) -> bool:
+    """Recognize only metadata listing for this command's sole configured MCP.
+
+    This is an opt-in research control, not permission to read resources or use
+    other built-in tools. Keep legacy/closed protocols on their strict default.
+    """
+    arguments = item.get("arguments")
+    identifier = item.get("id")
+    return (
+        item.get("server") in ("codex", "trial")
+        and isinstance(item.get("tool"), str)
+        and item.get("tool") in {"list_mcp_resources", "list_mcp_resource_templates"}
+        and isinstance(identifier, str) and 0 < len(identifier) <= 200
+        and isinstance(arguments, dict) and set(arguments) <= {"server", "cursor"}
+        and (arguments.get("server") is None or arguments.get("server") == "trial")
+        and (arguments.get("cursor") is None or isinstance(arguments["cursor"], str)
+             and len(arguments["cursor"]) <= 4096)
+    )
+
+
+def normalized_codex_usage(usage: object) -> dict | None:
+    if not isinstance(usage, dict):
+        return None
+    counts = (usage.get("input_tokens"), usage.get("output_tokens"),
+              usage.get("cached_input_tokens"))
+    if any(type(count) is not int or count < 0 for count in counts):
+        return None
+    input_tokens, _, cached_input_tokens = counts
+    if cached_input_tokens > input_tokens:
+        return None
+    normalized = dict(usage)
+    normalized["input_tokens_details"] = {"cached_tokens": cached_input_tokens}
+    return normalized
 
 
 def codex_command(cwd: str, url: str, *, model: str, effort: str) -> list[str]:
@@ -57,13 +97,76 @@ def child_environment() -> dict[str, str]:
                        "SSL_CERT_FILE", "SSL_CERT_DIR"}}
 
 
+async def verify_trial_registry(executable, cwd, url):
+    """Inspect configuration without inference; explicitly disable merged peers.
+
+    `mcp_servers={}` is not a deletion operator in the pinned CLI. Never expose
+    full inventory output: entries can contain configured credential material.
+    """
+    base = [str(executable), "mcp", "list", "--json", "--disable", "apps", "--disable", "plugins"]
+
+    async def inventory(settings):
+        command = list(base)
+        for setting in settings:
+            command.extend(["-c", setting])
+        process = await asyncio.create_subprocess_exec(*command, cwd=cwd, env=child_environment(),
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL)
+        try:
+            stdout, _ = await asyncio.wait_for(process.communicate(), 30)
+        finally:
+            if process.returncode is None:
+                process.kill()
+                await process.wait()
+        if process.returncode:
+            raise ValueError("Cannot verify configured MCP registry; no inference admitted")
+        rows = json.loads(stdout)
+        if not isinstance(rows, list) or any(not isinstance(row, dict)
+                or not isinstance(row.get("name"), str) or not row["name"] or len(row["name"]) > 256
+                or type(row.get("enabled")) is not bool for row in rows):
+            raise ValueError("Invalid MCP registry inventory; no inference admitted")
+        if len({row["name"] for row in rows}) != len(rows):
+            raise ValueError("Ambiguous configured MCP names; no inference admitted")
+        if any(row.get("transport", {}).get("type") not in {"stdio", "streamable_http"} for row in rows):
+            raise ValueError("Unknown MCP transport kind; no inference admitted")
+        return [{"name": row["name"], "enabled": row["enabled"],
+                 "transport_type": row["transport"]["type"]} for row in rows]
+
+    original = await inventory([])
+    if any(row["name"] == "trial" for row in original):
+        raise ValueError("Existing trial configuration could retain credentials; no inference admitted")
+    # Use a TOML value rather than quoted dotted CLI paths, and give disabled
+    # peers inert transports so the same override also parses with user config
+    # ignored. Never copy a peer's command, URL or credentials to process args.
+    entries = []
+    for row in sorted(original, key=lambda row: row["name"]):
+        transport = ('command="signalweave-disabled-no-launch"' if row["transport_type"] == "stdio"
+                     else 'url="http://127.0.0.1:9/disabled"')
+        entries.append(f'{json.dumps(row["name"])}={{enabled=false,{transport}}}')
+    entries.append(f'trial={{enabled=true,url={json.dumps(url)},required=true,tool_timeout_sec=120,default_tools_approval_mode="approve"}}')
+    overrides = ["mcp_servers={" + ",".join(entries) + "}"]
+    checked = await inventory(["mcp_servers={}", f"mcp_servers.trial.url={json.dumps(url)}", *overrides])
+    if [row["name"] for row in checked if row["enabled"]] != ["trial"]:
+        raise ValueError("Configured discovery registry is not isolated; no inference admitted")
+    checked.sort(key=lambda row: row["name"])
+    return {"overrides": overrides, "registry": checked,
+            "registry_sha256": hashlib.sha256(json.dumps(checked, sort_keys=True).encode()).hexdigest(),
+            "enabled_servers": ["trial"], "scope": "Configured MCP inventory, not proof of analytical correctness"}
+
+
 class TrialMCP:
-    def __init__(self, session, audit, specs: list[dict], max_calls: int):
+    def __init__(self, session, audit, specs: list[dict], max_calls: int, *,
+                 accounting_drain: bool = False, report_remaining_budget: bool = False):
         self.session, self.audit = session, audit
         self.specs = {spec["name"]: spec for spec in specs}
         self.max_calls = max_calls
+        self.accounting_drain = accounting_drain
+        self.report_remaining_budget = report_remaining_budget
         self.calls = 0
+        self.ingress_calls = 0
         self.exhausted = False
+        self.rejected_calls = 0
+        self.exhaustion_event = asyncio.Event()
+        self.rejection_limit_event = asyncio.Event()
         self.lock = asyncio.Lock()
         self.server = Server("signalweave-trial")
 
@@ -77,40 +180,80 @@ class TrialMCP:
             return await self.call(name, arguments)
 
     async def call(self, name: str, arguments: dict):
+        ingress_call = None
+        if self.accounting_drain:
+            # This records bridge-handler entry, not network packet completion.
+            self.ingress_calls += 1
+            ingress_call = self.ingress_calls
+            self.audit.emit("tool.ingress", name=name, ingress_call=ingress_call,
+                            stage="bridge_handler_entered")
+        try:
+            await self.lock.acquire()
+        except asyncio.CancelledError:
+            if self.accounting_drain:
+                self.audit.emit("tool.cancelled", name=name, ingress_call=ingress_call,
+                                stage="waiting_for_bridge_lock",
+                                reason="cancelled_before_dispatch")
+            raise
+        try:
+            return await self._call_locked(name, arguments)
+        finally:
+            self.lock.release()
+
+    async def _call_locked(self, name: str, arguments: dict):
         # Serialize state mutations/approval, equally for both arms.
-        async with self.lock:
-            if self.calls >= self.max_calls:
-                self.exhausted = True
-                self.audit.emit("tool.rejected", name=name, reason="tool_call_budget_exhausted")
-                raise ValueError("tool_call_budget_exhausted; stop now")
-            self.calls += 1
-            started = time.perf_counter()
-            failed = False
-            audited_arguments = arguments
+        if self.calls >= self.max_calls:
+            self.exhausted = True
+            if self.accounting_drain:
+                self.exhaustion_event.set()
+                self.rejected_calls += 1
+                if self.rejected_calls == ACCOUNTING_DRAIN_ABORT_AFTER_REJECTIONS:
+                    self.rejection_limit_event.set()
+                self.audit.emit("tool.rejected", name=name,
+                                reason="tool_call_budget_exhausted")
+                return types.CallToolResult(
+                    content=[types.TextContent(
+                        type="text",
+                        text=json.dumps({"error": "ValueError",
+                                         "message": "tool_call_budget_exhausted; stop now"}),
+                    )],
+                    isError=True,
+                )
+            self.audit.emit("tool.rejected", name=name, reason="tool_call_budget_exhausted")
+            raise ValueError("tool_call_budget_exhausted; stop now")
+        self.calls += 1
+        started = time.perf_counter()
+        failed = False
+        audited_arguments = arguments
+        try:
             try:
-                try:
-                    json.dumps(arguments, allow_nan=False)
-                except (ValueError, TypeError):
-                    audited_arguments = {"invalid_json_value": True}
-                    raise ValueError("Arguments must contain only finite JSON values") from None
-                if name not in self.specs:
-                    raise ValueError("tool not available")
-                validate(arguments, self.specs[name]["parameters"])
-                if self.session.submission is not None or (
-                    self.session.phase == "onboarding" and self.session.setup_complete
-                ):
-                    raise ValueError("episode already submitted; stop now")
-                result = await self.session.call(name, arguments)
-            except Exception as error:
-                failed = True
-                result = {"error": type(error).__name__,
-                          "message": self.audit.redact(str(error)[:2000])}
-            self.audit.emit("tool.result", name=name, arguments=audited_arguments, result=result,
-                            actor_role=getattr(self.session, "audit_role", "author"),
-                            seconds=time.perf_counter() - started)
-            return types.CallToolResult(
-                content=[types.TextContent(type="text", text=json.dumps(result))],
-                isError=failed)
+                json.dumps(arguments, allow_nan=False)
+            except (ValueError, TypeError):
+                audited_arguments = {"invalid_json_value": True}
+                raise ValueError("Arguments must contain only finite JSON values") from None
+            if name not in self.specs:
+                raise ValueError("tool not available")
+            validate(arguments, self.specs[name]["parameters"])
+            if self.session.submission is not None or (
+                self.session.phase == "onboarding" and self.session.setup_complete
+            ):
+                raise ValueError("episode already submitted; stop now")
+            result = await self.session.call(name, arguments)
+        except Exception as error:
+            failed = True
+            result = {"error": type(error).__name__,
+                      "message": self.audit.redact(str(error)[:2000])}
+        self.audit.emit("tool.result", name=name, arguments=audited_arguments, result=result,
+                        actor_role=getattr(self.session, "audit_role", "author"),
+                        seconds=time.perf_counter() - started)
+        content = [types.TextContent(type="text", text=json.dumps(result))]
+        if self.report_remaining_budget:
+            content.append(types.TextContent(type="text", text=(
+                f"Research tool budget: {max(0, self.max_calls - self.calls)} company-tool calls remain. "
+                "The final publication/submission also uses a call; reserve one. "
+                "This is operational status, not business/source evidence."
+            )))
+        return types.CallToolResult(content=content, isError=failed)
 
 
 @asynccontextmanager
@@ -149,10 +292,57 @@ async def serve_trial(bridge: TrialMCP):
         sock.close()
 
 
+def _response_clock_stamp():
+    return time.time(), time.monotonic()
+
+
+def _response_clock_result(started_at, ended_at, seconds):
+    wall_elapsed = ended_at[0] - started_at[0]
+    if wall_elapsed < 0 or wall_elapsed >= seconds:
+        return {"reason": "wall_clock_reversed" if wall_elapsed < 0 else "wall_episode_timeout",
+                "wall_elapsed_seconds": wall_elapsed,
+                "monotonic_elapsed_seconds": ended_at[1] - started_at[1]}
+    return None
+
+
+async def _wall_response_guard(process, seconds, audit, *, wall_clock=None,
+                               monotonic_clock=None, poll_seconds=1.0, started_at=None):
+    """Opt-in response deadline that expires across host sleep as well.
+
+    A backwards wall-clock jump is also censored. This does not prevent sleep,
+    attest to its cause, bound startup/cleanup, or recover provider billing.
+    """
+    wall_clock = wall_clock or time.time
+    monotonic_clock = monotonic_clock or time.monotonic
+    started_at = started_at or (wall_clock(), monotonic_clock())
+    while True:
+        ended_at = wall_clock(), monotonic_clock()
+        record = _response_clock_result(started_at, ended_at, seconds)
+        if record:
+            audit.emit("codex.response_clock_censored", **record)
+            if process.returncode is None:
+                try:
+                    process.kill()
+                except ProcessLookupError:
+                    pass
+            return record
+        if process.returncode is not None:
+            return None
+        wall_elapsed = ended_at[0] - started_at[0]
+        await asyncio.sleep(min(poll_seconds, seconds - wall_elapsed))
+
+
 async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                         max_tool_calls, max_output_tokens, bundle=None,
                         timeout_seconds=360, instructions_override=None,
-                        prompt_override=None, model: str | None = None) -> dict:
+                        prompt_override=None, model: str | None = None,
+                        codex_executable: str = "codex",
+                        accounting_drain: bool = False,
+                        allow_trial_resource_discovery: bool = False,
+                        expected_registry_sha256: str | None = None,
+                        report_remaining_budget: bool = False,
+                        strict_single_turn_usage: bool = False,
+                        enforce_wall_response_timeout: bool = False) -> dict:
     from evaluations.bootstrap_agent_trial import (
         COMMON_SYSTEM,
         MODEL,
@@ -243,7 +433,8 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
             "business": session.public, "saved_notes": session.notes,
             "shared_card": shared_card,
             "signalweave_evaluation": bundle})
-    bridge = TrialMCP(session, audit, await session.specs(), max_tool_calls)
+    bridge = TrialMCP(session, audit, await session.specs(), max_tool_calls,
+                      accounting_drain=accounting_drain, report_remaining_budget=report_remaining_budget)
     # Distinct IDs from positive Jev request IDs. A Codex invocation is NOT an API request.
     request_id = -(1 + sum(e["kind"] == "api.request" and e.get("provider") == "openai"
                           for e in audit.events))
@@ -253,14 +444,27 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                prompt=prompt, tools=list(bridge.specs.values()))
     started = time.perf_counter()
     usage = None
+    usage_reports = []
     error = None
     foreign_tools = []
+    resource_discovery_ids = set()
+    resource_discovery_attempt_ids = set()
+    registry_isolation = None
     final_message = ""
     exit_code = None
     with tempfile.TemporaryDirectory(prefix="signalweave-agent-") as cwd:
         async with serve_trial(bridge) as url:
+            command = codex_command(cwd, url, model=selected_model, effort=effort)
+            command[0] = codex_executable
+            if allow_trial_resource_discovery:
+                registry_isolation = await verify_trial_registry(codex_executable, cwd, url)
+                if expected_registry_sha256 and registry_isolation["registry_sha256"] != expected_registry_sha256:
+                    raise ValueError("Configured MCP inventory changed after preflight; no inference admitted")
+                for override in registry_isolation["overrides"]:
+                    command[-1:-1] = ["-c", override]
+                audit.emit("codex.registry_isolation", **registry_isolation)
             process = await asyncio.create_subprocess_exec(
-                *codex_command(cwd, url, model=selected_model, effort=effort),
+                *command,
                 env=child_environment(), stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
                 limit=8 * 1024 * 1024)
@@ -269,36 +473,117 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                 while line := await process.stderr.readline():
                     audit.emit("codex.stderr", text=line.decode(errors="replace")[:8000])
 
+            def record_event(line):
+                nonlocal usage, error, final_message
+                event = json.loads(line)
+                audit.emit("codex.event", event=event)
+                if event.get("type") == "turn.completed":
+                    usage = event.get("usage")
+                    usage_reports.append(usage)
+                if event.get("type") in {"turn.failed", "error"}:
+                    error = "codex_error"
+                item = event.get("item", {})
+                if item.get("type") in {"command_execution", "web_search", "file_change"}:
+                    foreign_tools.append(item["type"])
+                if item.get("type") == "agent_message" and isinstance(item.get("text"), str):
+                    final_message = item["text"]
+                if item.get("type") == "mcp_tool_call" and (
+                    item.get("server") != "trial"
+                    or registry_isolation and (not isinstance(item.get("tool"), str) or item["tool"] not in bridge.specs)
+                ):
+                    if registry_isolation and scoped_resource_discovery(item):
+                        identifier = item["id"]
+                        if identifier not in resource_discovery_attempt_ids:
+                            resource_discovery_attempt_ids.add(identifier)
+                            if len(resource_discovery_ids) >= MAX_RESOURCE_DISCOVERY_CALLS:
+                                foreign_tools.append("resource_discovery_budget_exhausted")
+                                audit.emit("codex.resource_discovery_rejected", name=item["tool"],
+                                           item_id=identifier, reason="metadata_budget_exhausted")
+                            else:
+                                resource_discovery_ids.add(identifier)
+                                audit.emit("codex.resource_discovery", name=item["tool"],
+                                           arguments=item["arguments"], item_id=identifier,
+                                           meaning="metadata only; not a company tool or source read")
+                    else:
+                        foreign_tools.append(str(item.get("server")))
+                return event
+
             errors_task = asyncio.create_task(read_errors())
+            output_task = None
+            signal_tasks = []
+            wall_guard = None
+            wall_censoring = None
+            response_clock_start = None
             try:
+                if enforce_wall_response_timeout:
+                    response_clock_start = _response_clock_stamp()
+                    wall_guard = asyncio.create_task(_wall_response_guard(
+                        process, timeout_seconds, audit, started_at=response_clock_start))
+                    signal_tasks.append(wall_guard)
                 async with asyncio.timeout(timeout_seconds):
                     process.stdin.write(prompt.encode())
                     await process.stdin.drain()
                     process.stdin.close()
-                    while line := await process.stdout.readline():
-                        event = json.loads(line)
-                        audit.emit("codex.event", event=event)
-                        if event.get("type") == "turn.completed":
-                            usage = event.get("usage")
-                        if event.get("type") in {"turn.failed", "error"}:
-                            error = "codex_error"
-                        item = event.get("item", {})
-                        if item.get("type") in {"command_execution", "web_search", "file_change"}:
-                            foreign_tools.append(item["type"])
-                        if item.get("type") == "agent_message" and isinstance(item.get("text"), str):
-                            final_message = item["text"]
-                        if item.get("type") == "mcp_tool_call" and item.get("server") != "trial":
-                            foreign_tools.append(str(item.get("server")))
-                        # In the local-MCP comparison this budget limits live Jev
-                        # requests, not the Codex subscription-backed agent. A
-                        # depleted Jev budget must be recorded as treatment
-                        # censoring; it must not kill the baseline agent (or a
-                        # reviewer) and bias the paired cohort by run order.
-                        if foreign_tools or bridge.exhausted:
-                            error = "foreign_tool_used" if foreign_tools else "tool_call_budget_exhausted"
-                            break
-                    if error:
-                        process.terminate()
+                    if not accounting_drain:
+                        while line := await process.stdout.readline():
+                            record_event(line)
+                            # In the local-MCP comparison this budget limits live Jev
+                            # requests, not the Codex subscription-backed agent. A
+                            # depleted Jev budget must be recorded as treatment
+                            # censoring; it must not kill the baseline agent (or a
+                            # reviewer) and bias the paired cohort by run order.
+                            if foreign_tools or bridge.exhausted:
+                                error = "foreign_tool_used" if foreign_tools else "tool_call_budget_exhausted"
+                                break
+                        if error:
+                            process.terminate()
+                    else:
+                        loop = asyncio.get_running_loop()
+                        output_task = asyncio.create_task(process.stdout.readline())
+                        exhausted_task = asyncio.create_task(bridge.exhaustion_event.wait())
+                        rejection_task = asyncio.create_task(bridge.rejection_limit_event.wait())
+                        signal_tasks.extend((exhausted_task, rejection_task))
+                        drain_deadline = None
+                        while True:
+                            waiters = {output_task, rejection_task}
+                            if drain_deadline is None:
+                                waiters.add(exhausted_task)
+                            remaining = (None if drain_deadline is None else
+                                         max(0.0, drain_deadline - loop.time()))
+                            ready, _ = await asyncio.wait(
+                                waiters, timeout=remaining,
+                                return_when=asyncio.FIRST_COMPLETED)
+                            if not ready:
+                                error = "tool_call_budget_exhausted"
+                                process.terminate()
+                                break
+                            if output_task in ready:
+                                line = output_task.result()
+                                if not line:
+                                    if bridge.exhausted:
+                                        error = "tool_call_budget_exhausted"
+                                    break
+                                record_event(line)
+                                if foreign_tools:
+                                    error = "foreign_tool_used"
+                                    process.terminate()
+                                    break
+                                if bridge.exhausted:
+                                    error = "tool_call_budget_exhausted"
+                                    if drain_deadline is None:
+                                        drain_deadline = loop.time() + ACCOUNTING_DRAIN_SECONDS
+                                elif error == "codex_error":
+                                    process.terminate()
+                                    break
+                                output_task = asyncio.create_task(process.stdout.readline())
+                            if rejection_task in ready:
+                                error = "tool_call_budget_exhausted"
+                                process.terminate()
+                                break
+                            if exhausted_task in ready:
+                                error = "tool_call_budget_exhausted"
+                                if drain_deadline is None:
+                                    drain_deadline = loop.time() + ACCOUNTING_DRAIN_SECONDS
                     await process.wait()
             except TimeoutError:
                 error = "episode_timeout"
@@ -311,21 +596,42 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                     process.kill()
                 await process.wait()
             finally:
+                # Capture the response boundary before stderr/server cleanup;
+                # a late EOF can beat the watchdog's next scheduled poll.
+                response_clock_end = _response_clock_stamp() if enforce_wall_response_timeout else None
                 if process.returncode is None:
                     process.kill()
                     await process.wait()
+                for task in [output_task, *signal_tasks]:
+                    if task is not None and not task.done():
+                        task.cancel()
+                pending_tasks = [task for task in [output_task, *signal_tasks]
+                                 if task is not None]
+                if pending_tasks:
+                    await asyncio.gather(*pending_tasks, return_exceptions=True)
+                if wall_guard is not None and wall_guard.done() and not wall_guard.cancelled():
+                    wall_censoring = wall_guard.result()
+                if response_clock_start is not None and wall_censoring is None:
+                    wall_censoring = _response_clock_result(response_clock_start, response_clock_end, timeout_seconds)
+                    if wall_censoring is not None:
+                        audit.emit("codex.response_clock_censored", **wall_censoring)
+                if wall_censoring:
+                    error = wall_censoring["reason"]
                 await errors_task
                 exit_code = process.returncode
-    if isinstance(usage, dict):
-        normalized = dict(usage)
-        normalized["input_tokens_details"] = {"cached_tokens": usage.get("cached_input_tokens", 0)}
+    normalized_usage = normalized_codex_usage(usage)
+    if strict_single_turn_usage and len(usage_reports) != 1:
+        normalized_usage = None
+        error = error or "ambiguous_codex_turn_usage"
+    if normalized_usage is not None:
         audit.emit("api.response", provider="openai", request_id=request_id,
                    transport="codex_cli", model=selected_model, effort=effort,
-                   usage=normalized, seconds=time.perf_counter() - started)
+                   usage=normalized_usage, seconds=time.perf_counter() - started)
     else:
         audit.emit("api.error", provider="openai", request_id=request_id,
                    model=selected_model, effort=effort,
-                   error_type=error or "missing_usage", usage_known=False)
+                   error_type=error or ("missing_usage" if usage is None else "invalid_usage"),
+                   usage_known=False)
     done = session.setup_complete if session.phase == "onboarding" else session.submission is not None
     success = done and not error and exit_code == 0
     elapsed = time.perf_counter() - started
@@ -333,7 +639,16 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
             error or ("codex_exit" if exit_code else "no_structured_submission"),
             "final_message": audit.redact(final_message[:12000]),
             "tool_calls": bridge.calls, "seconds": elapsed,
+            "resource_discovery_calls": len(resource_discovery_ids),
+            "resource_discovery_attempts": len(resource_discovery_attempt_ids),
+            "completion_usage_reports": usage_reports,
+            "registry_isolation": registry_isolation,
+            "observed_tool_calls_including_discovery": (
+                bridge.ingress_calls if accounting_drain else bridge.calls
+            ) + len(resource_discovery_attempt_ids),
             "response_timeout_seconds": timeout_seconds,
+            "wall_response_timeout_enabled": enforce_wall_response_timeout,
+            "wall_response_censoring": wall_censoring,
             "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
             "wall_time_overrun_seconds": max(0., elapsed - timeout_seconds),
             "transport": "codex_cli", "model": selected_model, "effort": effort,

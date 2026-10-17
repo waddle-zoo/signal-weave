@@ -50,7 +50,7 @@ _ENV_NAMES = {
     *_PATH_NAMES, *_SECRET_NAMES,
     "TYPESAFE_MODE", "SIGNALWEAVE_DECISION_PROVIDER", "OPENAI_DECISIONS_MODEL",
     "OPENAI_RESPONSES_MODEL", "SIGNALWEAVE_MAX_DECISION_INPUT_TOKENS",
-    "SIGNALWEAVE_STORE_BACKEND", "SIGNALWEAVE_TENANT_ID",
+    "SIGNALWEAVE_STORE_BACKEND", "SIGNALWEAVE_TENANT_ID", "SIGNALWEAVE_KNOWLEDGE_ENABLED",
     "TYPESAFE_TIMEOUT_SECONDS", "TYPESAFE_MAX_RETRIES", "TYPESAFE_RETRY_BACKOFF_SECONDS",
     "SIGNALWEAVE_ALLOW_EMPTY_SOURCES",
     "SIGNALWEAVE_AGENT",
@@ -415,6 +415,51 @@ def _config_text(values: dict[str, str]) -> str:
         f"{name} = {json.dumps(value, ensure_ascii=False)}\n"
         for name, value in values.items()
     )
+
+
+def configure_domain_context(home: str | Path | None, *, enabled: bool) -> Path:
+    """Persist the optional context tools without touching credentials or state.
+
+    This changes configuration only. Existing processes must reconnect, and the
+    process environment still takes precedence over the saved setting.
+    """
+    if type(enabled) is not bool:
+        raise SetupError("Context enablement must be a boolean")
+    root, _ = read_config(home)
+    lock = root / ".setup.lock"
+    try:
+        fd = os.open(lock, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except FileExistsError:
+        raise SetupError("Setup is already running or has an unreviewed stale setup lock") from None
+    os.close(fd)
+    try:
+        # Re-read under the same lock as setup to preserve any completed edit.
+        _, configured = read_config(root)
+        if enabled and configured.get("SIGNALWEAVE_STORE_BACKEND", "sqlite").strip().lower() != "sqlite":
+            raise SetupError("Domain context requires the SQLite store; no storage backend or data was changed")
+        desired = "1" if enabled else "0"
+        if configured.get("SIGNALWEAVE_KNOWLEDGE_ENABLED") != desired:
+            configured["SIGNALWEAVE_KNOWLEDGE_ENABLED"] = desired
+            original = _read_private(root / "config.toml")
+            # Keep human comments/layout for the ordinary [environment] form.
+            # Validate the whole parsed candidate before using a textual edit:
+            # a matching line inside another multiline string is not a setting.
+            pattern = r'''(?m)^[ \t]*(?:SIGNALWEAVE_KNOWLEDGE_ENABLED|"SIGNALWEAVE_KNOWLEDGE_ENABLED"|'SIGNALWEAVE_KNOWLEDGE_ENABLED')[ \t]*=[ \t]*(["'])([^\r\n]*?)\1[ \t]*(?:\#.*)?$'''
+            candidates = [original + f'\nSIGNALWEAVE_KNOWLEDGE_ENABLED = "{desired}"\n']
+            candidates.extend(original[:m.start(2)] + desired + original[m.end(2):]
+                              for m in re.finditer(pattern, original))
+            content = _config_text(configured)
+            for candidate in candidates:
+                try:
+                    if tomllib.loads(candidate) == {"version": 1, "environment": configured}:
+                        content = candidate
+                        break
+                except tomllib.TOMLDecodeError:
+                    pass
+            _publish_config(root / "config.toml", content)
+        return root
+    finally:
+        lock.unlink(missing_ok=True)
 
 
 def _credential_name(name: str) -> str:
@@ -1020,6 +1065,13 @@ def doctor(home: str | Path | None = None) -> tuple[bool, list[str]]:
     principal = os.getenv("SIGNALWEAVE_PRINCIPAL_ID", "").strip()
     if bool(tenant) != bool(principal):
         errors.append("SIGNALWEAVE_TENANT_ID and SIGNALWEAVE_PRINCIPAL_ID must be configured together")
+    from .local_status import _context_status
+
+    context = _context_status({})  # Doctor checks the effective deployment environment.
+    if context["status"] in {"blocked", "invalid"}:
+        errors.append(context["reason"])
+    elif context["enabled"]:
+        messages.append("Shared domain context: enabled in configuration (running process and analytical quality not tested).")
     sources = 0
     if os.getenv("SUPERSET_URL"):
         sources += 1

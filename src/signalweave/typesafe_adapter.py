@@ -2341,7 +2341,12 @@ class JevJudger:
         selected_probability = action_probabilities.get(selected_outcome, 0.0)
         outcome = Outcome(selected_outcome)
         confidence = selected_probability
-        if confidence < card.action_confidence_threshold:
+        # Match the engine's action gate: a data-gap handoff is not a confident
+        # business conclusion. Do not replace its configured owner with the
+        # unrelated investigation route merely because support is low.
+        confidence_fallback = (outcome in (Outcome.IGNORE, Outcome.NOTIFY, Outcome.ESCALATE)
+                               and confidence < card.action_confidence_threshold)
+        if confidence_fallback:
             outcome = Outcome.INVESTIGATE
         source_keys = plan.selected_source_keys or [source.key for source in card.sources]
         summary = (
@@ -2358,7 +2363,7 @@ class JevJudger:
                 f"selected={selected_outcome}, support={confidence:.2f}; routed={outcome.value}."
                 + (
                     " Code used the investigation fallback because support was below the card's confidence threshold."
-                    if confidence < card.action_confidence_threshold
+                    if confidence_fallback
                     else ""
                 )
             ),

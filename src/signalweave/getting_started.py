@@ -6,6 +6,16 @@ from typing import Literal
 
 GuideTask = Literal["start", "query", "report", "monitor"]
 
+EVIDENCE_INTERPRETATION = (
+    "Read measurements from observations/evidence and comparison totals when included in analyses. Watch and question results "
+    "are policy judgments, not an inventory of available data: unknown does not erase measured values. "
+    "Report supported facts even when a comparison is unavailable; preserve missing-value, coverage "
+    "and action limits. Cite source references for measurements and receipt IDs for workflow outcomes only."
+    " When present, analyses[].comparison retains original totals, segment counts and measurement windows; "
+    "source_contracts retains capture dates and declared quality/freshness. Check these before rereading "
+    "the same source. Page omitted receipt details instead of requerying to recover already-fetched facts."
+)
+
 
 def provider_label(provider: str) -> str:
     return {"openai-decisions": "OpenAI Decisions",
@@ -35,6 +45,7 @@ def agent_getting_started(task: str = "start", *, decision_provider: str = "jev-
         "jev_used": False,
         "inference_performed": False,
         "decision_provider": decision_provider,
+        "evidence_interpretation": EVIDENCE_INTERPRETATION,
         "agent_owns": ["source discovery", "deep investigation", "causal analysis", "explanation", "schedule", "delivery"],
         "signalweave_owns": ["card storage", "approved source scope", "authorized retrieval", "Jev policy judgment", "evidence bundle", "durable decision receipt"],
         "steps": [
@@ -42,7 +53,8 @@ def agent_getting_started(task: str = "start", *, decision_provider: str = "jev-
             {"tool": "search_catalog", "purpose": "Recall source candidates; titles and lexical matches are not semantic proof."},
             {"tool": "inspect_resource", "purpose": "Inspect likely sources, report the useful current findings with their periods and source-specific scopes, and clarify material missing context with the owner."},
             {"tool": "onboard_insight_card", "purpose": "Save the owner's intent and exact selected_sources as a draft."},
-            {"tool": "review_insight_card", "purpose": "Check current source bindings and unresolved setup questions; ask the owner about material ambiguity."},
+            {"tool": "revise_insight_card", "purpose": "Apply the owner's answers to the same saved card using its current version. Source anchors stay fixed; review and approval must happen again."},
+            {"tool": "review_insight_card", "purpose": "Check the fixed card's declared-source coverage, comparison contracts, and policy blockers even after frontier-owned discovery; fixed review does not Jev-rank those sources."},
             {"tool": "approve_insight_card", "purpose": "Request explicit owner approval after showing the saved card and source scope."},
             {"tool": "evaluate_insight_card", "purpose": "On each recurring run, fetch approved sources and use Jev to apply the card's typed outcome policy; returns evidence and a durable receipt without delivering."},
             {"tool": "get_decision_receipt", "purpose": "Read only needed omitted receipt details with result_path, offset and limit; a deferred handoff's observation_facts is the first view. Paging makes no new queries or inference."},
@@ -52,6 +64,7 @@ def agent_getting_started(task: str = "start", *, decision_provider: str = "jev-
             "Jev makes the card-bounded policy judgment; it does not discover the business, infer causality, or replace the frontier agent's deeper investigation.",
             "A returned evidence bundle is not a causal finding. Distinguish facts, hypotheses, and unknowns.",
             "A difference between the last two returned chart buckets is arithmetic, not proof of a like-for-like business decline. Verify period coverage and comparison basis; if unverified, put that caveat beside the headline, not only in setup questions. Never infer a currency from a metric name.",
+            "When source contracts lack a comparison basis, leave the gap explicit: do not invent comparison keys or replace prior_calendar_month with last_two_returned without source evidence; prefer an existing declared aggregate, use coverage-only sources only for coverage, and do not page full detail just to recreate that aggregate.",
             "Large compact responses may omit detail. Read included observation_facts first on a deferred handoff, then page only relevant receipt details; omitted evidence is not empty or an all-clear.",
             "For a deferred judgment, read observation_facts first when included; otherwise page its raw observation path. Then page only relevant attributes, definitions, or source contracts. A complete row overview does not establish source coverage or comparability; missing values and dates stay unknown.",
             "SignalWeave does not schedule runs or send messages.",
@@ -61,11 +74,24 @@ def agent_getting_started(task: str = "start", *, decision_provider: str = "jev-
         ],
         "next": "Start with what the person wants to understand, inspect the relevant evidence and give one useful current report. Preserve distinct source scopes and uncertainty. Then review the reusable card and ask only for the missing context needed for recurring decisions or delivery.",
     }
+    if task == "start":
+        response["first_readout"] = (
+            "During onboarding, show the proposed human message from the first owner-approved, "
+            "delivery-disabled evaluation, not just its decision or receipt. Check with the owner "
+            "or their designated data expert that it answers the question and fits the intended reader. "
+            "Reuse what that reader already knows; explain material scope differences, changed definitions "
+            "and real data gaps without copying the whole glossary into every update. Keep business "
+            "purpose in why_watch and presentation preferences in caller-owned notes; use reviewed domain context only "
+            "when its tools are available. These expectations are not current measurements. "
+            "Ask only about consequential uncertainty; an unclear style preference must not suppress a "
+            "supported analysis. Feedback is not new approval, scheduling or delivery permission, and a "
+            "useful example is not proof of unattended reliability."
+        )
     if task == "monitor":
         response.pop("next", None)
         response["steps"] = [
-            {"tool": "get_insight_card", "purpose": "Read the approved policy if it is not already available. Reuse its card ID and scope; do not repeat onboarding."},
-            {"tool": "evaluate_insight_card", "purpose": "Fetch the approved sources and obtain the policy decision and evidence in one call. Start here when the approved card is already available."},
+            {"tool": "evaluate_insight_card", "purpose": "Start here with the authorized approved card ID and a new run key. Fetch the approved sources, active card guidance and policy decision in one delivery-disabled call; no preparatory card/source fetch is required."},
+            {"tool": "get_insight_card", "purpose": "Read the card separately when reviewing or changing its policy, not to duplicate the active guidance already returned by evaluation. Use the default compact view unless an audit needs full history."},
             {"tool": "get_decision_receipt", "purpose": "Read only needed omitted evidence pages or recover a completed run; this does not refetch sources or run inference."},
         ]
         response["evaluation_example"] = {
@@ -99,6 +125,16 @@ def agent_getting_started(task: str = "start", *, decision_provider: str = "jev-
             "arguments. Follow the tool schema. Caller-supplied context is unverified and does not "
             "authorize policy changes or delivery."
         )
+        response["analyst_publications"] = (
+            "If an analyst publication is already an owner-approved source on this card, an "
+            "explicitly delegated publisher can update it through the caller's own authorized "
+            "tools; a new evaluation fetches the new source evidence. The company MCP source "
+            "bridge supports this path without a trusted caller-context flag. This grants no "
+            "write access or new underlying-data permissions and does not verify the analyst's "
+            "claims. Preserve input-result capture time, publication identity/revision and "
+            "provenance; label hypotheses. Without that source delegation, keep findings as "
+            "supported agent analysis or request a reviewed source update, not a trust relabel."
+        )
     return _with_provider(response, decision_provider)
 
 
@@ -106,6 +142,7 @@ def getting_started(task: GuideTask = "start", *, decision_provider: str = "jev-
     """Describe actual tool paths without probing sources or exposing configuration."""
     common = {
         "task": task,
+        "evidence_interpretation": EVIDENCE_INTERPRETATION,
         "purpose": "Turn an existing BI question into checked evidence and a reusable investigation.",
         "first_question": "What do you want to understand or keep an eye on, and which decision will it help you make?",
         "agent_role": (
@@ -163,7 +200,7 @@ def getting_started(task: GuideTask = "start", *, decision_provider: str = "jev-
                 {"tool": "preview_investigation_report", "purpose": "Show the actual evidence, numerical checks and proposed routes; do not enable delivery."},
                 {"tool": "evaluate_card_workflow", "purpose": "Use owner-labeled historical snapshots for actionable, quiet and missing-evidence acceptance. For a single current check, set capture_current_sources=true in ONE case with an owner-supplied expected_outcome; do not reconstruct snapshots. A current check alone is not full acceptance. If historical cases are unavailable, explicitly record acceptance as unassessed rather than inventing cases or retrying malformed inputs."},
                 {"tool": "review_insight_card", "purpose": "Show current policy, source bindings and remaining blockers to the owner."},
-                {"tool": "approve_insight_card", "purpose": "Only after explicit owner approval. Pass workflow_report_id only for a passing full acceptance report. Owner authorization without that report remains unassessed, suitable only for caller-managed shadow evaluation, not proven unattended delivery. For owner-confirmed fixed/none source ambiguity, pass source_selection_reason plus use_current_source_selection_review=true after review_insight_card; this avoids copying an opaque fingerprint. Other blockers must be fixed."},
+                {"tool": "approve_insight_card", "purpose": "Only after explicit owner approval of the saved policy and displayed source scopes. Copy approval_handoff arguments, including its snapshot fingerprint; the agent records the confirmation and source/definition choice in source_selection_reason. The owner need not write API fields. If the policy changes while awaiting confirmation, show it and ask again; do not substitute the latest-review shortcut. Pass workflow_report_id only for a passing full acceptance report. Owner authorization without that report remains unassessed, suitable only for caller-managed shadow evaluation, not proven unattended delivery. Other blockers must be fixed."},
                 {"tool": "evaluate_insight_card", "purpose": "Reuse the approved card; one stable idempotency key per scheduled observation, the same key for retries. Pass response_mode=compact for the normal agent handoff; use full only for an exhaustive audit response."},
                 {"tool": "get_decision_receipt", "purpose": "Recover the saved report and workflow handoff; suppress quiet outcomes, investigate gaps, and deliver only to approved recipients through the caller's tools."},
             ],

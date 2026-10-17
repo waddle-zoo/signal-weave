@@ -187,7 +187,9 @@ async def test_confirmation_persists_exact_scope_and_audit_after_restart(tmp_pat
     )
     approved = stored(server, card_id)
     omitted = {"onboarding_review", "onboarding_review_history", "onboarding_corrections", "compiled_plan"}
-    assert result["card"] == {k: v for k, v in approved.items() if k not in omitted}
+    expected_card = {k: v for k, v in approved.items() if k not in omitted}
+    expected_card["onboarding_warnings"] = approved["onboarding_review"]["warnings"]
+    assert result["card"] == expected_card
     audit = result["onboarding_review"]
     assert result["status"] == approved["status"] == "approved"
     assert approved["approved_by"] == "test-principal"
@@ -778,8 +780,10 @@ async def test_review_and_compile_awaits_preserve_concurrent_card_changes(
         assert changed["version"] == before["version"]
         assert changed["onboarding_review"] == before["onboarding_review"]
         resume.set()
-        with pytest.raises(ValueError, match=error):
+        with pytest.raises(ValueError, match=error) as raised:
             await asyncio.wait_for(pending, timeout=5)
+        if stage == "approval-compile":
+            assert "simulate" not in str(raised.value)
         assert stored(server, card_id) == changed
         assert changed["status"] == "draft"
         restarted = make_server(tmp_path, sqlite=sqlite)

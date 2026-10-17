@@ -1,0 +1,53 @@
+{
+  "protocol": "retained-raw-followup-v1",
+  "execution_status": "closed",
+  "scope": "New separately preregistered, formative forward cohort over the actual retained and owner-approved v2 card. It tests the latest native decision path and equal companion aggregation in one known fixture; it does not reopen, continue, or rescore v2 and is not a superiority estimate.",
+  "prior": {
+    "protocol": "raw-northstar-workflow-v2",
+    "report_sha256": "2a4c0b4ebbfd09b23fe97b6be3ed89c8857ef347aaaae0fe841e8003a3d712e4",
+    "trace_sha256": "d759fdb5f2e2d73f2742409cc0be97fe1eb5ca83f90996c93ee13580906c5c28",
+    "card_id": "card-executive-monthly-net-sales-and-online-contribution-4da3a6cb",
+    "card_version": 1,
+    "card_policy_sha256": "970a730838db97e05d31e753f8052d87f7b7fcfb3140bd7dcf44f3a82184e54b",
+    "run_key": "raw-northstar-workflow-v2:report",
+    "receipt_id": "receipt-134632e7393b45ce87792b6008abbf9c"
+  },
+  "owner_reference_file": "raw-northstar-onboarding-v1.json",
+  "native_build": {
+    "git_commit": "b7d02c2517c8a708c8d126ec833fd1417148fd6f",
+    "source_sha256": "84682ea7f41e31ccb7b2f9ead53575be95de901c301fa76266fc287f09cc2af8",
+    "binary_sha256": "efea4563c1195f074b82f8406605e1a68f825bbefae07d36a640ebbfab202cf3"
+  },
+  "run_key": "retained-raw-followup-v1:report",
+  "arm_order": [
+    "baseline",
+    "signalweave"
+  ],
+  "source_assets": {
+    "1": {
+      "source_url": "http://127.0.0.1:18089/explore/?slice_id=1"
+    },
+    "10": {
+      "source_url": "http://127.0.0.1:18089/explore/?slice_id=10"
+    }
+  },
+  "row_fingerprint_encoding": "sorted_json_row_multiset_v1",
+  "comparison": "Both fresh reporters receive the identical approved card execution policy and destinations, their own retained author notes, the same owner declarations, and the same five bounded BI tools, calculator, notes reader and final-report tool. Treatment additionally has the four current native report tools and must evaluate the exact approved card once under the new key before final submission, choosing its own tool order. No arbitrary SQL or shell is available to either arm. Fixed B-then-T order; descriptive single pair.",
+  "request": "Complete the approved calendar-month sales readout. Then investigate the apparent Online hit with a matched first-N-days comparison between the latest month and the prior month, letting source coverage establish N. Keep that diagnostic separate from the approved calendar-month policy result.",
+  "policy_boundary": "The retained card's prior_calendar_month policy remains authoritative. Matched first-N-days aggregation is a supplemental investigation only; it cannot replace or alter the approved policy comparison or route.",
+  "method": "Use actual retained private native home read-only for the saved card and prior receipt; only a fresh, non-replayed receipt under this protocol key may be added. Reject a key already present before any actor. Reuse the original author notes and owner declarations. Preflight verifies the retained loopback source config, native-inspects both approved charts, and compares saved query definitions and columns with the pinned v2 trace; source-row multiset hashes are frozen for current point-in-time parity only, not historical raw identity or an atomic warehouse snapshot. Recheck fresh profile hashes before and after each episode and each actor chart read. No card import, approval, revision, message or schedule.",
+  "limits": {
+    "frontier_invocations": 2,
+    "tools_per_episode": 24,
+    "seconds_per_episode": 300,
+    "model": "gpt-6-luna",
+    "reasoning_effort": "xhigh",
+    "jev_attempts_total": 1,
+    "jev_arm": "signalweave",
+    "between_invocation_input_stop": 600000,
+    "between_invocation_uncached_stop": 120000,
+    "accounting_drain": true,
+    "automatic_retries": 0
+  },
+  "stops": "Freeze the reviewed native binary, Codex identity, runner, complete manifest, original owner reference, repository helper inventory including src/signalweave, prior report/trace and retained card/receipt policy before inference; recheck before and after each episode. Source URL is only http://127.0.0.1:18089. Unknown usage, incomplete actors, a between-invocation token stop, changed inputs, failure of a pinned required chart, transport failure or Jev failure closes this pair with a partial report. Recoverable errors on other chart IDs remain recorded for quality review. No retries, allowance transfer, approval, import, send or schedule. Token stops are between-invocation admission checks, not hard total-token ceilings. The CLI has no model-turn or output-token cap. The 300-second timeout covers actor execution, not startup/cleanup; tool dispatch is capped at 24."
+}

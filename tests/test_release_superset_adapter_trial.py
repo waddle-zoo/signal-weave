@@ -227,6 +227,19 @@ def test_evaluation_diagnostics_use_typed_telemetry_and_preserve_source_scope():
     ]
 
 
+def test_evaluation_diagnostics_keep_separated_optional_judgments():
+    watch = {"key": "watch_0", "status": "unknown", "probability": .5,
+             "probabilities": {"present": .4, "absent": .1, "unknown": .5}}
+    question = {"key": "question_0", "status": "unknown", "probability": .3}
+    response = {"result": {"outcome": "ignore"}, "optional_policy_diagnostics": {
+        "values": {"watch_results": [watch], "question_results": [question]},
+    }}
+    diagnostics = _evaluation_diagnostics(response)
+    assert diagnostics["watch_results"] == [watch]
+    assert diagnostics["question_results"] == [question]
+    assert diagnostics["outcome"] == "ignore"
+
+
 def test_health_json_reads_the_cli_healthy_field_and_mode():
     report = _read_health_output(
         subprocess.CompletedProcess(

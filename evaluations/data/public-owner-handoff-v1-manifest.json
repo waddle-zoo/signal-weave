@@ -1,0 +1,10 @@
+{
+  "protocol": "public-owner-report-handoff-v2",
+  "prior_protocol": "public-owner-report-v1",
+  "source_commit": "fcd4ddf",
+  "report_sha256": "836031c662996131d544a44375314a4f3bd0ffb8e87fbf040c88699b6302ca96",
+  "trace_sha256": "f0ad2e2054b57ba6c2c65590d6088904ab7d4e3ffae7485031d5c32bad0ff3df",
+  "runner_sha256": "c5f98ff435a597c7b288a44242b1fe5b99494c9a45f6748f61cc4a1e29a9e64e",
+  "public_input_sha256": "87da1f47eeeac30d704508a89b4ae1027801b4d2ce9763970203a5b9eff54501",
+  "scope": "Immutable one-author synthetic baseline handoff. No expert cards, approved cards or provider decisions are imported. Raw runtime artifacts remain local; this manifest alone is not a public replay bundle."
+}

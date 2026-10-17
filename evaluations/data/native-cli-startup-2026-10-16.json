@@ -1,0 +1,53 @@
+{
+  "scope": "Local engineering diagnostic, not business performance, human onboarding, a cold-start benchmark or causal isolation of import time.",
+  "method": "Three invocations of each command per binary, alternating before/after order; both executables named signalweave. Files hashed before timing (cache warmed), output equality required for help, embedded source identity verified. Fixture unit tests overlapped part of the run; this was not an idle-machine measurement.",
+  "before": {
+    "source_commit": "0ad2d72f423e22c2429b5328d12e8179cb4bde6d",
+    "source_sha256": "05860c6fcb5325c3fa60c04026648cd5f4d5ae661684ff11a86eb47998f41208",
+    "binary_sha256": "dfb6e6a6c17de79e6a841a9b4524054f3be78aac1437f43a76b93871a5f6a39f"
+  },
+  "after": {
+    "source_commit": "2a9b852a3932933f712c09434491b975c00b0792",
+    "source_sha256": "2af23f36d0e5894dfc3c804a915209d63c69db0930b893c93eaf4eb5e7496972",
+    "binary_sha256": "d6b997a9f91fd960be7957783af2c21d5e377cd2f37e52ff46a61c7e01305c34",
+    "dirty": true,
+    "dirty_reason": "Uncommitted example/test groundwork; production source fingerprint matches the tested checkout.",
+    "platform": "macOS arm64, CPython 3.12.10, PyInstaller one-file build, source candidate not a published release"
+  },
+  "seconds": [
+    {"arguments": ["--help"], "before": [12.059772083011921, 9.1518046669662, 8.371232290985063], "after": [10.301721249998081, 6.633649250026792, 7.3359232090297155], "median_before": 9.1518046669662, "median_after": 7.3359232090297155},
+    {"arguments": ["context", "--help"], "before": [9.335808958974667, 7.77927737502614, 8.952787542017177], "after": [7.735638124984689, 6.897467083996162, 7.376561916957144], "median_before": 8.952787542017177, "median_after": 7.376561916957144},
+    {"arguments": ["--build-info"], "before": [7.4316206249641255, 16.3754261250142, 8.139022290997673], "after": [6.686039375024848, 11.928583959001116, 7.347129791975021], "median_before": 8.139022290997673, "median_after": 7.347129791975021}
+  ],
+  "rejected_initial_attempt": "The first comparison stopped on help-output inequality: the retained control had a different executable basename, changing argparse usage and wrapping. No initial timings substituted into the completed run. Matching basenames repaired the measurement, not the product.",
+  "retained_artifact_scope_correction": "The raw artifact's phrase 'no competing trial workload' does not mean an idle machine: local fixture unit tests overlapped. This public qualification supersedes that ambiguous generated scope text; the raw artifact remains unchanged.",
+  "native_regression_checks": {
+    "passed": 12,
+    "integration_journeys": 2,
+    "url_validation_cases": 10,
+    "seconds": 170.01,
+    "warnings": "Two pytest record_property/xunit2 warnings; properties were present and inspected in the actual XML.",
+    "scope": "Scripted local context setup/lifecycle, not expert-led semantic onboarding or business outcomes. Stdio used 21 MCP operations and 14 local Superset metadata reads. HTTP used a synthetic signed issuer, not customer SSO. No provider inference.",
+    "reproduction": "Use the native_checks command and prerequisites in context-cli-native-2026-10-16-summary.json after building source matching this record. Ten URL cases also run in the normal suite; do not add them as independent samples.",
+    "artifacts": {
+      "artifacts/lazy-cli-native-junit.xml": "97aea333b99721b764e8cce096ea82d9b5720efa2fd65edfbf3ba557be58fc5c",
+      "artifacts/lazy-cli-native-verification.log": "7a8a519fa162ce766c9411d728bc8b2e923e94359089a65ce3766738aa86ed2d"
+    }
+  },
+  "software_verification": {
+    "implementation_commit": "f5b7d7045ac1a715be884f6754867e3667647889",
+    "normal_suite": {"command": "make verify", "passed": 4187, "opt_in_skipped": 12, "seconds": 318.86},
+    "python311_subset": {"python": "3.11.6", "passed": 64, "seconds": 10.24},
+    "raw_fixture_checks": "Five seed tests and seven company-MCP tests are included in the normal suite, not additional business observations. The MCP test uses a real stdio subprocess; no frontier agent ran.",
+    "review": "Separate internal Luna code reviews cleared the lazy CLI boundary and raw-source fixture/MCP. Initial ingestion-time and connection-lifetime findings were corrected before full verification. Not external peer review or enterprise certification.",
+    "artifacts": {
+      "artifacts/lazy-cli-harbor-full-verify.log": "461a7ac87eef852aae095332eb56d6857dc357a740409303d4454d868e2112a9",
+      "artifacts/lazy-cli-harbor-python311.log": "7cc99b0f14396f7f11cd198eaf9c18259451c3f0051327306bcdb8f672e9480a"
+    }
+  },
+  "retained_artifacts": {
+    "artifacts/lazy-cli-startup-comparison.json": "77f9dee447a7c537ae23167112933716f6562020bdc6574e8384b1244540a301",
+    "artifacts/compare_cli_startup.py": "6c4bc42fc519888835affdbc3eb253c54fc20e994d14ae166e93b5ac7fd750c2"
+  },
+  "conclusion": "The source import boundary is now tested, but native lightweight commands still take roughly seven seconds at the median here. Startup remains an open human-experience issue; no seamless-setup or analytics speed claim is supported. No provider inference occurred."
+}

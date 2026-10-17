@@ -130,6 +130,7 @@ def card_acceptance_digest(card: InsightCard) -> str:
 
     return _stable_digest({
         "execution_payload": card.execution_payload(),
+        "context_bindings": [pin.model_dump(mode="json") for pin in card.context_bindings],
         "delivery_methods": [method.model_dump(mode="json") for method in card.delivery_methods],
         "principal_id": card.principal_id,
         "principal_tenant": card.principal_tenant,

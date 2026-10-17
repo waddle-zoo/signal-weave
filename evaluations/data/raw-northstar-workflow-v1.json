@@ -1,0 +1,35 @@
+{
+  "protocol": "raw-northstar-workflow-v1",
+  "execution_status": "closed",
+  "closed_attempt": {
+    "method_commit": "37beb80",
+    "report_sha256": "7604a871e8987f8c3282c1ad2c000d19251bba1b395ac909c82be604c28d06a9",
+    "trace_sha256": "d157eed7269474e0eeb032654f684694f506edb17d6de0d4af1d5c90a06223a9",
+    "reason": "Both authors completed; treatment raw-page review packet exceeded 180000 bytes before expert review. No approval, recurring reports or Jev calls. No retry, rescore or unused allowance transfer."
+  },
+  "scope": "New formative raw-source discovery, independent expert review, synthetic owner approval and fresh shadow-report cohort. One known local Northstar fixture, not a holdout, customer or enterprise-readiness estimate. Does not reopen the closed author-only v1 attempt.",
+  "owner_reference_file": "raw-northstar-onboarding-v1.json",
+  "prior_attempt": {
+    "report_sha256": "ff1611b19f3caf2d5dd4985ca3a953efeff1108cc63cab191dd316a9d056f232",
+    "trace_sha256": "140636df0daae61273c14b53a3823221e3acb0ba3bd229c44d0ae43e15301545",
+    "cost": "Unknown, retained separately. No end-to-end cost total, amortized win or unused allowance transfer is permitted."
+  },
+  "limits": {
+    "agent_invocations": 6,
+    "author_tools": 60,
+    "author_seconds": 480,
+    "review_tools": 1,
+    "review_seconds": 180,
+    "report_tools": 24,
+    "report_seconds": 300,
+    "jev_attempts_after_approval": 2,
+    "between_invocation_input_stop": 1600000,
+    "between_invocation_uncached_stop": 350000,
+    "review_source_excerpt_bytes": 180000
+  },
+  "cap_rationale": "The closed author-only attempt consumed 24 calls in 54 seconds while still doing legitimate source inspection and arithmetic. Two saves alone require at least two more calls; the treatment also needs guide, source inspection, card authoring and review. Sixty disclosed calls allow that work plus bounded exploration; they are a safety ceiling, not a performance target or guarantee. Accounting drain does not permit extra tool work.",
+  "simulated_owner_reply": "After the independent expert accepts this exact saved policy and source scope, I approve this saved card version for one delivery-disabled shadow check. This is synthetic consent, not a real person's approval. Do not schedule or send anything.",
+  "report_request": "Run the reviewed sales check as a fresh historical shadow readout. Tell me whether the apparent online-sales hit is supported, its contribution to overall net sales, the supported policy route, and the next useful investigation. Fetch current evidence rather than reuse onboarding measurements. Keep the actual message short, source-linked and honest about partial periods. No messages or schedules.",
+  "comparison": "Each author creates its own brief from real saved queries and ordinary-language owner declarations. Independent reviews use that arm's actual source excerpts. After both setups qualify, recurring arms receive the same actual approved card policy and destinations, retain their own notes and identical company BI tools. Treatment additionally evaluates through the current native MCP/live Jev. Recurring instructions are focused, not the full onboarding skill. This tests the whole configured workflow, not an isolated Jev or memory ablation.",
+  "stops": "No retries, artifact rewriting, source mutation, scheduling or delivery. Stop on unknown usage, budget/transport failure, changed frozen input or incomplete actor. Rejected setup is retained, never repaired or replaced within this cohort. Qualified-but-not-paired results are not a comparative win. Live inference requires matching successful zero-model preflight and independent method review."
+}

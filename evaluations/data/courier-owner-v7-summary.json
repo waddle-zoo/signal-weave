@@ -1,0 +1,194 @@
+{
+  "protocol": "courier-owner-clarified-v7",
+  "completed": true,
+  "paired_reporting_complete": false,
+  "qualified_arms": [],
+  "onboarding_status": {
+    "baseline": "needs_owner_review",
+    "signalweave": "needs_owner_review"
+  },
+  "agent_invocations_started": 4,
+  "provider_attempts": 0,
+  "usage_known": true,
+  "usage": {
+    "input_tokens": 554551,
+    "cached_input_tokens": 462336,
+    "uncached_input_tokens": 92215,
+    "output_tokens": 8253,
+    "responses": 4
+  },
+  "owner_clarification": {
+    "sha256": "bc824cd99b28ad8e63c113d82768454eb91184223632a3e1138911f00dc2808b",
+    "topic": "workflow_boundaries",
+    "provenance": "New fictional owner policy supplied equally; not inferred context, measurements or approval."
+  },
+  "initial_native_card_count": 0,
+  "installed_skill_sha256": "1ac868c37b0b90d50f2c76167b9985ee049c5170b01a1abb12d0fb36ed05c537",
+  "schema_version": 1,
+  "scope": "Fresh known fictional courier setup with additional owner clarification; no later reports, no Jev inference, no paired performance result or real-human usability claim.",
+  "frozen_commit": "5f215d3",
+  "build": {
+    "dirty": false,
+    "format_version": 1,
+    "frozen": true,
+    "git_commit": "ae973808793d1d50bf30412831ac5a06b10694c2",
+    "python": "3.12.10",
+    "source_sha256": "2d3cbc18b796ca13aa00179172be89880b6794239453f800817fa51ef7b5ed78",
+    "version": "0.2.0rc3",
+    "binary_sha256": "567a666e7a681f08d0f22f5bead9b02490f293b9546c712a7f511603d2ea1bf7"
+  },
+  "company": "Pine Courier",
+  "owner_answers": {
+    "metric_scope": "SLA attainment is parcels delivered by the promised window divided by all parcels due, including overdue undelivered parcels. Cancelled parcels are excluded.",
+    "materiality": "Notify the business destination when SLA attainment drops by at least 0.05 ratio units against the prior complete week. Volume alone is ignore. A missing eligible denominator requires insufficient_data to the data destination.",
+    "routing": "business destination: team-f1f9b333eb06561bdd7e; data destination: team-ea2dc93e9c685f281a5b. Only these routes are authorized; no destructive actions.",
+    "data_gaps": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer.",
+    "source_scope": "For our recurring dispatch check, Delivery service is the metric-of-record export of all parcels due, including overdue undelivered parcels and excluding cancellations, across the service tiers in the export. That is the intended operating population, not just completed parcels. Dispatch handbook supplies calendar/eligibility context, not extra parcel rows. Completed parcels excludes overdue undelivered parcels and is not the metric of record. Driver activity is not service attainment. I confirm the selected sources' declared scopes on that basis; do not join separate source populations.",
+    "context_review": "The agreed definition can be shared within this fictional tenant, with review due in 30 days. Show the saved artifact before requesting consent. Hypotheses remain advisory.",
+    "workflow_boundaries": "# Fictional courier owner's workflow clarification\n\nWatch the overall delivery SLA from the controlling totals. Tier breakdowns\nhelp explain that result; they are not independent alert rules.\n\nIf either the current or previous week is incomplete or non-comparable, or\neligible parcel counts are missing, use insufficient_data to Data Operations\nand no business alert. Ask for a corrected export. If independently validated\noverall totals are usable, a missing optional tier breakdown does not block\nthe overall check; explain the limitation.\n\nUse the source's declared UTC reporting windows and coverage. Do not invent a\ngeneral freshness SLA; any unresolved operational freshness requirement must\nbe settled before unattended delivery. Supported shadow findings can still be\nshown with their actual measurement dates and limitations.\n\nKeep these checks delivery-disabled. Do not schedule anything or send messages.\nThe existing overall threshold and authorized destinations are unchanged.\n\nThis is newly supplied fictional owner policy, not inferred meaning, a real\nhuman's approval, measured data, a card template or a period's expected result."
+  },
+  "raw_artifact_sha256": {
+    "report.json": "cae539c927d7315a00fd5061728a6e066ecc4d1b590e4377afc62d72cfdb2e37",
+    "trace.jsonl": "77c4fa78f0eeeef68c3227c86bf7f97f1295f450169d3ad50391c541e612f2f5"
+  },
+  "authors": [
+    {
+      "arm": "baseline",
+      "agent_final_message": "Setup is recorded and complete. The saved notes include the reusable metric definition, exact source scope, threshold and routing policy, missing-data behavior, investigation method, and a clearly dated historical example.\n\nThat example covers Sep 7–14 and Sep 14–21, 2026 UTC. Overall SLA was 90% in both weeks; parcel counts doubled. These measurements are historical, not a statement of current business conditions.\n\nThe scripted fixture consented to the saved notes for one later check. Semantic review is still pending, and this is not real human approval. Quiet behavior below the threshold remains unconfirmed; any freshness requirement must be settled before unattended delivery. Delivery is disabled; nothing was scheduled or sent.",
+      "setup": {
+        "card_ids": [],
+        "unresolved": [
+          "Owner confirmation is still needed for quiet behavior when complete, comparable data show a drop below 0.05 ratio units.",
+          "Any operational freshness requirement must be settled before unattended delivery."
+        ],
+        "message": "Pine Courier setup notes are saved and shown for synthetic owner consent. The scripted fixture approved the saved notes for one later check; this is not real human approval or independent semantic validation. Reusable definition: on_time_delivery = parcels delivered by promised window divided by all parcels due, including overdue undelivered parcels and excluding cancellations. Use Delivery service controlling totals for the overall weekly check against the previous complete UTC week; tiers explain but do not independently alert. Notify the authorized Business owner destination team-f1f9b333eb06561bdd7e on an overall drop of at least 0.05 ratio units. Extra volume alone is ignored. Incomplete or non-comparable week(s), or missing eligible counts, route as insufficient_data to Data Operations team-ea2dc93e9c685f281a5b with a corrected-export request and no business alert. If overall totals are validated but optional tier detail is absent, continue the overall check and explain the limitation. The examined historical snapshot covers 2026-09-07–09-14 and 2026-09-14–09-21 UTC: 0.90 to 0.90 (no change) while counts doubled. These dated measurements are historical examples, not today's business conditions. Delivery remains disabled; nothing was scheduled or sent.",
+        "handoff_state": "awaiting_owner_context"
+      },
+      "tool_calls": 19,
+      "seconds": 39.177840874996036,
+      "review": {
+        "approved": false,
+        "reasons": [
+          "Owner confirmation is required for quiet behavior below the 0.05 drop threshold: the owner explicitly said this was not confirmed, so the artifact must not operationalize or imply a quiet/ignore outcome until clarified.",
+          "The historical example asserts ratios and complete/comparable windows, but those are stated as source snapshot facts; this review treats them as illustrative only. Core recurring rule otherwise matches the 0.05 ratio-unit overall drop threshold, insufficient_data routing, authorized recipients, and scope."
+        ],
+        "input_digest": "294cc5a159c823d07fe81624131d9b72fb69d29b751a7906958f2ddd54165a63",
+        "artifact_digest": "e2f5c9b2ede23394894e65611b29c65f9baa64772f1e75de94a297c2b23ffe39",
+        "instructions_digest": "2315944eb7f1cba22fa0a0b11bd08b038d1db947bb0a5afda11c85e7d0b76062"
+      }
+    },
+    {
+      "arm": "signalweave",
+      "agent_final_message": "## Historical readout\n\nThe Delivery service snapshot compares complete, comparable UTC weeks:\n\n- **2026-09-07–2026-09-14:** 5,220 / 5,800 = **90.0%**\n- **2026-09-14–2026-09-21:** 10,440 / 11,600 = **90.0%**\n- **Change:** 0.00 ratio units, below the owner’s 0.05 drop threshold.\n\nEligible volume doubled, but the owner says volume alone is not adverse. Tier breakdowns are explanatory only. The Dispatch handbook confirms definition version v3 and eligibility context; it does not add parcel rows. The source was captured on 2026-10-16, after those measurement windows. These are historical snapshot measurements, not today’s business conditions. [Delivery service](company_mcp|resource-050a0fa424fb5741afb0) · [Dispatch handbook](company_mcp|resource-bb4d2a9c15b878315e8d)\n\n## Saved setup\n\nThe card and tenant-shared definition were saved and received scripted synthetic owner consent. They preserve the all-parcels-due SLA definition, exact source scope, overall threshold, volume-only quiet behavior, and insufficient-data routing for incomplete or non-comparable weeks or missing eligible counts. Optional missing tier detail does not block otherwise usable overall totals.\n\nNo evaluation, schedule, or message was performed. Before unattended delivery, the owner still needs to set an operational freshness requirement. The saved card also has an automatically supplied 24-hour source-age setting that is not confirmed owner policy. Setup handoff was recorded with semantic review pending.",
+      "setup": {
+        "card_ids": [
+          "card-dispatch-overall-delivery-sla-d8e2a0ef"
+        ],
+        "message": "Historical onboarding readout from Delivery service (company_mcp|resource-050a0fa424fb5741afb0): the source's complete, comparable UTC windows were 2026-09-07–2026-09-14 and 2026-09-14–2026-09-21. Overall controlling totals yield 5,220/5,800 = 90.0% and 10,440/11,600 = 90.0%, a 0.00 ratio-unit change. That does not meet the owner's ≥0.05 ratio-unit drop rule. Eligible volume doubled (5,800 to 11,600); volume alone is explicitly not bad news. Tier counts are available as explanatory breakdowns, not independent rules. Dispatch handbook (company_mcp|resource-bb4d2a9c15b878315e8d) confirms definition version v3 and eligible-population meaning; it supplies no extra parcel rows. The source was captured 2026-10-16, after these historical measurement windows; these figures are not today's business conditions. Saved card card-dispatch-overall-delivery-sla-d8e2a0ef and tenant-shared definition 990a60615511478db135dbd4c46c94e9 received scripted synthetic owner consent. Delivery remains disabled; no run, schedule, or message was performed. Unresolved before any unattended delivery: the owner has not specified an operational freshness limit. Also, the saved card currently carries an automatically supplied 24-hour max-source-age setting that is not confirmed owner policy and should be resolved before evaluation/automation.",
+        "unresolved": [
+          "Ask owner to set the operational freshness requirement before unattended delivery; the clarification explicitly leaves it unresolved.",
+          "Resolve the card's tool-supplied max_source_age_hours=24 setting because no such limit was owner-confirmed."
+        ],
+        "handoff_state": "awaiting_owner_context"
+      },
+      "tool_calls": 24,
+      "seconds": 44.86656508300803,
+      "review": {
+        "approved": false,
+        "reasons": [
+          "Decision and routes match owner policy: alert the business owner only for an overall SLA drop of at least 0.05 ratio units; ignore volume alone; send insufficient_data to Data Operations for incomplete/non-comparable weeks or missing eligible counts, with no business alert. Optional tier detail does not gate the overall decision.",
+          "The numeric check is inconsistent with that rule. on_time_delivery.delta is current minus baseline in ratio units, so a drop of at least 0.05 requires delta <= -0.05. The artifact uses <= -0.05, but its comparison_key is unverified by the inspected source evidence; clarify/fix the binding to the source’s declared comparison if required."
+        ],
+        "input_digest": "cdc429d263e9fc15fd54765eff296db9096bb752557fd59edf8a10b703d9cef3",
+        "artifact_digest": "9e65f199f8ebae29b0d0326501661bc432a9795bf9936c89096c348627d7c4f4",
+        "instructions_digest": "2315944eb7f1cba22fa0a0b11bd08b038d1db947bb0a5afda11c85e7d0b76062"
+      },
+      "actual_saved_card": {
+        "id": "card-dispatch-overall-delivery-sla-d8e2a0ef",
+        "version": 1,
+        "status": "approved",
+        "sources": [
+          {
+            "key": "delivery_service",
+            "adapter": "company_mcp",
+            "resource": "resource-050a0fa424fb5741afb0",
+            "label": "Delivery service",
+            "parameters": {},
+            "required": true,
+            "required_comparison_keys": [
+              "on_time_delivery"
+            ]
+          }
+        ],
+        "numeric_conditions": [
+          {
+            "text": "Overall SLA dropped by at least 0.05 ratio units against the previous complete, comparable UTC reporting week.",
+            "source_key": "delivery_service",
+            "comparison_key": "on_time_delivery",
+            "measurement": "delta",
+            "segment": null,
+            "unit": "ratio",
+            "threshold": -0.05,
+            "comparator": "<=",
+            "absolute": false
+          }
+        ],
+        "max_source_age_hours": 24.0,
+        "context_bindings": []
+      }
+    }
+  ],
+  "treatment_review_input_excerpt": {
+    "input_digest": "cdc429d263e9fc15fd54765eff296db9096bb752557fd59edf8a10b703d9cef3",
+    "numeric_bindings_verified_against_inspection": true,
+    "numeric_bindings": [
+      {
+        "absolute": false,
+        "comparator": "<=",
+        "comparison_key": "on_time_delivery",
+        "measurement": "delta",
+        "segment": null,
+        "semantics": "delta",
+        "source_key": "delivery_service",
+        "threshold": -0.05,
+        "unit": "ratio"
+      }
+    ],
+    "source_bindings": [
+      {
+        "adapter": "company_mcp",
+        "key": "delivery_service",
+        "required": true,
+        "required_comparison_keys": [
+          "on_time_delivery"
+        ],
+        "resource": "resource-050a0fa424fb5741afb0"
+      }
+    ],
+    "inspected_comparison_descriptors": [
+      {
+        "ref": "company_mcp|resource-050a0fa424fb5741afb0",
+        "analytical_comparisons": [
+          {
+            "comparable": true,
+            "comparison_window": "previous_period",
+            "coverage": "complete",
+            "definition": "SLA attainment is parcels delivered by the promised window divided by all parcels due, including overdue undelivered parcels. Cancelled parcels are excluded.",
+            "dimension": "cohort",
+            "disjoint_segments": true,
+            "key": "on_time_delivery",
+            "kind": "rate",
+            "metric": "on_time_delivery",
+            "population": "Eligible entities in the source glossary",
+            "unit": "ratio"
+          }
+        ]
+      },
+      {
+        "ref": "company_mcp|resource-bb4d2a9c15b878315e8d",
+        "analytical_comparisons": []
+      }
+    ]
+  },
+  "interpretation": "Both model reviews rejected. The treatment comparison-key objection contradicts the supplied descriptor and checked binding; preserve the rejection, not a repaired pass. Baseline left below-threshold quiet behavior unresolved. No business reporting or provider outcome was observed. Reviewed context was saved but the actual card has no context bindings."
+}

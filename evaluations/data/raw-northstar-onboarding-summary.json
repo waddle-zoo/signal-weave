@@ -1,0 +1,324 @@
+{
+  "protocol": "raw-northstar-onboarding-v1",
+  "status": "closed_incomplete_harness_censored_not_product_comparison",
+  "scope": "Formative paired source-discovery/onboarding study on the existing local Northstar Superset. No prepared card or normalized scenario snapshots. Scripted owner declarations, not a real human trial. No approval, recurring evaluation, scheduling, sending, or superiority claim.",
+  "build": {
+    "dirty": false,
+    "format_version": 1,
+    "frozen": true,
+    "git_commit": "e5ae9ca8c1baafb2dfc899f6f97bcb46af7dd8c4",
+    "python": "3.12.10",
+    "source_sha256": "1a6bdb32b192ab710f1e4c7453df83ebacf1f7ee903c9a0c239c73bef81ac400",
+    "version": "0.2.0rc3",
+    "binary_sha256": "06664ecd42571c314b796f23226a74a5c3a8c02eddc3484c16ed5f8b9ce5805c"
+  },
+  "codex": {
+    "path": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex",
+    "version": "codex-cli 0.162.0-alpha.2",
+    "sha256": "cb4e4994627e770800a940b42969c77855a3fc09a6e60b02aa6319f670d6b6ab"
+  },
+  "manifest_sha256": "40ff36368e2ac616467a8fdadfdfba31c6a159eb29183fad4139450dbfbf045e",
+  "runner_sha256": "96696bfb457847ca7a68a63cc331fc9545af6eb1e99905115da4633e15a7f445",
+  "report_sha256": "ff1611b19f3caf2d5dd4985ca3a953efeff1108cc63cab191dd316a9d056f232",
+  "trace_sha256": "140636df0daae61273c14b53a3823221e3acb0ba3bd229c44d0ae43e15301545",
+  "agent_invocations_started": 1,
+  "signalweave_author_invocations": 0,
+  "upstream_jev_requests": 0,
+  "usage_known": false,
+  "usage": null,
+  "usage_limit": "The interrupted ephemeral Codex run did not return turn.completed usage. No token or cost total is claimed; observed-response counters of zero are not zero spending.",
+  "termination": "Baseline reached the fixed 24-call ceiling before save_working_notes or record_setup. The transport terminated it without accounting drain; the next arm was not launched. No retry, rescore or unused allowance transfer.",
+  "episodes": [
+    {
+      "arm": "baseline",
+      "episode": {
+        "status": "failed",
+        "error": "tool_call_budget_exhausted",
+        "final_message": "The owner’s declarations say the Executive Command Center’s `net_sales` is the management figure, and only its daily-detail model has a stated completeness guarantee. The first title searches missed the relevant dashboard; I found the Executive Command Center and Digital Commerce Funnel and am checking their saved chart definitions next.",
+        "tool_calls": 24,
+        "seconds": 53.99429541698191,
+        "response_timeout_seconds": 300,
+        "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+        "wall_time_overrun_seconds": 0,
+        "transport": "codex_cli",
+        "model": "gpt-6-luna",
+        "effort": "xhigh",
+        "exit_code": -15,
+        "foreign_tools": []
+      },
+      "submission": null,
+      "notes": "",
+      "native_calls": [],
+      "source_telemetry": {
+        "logical_tool_calls": 19,
+        "chart_query_http_requests": 7
+      }
+    }
+  ],
+  "tool_calls": [
+    {
+      "name": "ask_owner",
+      "arguments": {
+        "question": "What have you previously declared about online sales, net sales, the populations and accounting treatment involved, period-comparison rules, known caveats, and any hypotheses or evidence about what changed? Please report only your stated policies or context, not a new analysis or consent."
+      }
+    },
+    {
+      "name": "find_dashboards",
+      "arguments": {
+        "query": "online sales"
+      }
+    },
+    {
+      "name": "find_dashboards",
+      "arguments": {
+        "query": "sales"
+      }
+    },
+    {
+      "name": "find_dashboards",
+      "arguments": {
+        "query": "net sales"
+      }
+    },
+    {
+      "name": "find_dashboards",
+      "arguments": {
+        "query": "Executive"
+      }
+    },
+    {
+      "name": "find_dashboards",
+      "arguments": {
+        "query": "Executive Command Center"
+      }
+    },
+    {
+      "name": "find_dashboards",
+      "arguments": {
+        "query": "Command Center"
+      }
+    },
+    {
+      "name": "find_dashboards",
+      "arguments": {
+        "query": "commerce"
+      }
+    },
+    {
+      "name": "list_dashboard_charts",
+      "arguments": {
+        "id": "1"
+      }
+    },
+    {
+      "name": "list_dashboard_charts",
+      "arguments": {
+        "id": "8"
+      }
+    },
+    {
+      "name": "read_chart_rows",
+      "arguments": {
+        "id": "1",
+        "limit": 100,
+        "offset": 0
+      }
+    },
+    {
+      "name": "read_chart_rows",
+      "arguments": {
+        "id": "10",
+        "limit": 100,
+        "offset": 0
+      }
+    },
+    {
+      "name": "read_chart_rows",
+      "arguments": {
+        "id": "5",
+        "limit": 100,
+        "offset": 0
+      }
+    },
+    {
+      "name": "read_chart_rows",
+      "arguments": {
+        "id": "72",
+        "limit": 100,
+        "offset": 0
+      }
+    },
+    {
+      "name": "read_chart_rows",
+      "arguments": {
+        "id": "73",
+        "limit": 100,
+        "offset": 0
+      }
+    },
+    {
+      "name": "read_chart_rows",
+      "arguments": {
+        "id": "75",
+        "limit": 100,
+        "offset": 0
+      }
+    },
+    {
+      "name": "read_chart_rows",
+      "arguments": {
+        "id": "79",
+        "limit": 100,
+        "offset": 0
+      }
+    },
+    {
+      "name": "read_chart_rows",
+      "arguments": {
+        "id": "1",
+        "limit": 200,
+        "offset": 0
+      }
+    },
+    {
+      "name": "profile_saved_chart",
+      "arguments": {
+        "id": "10"
+      }
+    },
+    {
+      "name": "profile_saved_chart",
+      "arguments": {
+        "id": "72"
+      }
+    },
+    {
+      "name": "calculate",
+      "arguments": {
+        "expression": "781780.69 + 284981.28 + 141312.48 + 950920.29"
+      }
+    },
+    {
+      "name": "calculate",
+      "arguments": {
+        "expression": "843730.63 + 333207.57 + 160014.17 + 955315.13"
+      }
+    },
+    {
+      "name": "calculate",
+      "arguments": {
+        "expression": "((843730.63 + 333207.57 + 160014.17 + 955315.13) - (781780.69 + 284981.28 + 141312.48 + 950920.29)) / (781780.69 + 284981.28 + 141312.48 + 950920.29) * 100"
+      }
+    },
+    {
+      "name": "calculate",
+      "arguments": {
+        "expression": "(843730.63 + 333207.57 + 160014.17 + 955315.13) - (781780.69 + 284981.28 + 141312.48 + 950920.29)"
+      }
+    }
+  ],
+  "recorded_calculations": [
+    {
+      "expression": "781780.69 + 284981.28 + 141312.48 + 950920.29",
+      "result": {
+        "value": 2158994.74
+      }
+    },
+    {
+      "expression": "843730.63 + 333207.57 + 160014.17 + 955315.13",
+      "result": {
+        "value": 2292267.5
+      }
+    },
+    {
+      "expression": "((843730.63 + 333207.57 + 160014.17 + 955315.13) - (781780.69 + 284981.28 + 141312.48 + 950920.29)) / (781780.69 + 284981.28 + 141312.48 + 950920.29) * 100",
+      "result": {
+        "value": 6.17290804515808
+      }
+    },
+    {
+      "expression": "(843730.63 + 333207.57 + 160014.17 + 955315.13) - (781780.69 + 284981.28 + 141312.48 + 950920.29)",
+      "result": {
+        "value": 133272.75999999978
+      }
+    }
+  ],
+  "daily_source_profile": {
+    "actual_sql": [
+      {
+        "query_index": 0,
+        "sql": "SELECT order_date AS order_date, channel AS channel, region AS region, net_sales AS net_sales \nFROM gold.mart_executive_daily GROUP BY order_date, channel, region, net_sales \n LIMIT 10000;\n\n"
+      }
+    ],
+    "chart_id": "10",
+    "columns": [
+      "order_date",
+      "channel",
+      "region",
+      "net_sales"
+    ],
+    "date_ranges": {
+      "order_date": {
+        "missing_count": 0,
+        "null_count": 0,
+        "range_status": "raw_values",
+        "raw_max": 1789776000000,
+        "raw_min": 1704067200000
+      }
+    },
+    "declared_row_limits": [
+      {
+        "declared": true,
+        "query_index": 0,
+        "row_limit": 10000
+      }
+    ],
+    "numeric_ranges": {
+      "net_sales": {
+        "finite_numeric_count": 8937,
+        "max": 43748.16,
+        "min": 246.74,
+        "missing_count": 0,
+        "null_count": 0
+      },
+      "order_date": {
+        "finite_numeric_count": 8937,
+        "max": 1789776000000,
+        "min": 1704067200000,
+        "missing_count": 0,
+        "null_count": 0
+      }
+    },
+    "provider_row_counts": [
+      {
+        "query_index": 0,
+        "rowcount": 8937,
+        "sql_rowcount": 8937
+      }
+    ],
+    "query_definition": {
+      "chart_id": "10",
+      "description": "Synthetic Northstar example. Grain is owned by gold.mart_executive_daily; inspect the agent notes before interpreting it.",
+      "params": "{\"viz_type\": \"table\", \"datasource\": \"1__table\", \"time_range\": \"No filter\", \"adhoc_filters\": [], \"row_limit\": 10000, \"show_legend\": true, \"rich_tooltip\": true, \"all_columns\": [\"order_date\", \"channel\", \"region\", \"net_sales\"], \"page_length\": 20, \"include_search\": true}",
+      "query_context": null,
+      "slice_name": "NS | 01 | Executive Command Center | Executive daily detail",
+      "viz_type": "table"
+    },
+    "query_scope": {
+      "dashboard_filters_applied": false,
+      "kind": "saved_chart_query",
+      "warehouse_completeness": "unknown"
+    },
+    "returned_rowcount": 8937,
+    "telemetry": {
+      "chart_query_cache_hit": true,
+      "chart_query_http_requests": 7,
+      "logical_tool_calls": 18
+    }
+  },
+  "binary_unchanged": true,
+  "research_key_replaced": true,
+  "provider_credentials": "Synthetic dummy only; no personal provider key read or copied. Author-only study does not test live Jev.",
+  "review": "Independent method/code review cleared the two-author scope after dummy-key and draft-check repairs. It did not predict tool-budget adequacy or validate a completed business outcome. No final-message quality review is possible because neither final report was submitted.",
+  "interpretation": "This is an invalid/censored onboarding comparison caused by the experiment cap/accounting design, not a SignalWeave failure, baseline failure rate, successful onboarding, recurrence, Jev accuracy or enterprise-value evidence."
+}

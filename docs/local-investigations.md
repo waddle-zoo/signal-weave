@@ -16,8 +16,16 @@ before saving or approving it. Keep the card human-readable and practical:
 - exact source resources and any required parameters;
 - context the agent should retain when interpreting results.
 
-First use `list_insight_cards` to avoid duplicating an existing brief. The agent
-uses `search_catalog` to recall source candidates and `inspect_resource` to
+First use `list_insight_cards` to avoid duplicating an existing brief. It returns
+ID-sorted pages (25 cards by default, at most 100) and a `next_offset` when more
+remain. The agent profile returns identity/status summaries, not policy or
+history; fetch a chosen card with `get_insight_card` before interpreting it.
+Use `response_mode="full"` for a full stored-card page when auditing. The
+`count` is the authorized, status-filtered total; `returned_count` is this page's
+length. Paging bounds the response, not database scan cost; concurrent card
+changes can shift offsets.
+
+The agent uses `search_catalog` to recall source candidates and `inspect_resource` to
 check them. Search results are not a relevance guarantee. Once exact references
 are agreed, `onboard_insight_card` saves a draft. Show the draft and source
 scope to the owner, use `review_insight_card` to surface setup issues, then
@@ -60,6 +68,20 @@ partial response is not an all-clear. A contribution or correlation is not
 causation. If important evidence is absent or contradictory, state the gap and
 ask the owner or update the approved card instead of claiming the analysis is
 finished.
+
+Watch/question judgments describe policy interpretation, not which measurements
+exist. An `unknown` watch must not erase available counts or values. Read the
+source evidence and comparison totals; preserve supported facts from one period
+even if the other period or the full comparison is unavailable. This does not
+waive coverage, comparability or action requirements. Cite the source for a
+measurement and the receipt for a workflow outcome—not interchangeably.
+
+Compact results label a whole explicitly optional watch/question group in
+`optional_policy_diagnostics.values`. Required or ambiguously mapped groups
+stay in `result`; no judgment is discarded. The saved report, quality checks,
+evidence plan and action are unchanged. Full receipts keep the original
+`result.watch_results` and `result.question_results` paths, including paged reads.
+Near the handoff byte limit, the label is omitted rather than displacing evidence.
 
 ## What is and is not tested
 

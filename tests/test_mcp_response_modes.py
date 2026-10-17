@@ -1,4 +1,7 @@
+import copy
 import json
+
+import pytest
 
 from signalweave.mcp_server import create_mcp
 from signalweave.models import DeliveryMethod
@@ -113,23 +116,81 @@ async def test_compact_evaluation_preserves_evidence_but_avoids_duplicate_handof
     full = await tool(server, "evaluate_insight_card")(
         card_id, idempotency_key="full-handoff", response_mode="full"
     )
-    compact = await tool(server, "evaluate_insight_card")(
-        card_id, idempotency_key="compact-handoff", response_mode="compact"
+    agent_server = create_mcp(server._test_runtime, profile="agent")
+    compact = await tool(agent_server, "evaluate_insight_card")(
+        card_id, idempotency_key="compact-handoff"
     )
-    durable = tool(server, "get_decision_receipt")(
+    durable = await tool(agent_server, "get_decision_receipt")(
         idempotency_key="compact-handoff"
     )
 
     expected = dict(durable["result"])
     expected.pop("report_markdown", None)
     assert compact["response_mode"] == "compact"
-    assert compact["result"] == expected
+    assert compact["optional_policy_diagnostics"]["values"] == {
+        field: expected[field] for field in ("watch_results", "question_results")
+    }
+    reconstructed = copy.deepcopy(compact["result"])
+    for parent_key, field in (("report", "evidence"), ("workflow", "evidence_plan")):
+        parent = reconstructed[parent_key]
+        assert parent.pop(f"{field}_ref") == {"result_path": [field]}
+        parent[field] = reconstructed[field]
+    assert {**reconstructed, **compact["optional_policy_diagnostics"]["values"]} == expected
     assert compact["result"]["evidence"]
     assert compact["result"]["report"]
     assert "report_markdown" not in compact["result"]
     assert "resources" not in compact
     assert "plan" not in compact
     assert len(json.dumps(compact)) < len(json.dumps(full)) * 0.75
+
+
+@pytest.mark.parametrize("parent,field", [("report", "evidence"), ("workflow", "evidence_plan")])
+@pytest.mark.parametrize("nested", [[], [{"id": "different"}], None, "not-a-section"])
+def test_compact_does_not_coalesce_distinct_or_invalid_sections(parent, field, nested):
+    from signalweave.mcp_server import _compact_evaluation_response
+
+    response = {"result": {field: [{"id": "canonical"}], parent: {field: nested}}}
+    original = copy.deepcopy(response)
+    compact = _compact_evaluation_response(response)
+    assert compact["result"][parent][field] == nested
+    assert f"{field}_ref" not in compact["result"][parent]
+    assert response == original
+
+
+def test_compact_duplicate_references_preserve_facts_source_and_nonduplicates():
+    from signalweave.mcp_server import _compact_evaluation_response
+
+    evidence = [{"id": "e-1", "value": 12, "source_key": "source-a", "note": "x" * 4096}]
+    plan = {"slots": [{"key": "q-1", "source_keys": ["source-a"]}], "version": 1}
+    response = {"result": {"evidence": evidence, "evidence_plan": plan,
+                           "report": {"evidence": copy.deepcopy(evidence), "warnings": ["coverage unknown"]},
+                           "workflow": {"evidence_plan": copy.deepcopy(plan), "instructions": "Follow up"}}}
+    original = copy.deepcopy(response)
+    compact = _compact_evaluation_response(response)
+    result = compact["result"]
+    assert result["evidence"] == evidence
+    assert result["evidence_plan"] == plan
+    assert result["report"] == {"evidence_ref": {"result_path": ["evidence"]}, "warnings": ["coverage unknown"]}
+    assert result["workflow"] == {"evidence_plan_ref": {"result_path": ["evidence_plan"]}, "instructions": "Follow up"}
+    assert response == original
+    assert len(json.dumps(compact)) < len(json.dumps(response))
+
+
+def test_compact_preserves_existing_nested_reference_without_overwriting():
+    from signalweave.mcp_server import _compact_evaluation_response
+
+    response = {"result": {"evidence": [], "report": {"evidence": [], "evidence_ref": {"result_path": ["other"]}}}}
+    assert _compact_evaluation_response(response)["result"]["report"] == response["result"]["report"]
+
+
+@pytest.mark.parametrize("nested,canonical", [([True], [1]), ([1.0], [1]), ([{"a": False}], [{"a": 0}])])
+def test_compact_requires_json_typed_equality_not_python_numeric_equality(nested, canonical):
+    from signalweave.mcp_server import _compact_evaluation_response
+
+    response = {"result": {"evidence": canonical, "report": {"evidence": nested}}}
+    result = _compact_evaluation_response(response)["result"]
+    assert "evidence_ref" not in result["report"]
+    assert json.dumps(result["report"]["evidence"]) == json.dumps(nested)
 
 
 async def test_compact_card_read_keeps_latest_review_and_full_read_keeps_legacy_shape(tmp_path):

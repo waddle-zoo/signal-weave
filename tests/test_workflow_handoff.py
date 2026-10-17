@@ -166,6 +166,25 @@ def test_workflow_handoff_is_strictly_typed():
     assert card.follow_up_guidance == "Re-evaluate after diagnostics."
 
 
+@pytest.mark.parametrize("outcome", [Outcome.NOTIFY, Outcome.ESCALATE, Outcome.INSUFFICIENT_DATA, Outcome.INVESTIGATE])
+def test_delivery_handoff_requests_inspectable_actionable_prose_without_new_policy(outcome):
+    card = _card()
+    route = DeliveryMethod(key="configured-route", outcome=outcome, label="Owner", destination="agent://owner")
+    card.delivery_methods = [route]
+    result = InsightResult(card_id=card.id, outcome=outcome, summary="Supported result",
+                           rationale="Fixture", evaluator="contract-test", delivery_methods=[route])
+    before = result.model_dump(mode="json")
+    handoff = InsightEngine._workflow_handoff(card, result)
+    assert handoff.action == "deliver" and handoff.status == "ready"
+    assert handoff.delivery_method_keys == ["configured-route"]
+    assert "source URL or exact adapter|resource" in handoff.instructions
+    assert "next check" in handoff.instructions
+    assert result.model_dump(mode="json") == before
+    if outcome == Outcome.INSUFFICIENT_DATA:
+        assert "not a business regression" in handoff.instructions
+        assert "separately authorize delivery" in handoff.instructions
+
+
 @pytest.mark.asyncio
 async def test_workflow_exposes_compiled_evidence_slots_and_completion_state():
     card = _card(follow_up_guidance="Retrieve diagnostic evidence.").model_copy(

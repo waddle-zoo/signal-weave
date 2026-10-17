@@ -24,9 +24,9 @@ def test_agent_guide_distinguishes_bucket_arithmetic_from_comparable_changes(tas
 def test_recurring_agent_guide_uses_existing_card_bundle_without_repeating_onboarding(provider):
     guide = agent_getting_started("monitor", decision_provider=provider)
     assert [step["tool"] for step in guide["steps"]] == [
-        "get_insight_card", "evaluate_insight_card", "get_decision_receipt",
+        "evaluate_insight_card", "get_insight_card", "get_decision_receipt",
     ]
-    assert "Start here" in guide["steps"][1]["purpose"]
+    assert "Start here" in guide["steps"][0]["purpose"]
     assert "when needed" in guide["repeat"]
     assert "onboarding examples are not permanent date restrictions" in guide["repeat"]
     assert "explicit owner-requested fixed window" in guide["repeat"]
@@ -49,6 +49,14 @@ def test_first_use_guide_still_exposes_discovery_and_owner_approval():
     steps = {step["tool"] for step in agent_getting_started("start")["steps"]}
     assert {"search_catalog", "inspect_resource", "onboard_insight_card",
             "review_insight_card", "approve_insight_card"} <= steps
+
+
+def test_monitor_guide_explains_existing_publication_source_without_granting_authority():
+    text = agent_getting_started("monitor")["analyst_publications"]
+    assert "already an owner-approved source" in text
+    assert "own authorized tools" in text and "grants no" in text
+    assert "does not verify" in text and "label hypotheses" in text
+    assert "not a trust relabel" in text
 
 
 @pytest.fixture

@@ -1,0 +1,23 @@
+{
+  "protocol": "retained-publication-routing-v1",
+  "execution_status": "closed",
+  "scope": "Forward native routing regression using the unchanged actual frontier publication from the failed agent-report-handoff-v1 study. Not a new agent trial, new business scenario, corrected score or comparative benefit claim.",
+  "owner_reference": "evaluations/data/raw-northstar-onboarding-v1.json",
+  "retained_report": "artifacts/agent-report-handoff-v1-live/report.json",
+  "retained_report_sha256": "7c1edcb0b8712b4a43932aff7822294aa7140d34c5cd1da89f8a9aceb7d90fc3",
+  "publication": "artifacts/agent-report-handoff-v1-live/publication.json",
+  "publication_sha256": "4e2963767d01407a9a086645310bd8e05ba853560a220bb799d30296e2cbf936",
+  "limits": {
+    "frontier_invocations": 0,
+    "jev_attempts": 1,
+    "automatic_retries": 0
+  },
+  "expected": {
+    "outcome": "insufficient_data",
+    "delivery_method_keys": [
+      "data_trust"
+    ]
+  },
+  "admission": "Independent code/method review, full software verification, rebuilt source-matching native binary, matching zero-inference preflight, frozen private runner SHA and exclusive one-shot closure before inference. Create a new private home and approve the same supplied policy and shadow routes; copy only the unmodified fictional publication. Never edit old artifacts or copy real credentials. Stop on unknown usage, changed inputs, failure or any extra provider attempt. No retry or unused allowance transfer.",
+  "acceptance": "One actual live Jev evaluation through the rebuilt binary, valid typed receipt with configured data-gap route, exact retained publication hash and capture semantics, unchanged new card, known usage. Report actual provider selection/support separately: a confident result would not prove the low-support branch live. Offline tests exercise every outcome below/at the floor. No agent or human-message improvement is inferred."
+}

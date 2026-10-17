@@ -1,0 +1,257 @@
+{
+  "protocol": "raw-northstar-workflow-v1",
+  "status": "closed_after_authors_review_packet_overflow_not_complete_workflow",
+  "scope": "New formative raw-source discovery, independent expert review, synthetic owner approval and fresh shadow-report cohort. One known local Northstar fixture, not a holdout, customer or enterprise-readiness estimate. Does not reopen the closed author-only v1 attempt.",
+  "build": {
+    "dirty": false,
+    "format_version": 1,
+    "frozen": true,
+    "git_commit": "e5ae9ca8c1baafb2dfc899f6f97bcb46af7dd8c4",
+    "python": "3.12.10",
+    "source_sha256": "1a6bdb32b192ab710f1e4c7453df83ebacf1f7ee903c9a0c239c73bef81ac400",
+    "version": "0.2.0rc3",
+    "binary_sha256": "06664ecd42571c314b796f23226a74a5c3a8c02eddc3484c16ed5f8b9ce5805c"
+  },
+  "codex": {
+    "path": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex",
+    "version": "codex-cli 0.162.0-alpha.2",
+    "sha256": "cb4e4994627e770800a940b42969c77855a3fc09a6e60b02aa6319f670d6b6ab"
+  },
+  "frozen_inputs": {
+    "build": {
+      "dirty": false,
+      "format_version": 1,
+      "frozen": true,
+      "git_commit": "e5ae9ca8c1baafb2dfc899f6f97bcb46af7dd8c4",
+      "python": "3.12.10",
+      "source_sha256": "1a6bdb32b192ab710f1e4c7453df83ebacf1f7ee903c9a0c239c73bef81ac400",
+      "version": "0.2.0rc3",
+      "binary_sha256": "06664ecd42571c314b796f23226a74a5c3a8c02eddc3484c16ed5f8b9ce5805c"
+    },
+    "codex": {
+      "path": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex",
+      "version": "codex-cli 0.162.0-alpha.2",
+      "sha256": "cb4e4994627e770800a940b42969c77855a3fc09a6e60b02aa6319f670d6b6ab"
+    },
+    "manifest": "eaf090348a69f93bb5acea8ac09cf0713febac65e4b66cb715b02685884fbeee",
+    "owner": "2aa2750d9a57d46fd47ad7abe1cee52a6d1ddc9ad88b90644bf8648e389ce8cf",
+    "runner": "5018bf1816b17088932f3475c524a0a574f9dc93f3d4e1216b95f5e5d31122e6",
+    "helpers": {
+      "raw_superset_onboarding.py": "c1077149d9da2596c936217983b69595911e9c2a3412af46052a6686ad614825",
+      "raw_superset_tools.py": "87acc9e1c569a00af186ea753230a3c8b76b64bcb8f107de59ef40edc0904129",
+      "raw_workflow_review.py": "af26fd41abcbe00240ad4f5ab4a53a22952a7fc30770a1c02c9272f1f54d7f93",
+      "declared_owner_reference.py": "611141aef1abdc3387013409011b509c32deabae273e8c65a5ec35ed8894b805",
+      "codex_trial_transport.py": "3368159f1a2d762d7bb7aceba0a98d152200dd88b8617a485e6850ea76d3aff9",
+      "installed_trial_transport.py": "43f56ae99eb265902a60b6f150ae64a8bee9f763ed1624a426f647343355129b",
+      "domain_context_onboarding_trial.py": "2e2f8755c76b3d227c2ea171f33b5f1e690869dd42f60106afd3a8c9cb2ca9b2",
+      "retained_owner_periods.py": "bd883840b496ad44dc1c4c37e14c5006b0d7ef292f93fd97394b927f6370c34b",
+      "native_superset_card_journey.py": "b1d9e4511ed1424baab696a1425dcc511a0cee916c12b5ba6a52465b0065b251",
+      "bootstrap_agent_trial.py": "01ee8ad009f7b33c5fec6c21f2b6334007f5a8b3dc997a16a2aba063ab3c4e7b",
+      "explicit_owner_conversation.py": "b0cb95748e5447e28782eb51e103f6597d77425f48b869a8d782752041de25b1"
+    },
+    "control_files": {
+      "scripts/binary_provenance.py": "2da29be3c4715d1ad16121bfc7fea7a4500e6fb7fc71513ba051fb88bdd430c0"
+    },
+    "superset_url": "http://127.0.0.1:18089"
+  },
+  "report_sha256": "7604a871e8987f8c3282c1ad2c000d19251bba1b395ac909c82be604c28d06a9",
+  "trace_sha256": "d157eed7269474e0eeb032654f684694f506edb17d6de0d4af1d5c90a06223a9",
+  "prior_attempt": {
+    "report_sha256": "ff1611b19f3caf2d5dd4985ca3a953efeff1108cc63cab191dd316a9d056f232",
+    "trace_sha256": "140636df0daae61273c14b53a3823221e3acb0ba3bd229c44d0ae43e15301545",
+    "cost": "Unknown, retained separately. No end-to-end cost total, amortized win or unused allowance transfer is permitted."
+  },
+  "invocations": 2,
+  "usage": {
+    "input_tokens": 901451,
+    "cached_input_tokens": 775168,
+    "uncached_input_tokens": 126283,
+    "output_tokens": 38281,
+    "responses": 2
+  },
+  "usage_known": true,
+  "upstream_jev_requests": 0,
+  "credential_scrubbed": true,
+  "phases_not_run": [
+    "expert review",
+    "owner approval",
+    "fresh paired reporting",
+    "live Jev policy evaluation"
+  ],
+  "termination": "Both authors completed. Building the treatment expert-review packet exceeded the preregistered 180000-byte bound because it included all raw detail pages. The cohort stopped without truncation, retry, in-cohort artifact repair or unused allowance transfer.",
+  "episodes": [
+    {
+      "arm": "baseline",
+      "episode": {
+        "status": "complete",
+        "error": null,
+        "final_message": "Recorded successfully. The latest two fully covered months show net sales up 6.2% from July to August 2026; Online rose 61,949.94 in reported units. September data ends on September 19, so its lower partial total does not establish a decline. [Executive Command Center charts 1 and 10; northstar-steward://sales/coverage]\n\nThe proposed check marks a partial or unverified comparison `insufficient_data` for Data Trust, while still reporting the latest two full months. [northstar-owner://sales/check] The reusable brief is saved in working notes. No card was saved (ID: none).\n\nUnresolved: causes of channel changes, the currency or unit, and September’s final monthly result.",
+        "tool_calls": 28,
+        "seconds": 92.93417374999262,
+        "response_timeout_seconds": 480,
+        "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+        "wall_time_overrun_seconds": 0,
+        "transport": "codex_cli",
+        "model": "gpt-6-luna",
+        "effort": "xhigh",
+        "exit_code": 0,
+        "foreign_tools": []
+      },
+      "submission": {
+        "card_id": null,
+        "message": "First readout\nThe official measure for this exercise is the Executive Command Center’s reported net_sales by its own channel categories, not GAAP revenue, cash, or marketing-attributed sales. [northstar-owner://sales/meaning] The saved Revenue trend chart sums net_sales by month and channel from gold.mart_executive_daily, without dashboard filters. [Executive Command Center dashboard 1, chart 1: saved definition and rows]\n\nOnline did not take a hit across the latest two fully covered months. July 2026 net_sales was 2,158,994.74 and August was 2,292,267.50, up 133,272.76 (+6.2%). Online rose 781,780.69 to 843,730.63 (+61,949.94), accounting arithmetically for 46.5% of the total increase; Mobile added 48,226.29, Marketplace 18,701.69, and Store 4,394.84. [Executive Command Center chart 1 rows; arithmetic on those reported values] The channel contributions explain the total change in accounting terms; they do not establish a cause. [northstar-owner://sales/investigation]\n\nThe latest observed order_date in the saved daily-detail chart is 2026-09-19 (raw max 1789776000000); the steward says this model is complete only through its latest observed day. September is therefore partial. [Executive Command Center dashboard 1, chart 10: saved definition/profile; northstar-steward://sales/coverage] Its reported 1,371,704.27 total, including 484,648.16 Online, must not be compared as a decline against August’s full-month total. Currency/units were not specified. [chart 1 rows; northstar-steward://sales/coverage]\n\nProposed recurring brief\n- Check latest reported Executive month versus prior calendar month only after confirming both are complete and comparable.\n- If the latest month is partial or coverage is unknown, mark the comparison insufficient_data for Data Trust and still report the latest two full months. [northstar-owner://sales/check]\n- For a complete comparison: net_sales decline of at least 15% means Leadership; otherwise an absolute change of at least 10% means Analytics; smaller changes mean no triggered recipient. July-to-August is +6.2%, below the trigger threshold. [northstar-owner://sales/policy]\n- Include channel contributions as explanation, never as causal proof; funnel/marketing diagnostics remain optional follow-up. [northstar-owner://sales/investigation]\n\nSaved this reusable brief in working notes. No card was saved (card_id=null); no approval, schedule, card evaluation, or message was made.",
+        "unresolved": [
+          "What caused Online/Mobile/Marketplace/Store to move is unresolved; this readout establishes channel contributions but does not inspect funnel or marketing diagnostics.",
+          "The currency or unit for reported net_sales is unspecified.",
+          "September 2026 remains partial in the available source; its completed monthly comparison is unresolved."
+        ]
+      },
+      "notes": "Reusable Executive sales check — saved 2026-10-16\n\nPrimary source and definitions\n- Use Executive Command Center dashboard id 1, saved chart id 1 “Revenue trend.” Its saved definition is monthly SUM(net_sales) grouped by channel, with no time filter or dashboard filters; actual SQL reads gold.mart_executive_daily and DATE_TRUNC('month', order_date). Query returned 132 channel-month rows. [Superset dashboard 1 / chart 1: saved definition and rows]\n- Treat source-reported net_sales and its own channel labels as the official management sales measure for this exercise; it is not GAAP revenue, settled cash, marketing-attributed revenue, or unique customers. [northstar-owner://sales/meaning]\n- Establish coverage from chart 10 “Executive daily detail,” same model. Its saved query returns order_date, channel, region, net_sales (8,937 returned rows); raw max order_date is 1789776000000 = 2026-09-19. The steward says daily coverage is complete through the latest observed date; a final calendar month is complete only if that date is its last day. [Superset chart 10: saved definition/profile; northstar-steward://sales/coverage]\n- Thus Sep 2026 is partial (through Sep 19); do not present September’s 1,371,704.27 total / 484,648.16 Online as a decline against August’s full-month 2,292,267.50 / 843,730.63. Units/currency are unspecified. [Superset chart 1 rows; chart 10 profile; northstar-steward://sales/coverage]\n\nLatest two fully covered months (channel contributions are arithmetic, not causal explanations)\n- Jul 2026 total 2,158,994.74; Aug 2026 total 2,292,267.50; change +133,272.76 (+6.2%).\n- Online 781,780.69 -> 843,730.63 (+61,949.94; +7.9%, 46.5% of total increase).\n- Mobile 284,981.28 -> 333,207.57 (+48,226.29; +16.9%, 36.2%).\n- Marketplace 141,312.48 -> 160,014.17 (+18,701.69; +13.2%, 14.0%).\n- Store 950,920.29 -> 955,315.13 (+4,394.84; +0.5%, 3.3%).\n- Full-month July-to-August shows Online rose, and overall net_sales rose 6.2%. This falls below the declared +/-10% investigation threshold. [Superset chart 1 rows; northstar-owner://sales/policy]\n\nReusable check policy\n1. Compare latest reported Executive month with preceding calendar month only after checking both are fully covered and comparable.\n2. If latest month is partial or coverage cannot be established, label that comparison insufficient_data for Data Trust; show the latest two fully covered months when available. Do not compare partial and full totals as a decline. [northstar-owner://sales/check]\n3. On a complete comparable primary monthly comparison: net_sales decline >=15% => notify Leadership; otherwise absolute change >=10% => investigate with Analytics; smaller absolute change => ignore/no triggered recipient. Optional channel/funnel context explains the primary result; it is not an extra trigger. [northstar-owner://sales/policy]\n4. Show channel contributions as accounting arithmetic only. Digital funnel/marketing may suggest questions but cannot establish cause or be added to Executive net_sales. [northstar-owner://sales/investigation]\n5. For any reusable card/schedule/delivery, prepare a draft for owner/expert review; none is approved or authorized here. [northstar-owner://sales/delivery]\n\nOptional follow-up: inspect funnel/marketing diagnostic assets only if someone asks why the channel movement occurred; no causal evidence was established in this first readout.",
+      "draft_checks": null,
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 167680,
+        "input_tokens": 212614,
+        "input_tokens_details": {
+          "cached_tokens": 167680
+        },
+        "output_tokens": 9094,
+        "reasoning_output_tokens": 6401
+      },
+      "tool_counts": {
+        "ask_owner": 1,
+        "find_dashboards": 5,
+        "list_dashboard_charts": 1,
+        "read_working_notes": 1,
+        "read_chart_rows": 4,
+        "profile_saved_chart": 1,
+        "calculate": 13,
+        "save_working_notes": 1,
+        "record_setup": 1
+      },
+      "source_telemetry": {
+        "logical_tool_calls": 11,
+        "chart_query_http_requests": 3
+      }
+    },
+    {
+      "arm": "signalweave",
+      "episode": {
+        "status": "complete",
+        "error": null,
+        "final_message": "## Readout\n\nThe dashboard’s apparent online drop is a **partial-month comparison**. Executive daily detail shows September 1–19 net sales of 1,371,704.27, including 484,648.16 Online, against all 31 days of August at 2,292,267.50 total and 843,730.63 Online. Those raw differences are −40.2% overall and −42.6% Online; they do not establish a comparable monthly decline. [superset|chart:10]\n\nIn the latest two fully covered months, July to August, total net sales **rose 133,272.76 (+6.2%)**. Online rose 61,949.94 (+7.9%), accounting for 46.5% of the total increase. These are channel contributions to the arithmetic change, not causes. The owner’s declared coverage rule treats earlier months as complete and a final month as complete only when the latest date reaches month end. [superset|chart:10; northstar-steward://sales/coverage]\n\nThe saved chart reads `order_date`, `channel`, `region`, and `net_sales` from `gold.mart_executive_daily`, with no filters. It returned 8,937 rows through September 19; it was captured October 16 and has a 10,000-row limit. The source declares no freshness SLA, so the gap between capture and latest date is unexplained. [superset|chart:10] The owner defines this `net_sales` as the official management figure, not GAAP revenue, settled cash, marketing-attributed revenue, or a unique-customer metric. [northstar-owner://sales/meaning]\n\n## Saved draft\n\nCard **card-executive-net-sales-coverage-channel-check-3a4b11bc**, version 2, is a draft with `superset|chart:10` as its sole required source and the prior calendar month as its comparison window.\n\nIts proposed policy sends partial or unknown coverage to Data Trust; for a valid full-month comparison, a decline of at least 15% goes to Leadership, otherwise an absolute change of at least 10% goes to Analytics, and smaller changes are ignored without a triggered recipient. [northstar-owner://sales/check; northstar-owner://sales/policy]\n\nThe onboarding source check found that the chart lacks an adapter-owned metric, population, grain, and comparison-window contract needed for automatic routing. I corrected the draft’s comparison window to match the owner’s declared policy. The separate review endpoint ranks catalog candidates with Jev, so I did not call it under your restriction; formal review of version 2 remains outstanding.\n\nI saved the reusable brief in my notes. The card remains unapproved; no evaluation, schedule, or message send occurred.\n\n## Unresolved\n\n- What freshness or ingestion cadence should be expected when the chart was captured October 16 but its latest `order_date` is September 19?\n- Can the data steward provide the source-owned metric, population, grain, and monthly comparison contract needed to review automatic routing?\n- The source does not declare a currency, so the figures are reported as `net_sales` numbers.",
+        "tool_calls": 55,
+        "seconds": 221.17248258300242,
+        "response_timeout_seconds": 480,
+        "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+        "wall_time_overrun_seconds": 0,
+        "transport": "codex_cli",
+        "model": "gpt-6-luna",
+        "effort": "xhigh",
+        "exit_code": 0,
+        "foreign_tools": []
+      },
+      "submission": {
+        "card_id": "card-executive-net-sales-coverage-channel-check-3a4b11bc",
+        "message": "Current readout — the apparent online hit is not a like-for-like full-month decline. Executive daily detail contains Sep 1–19 net_sales of 1,371,704.27, including 484,648.16 Online, versus all 31 days of August at 2,292,267.50 total and 843,730.63 Online. Raw bucket differences are -40.2% overall and -42.6% Online, but September has only 19 reported days; this cannot establish a business decline or quantify a comparable monthly effect. [superset|chart:10]\n\nThe latest two fully covered months are July and August, per the owner's declared coverage rule that earlier months are complete and a final month is complete only when the latest order_date reaches month end. [northstar-steward://sales/coverage] On the same source rows, July total net_sales was 2,158,994.74 and August was 2,292,267.50, up 133,272.76 (+6.2%). Online rose from 781,780.69 to 843,730.63, up 61,949.94 (+7.9%), accounting for 46.5% of the total increase. Other channel increases accounted for the rest. These are channel accounting contributions, not causal explanations. [superset|chart:10] The owner defines Executive net_sales as the official management sales figure, not GAAP revenue, settled cash, marketing-attributed revenue, or a unique-customer metric. [northstar-owner://sales/meaning]\n\nProposed recurring brief: use only Executive daily detail; compare the latest reported calendar month with the prior month after checking coverage. A partial or unknown latest month routes as insufficient_data to Data Trust and still reports the latest two fully covered months. For a valid full-month comparison, a decline of at least 15% routes to Leadership; otherwise an absolute change of at least 10% routes to Analytics; smaller changes are ignored with no triggered recipient. Channel contribution is optional explanation only. [northstar-owner://sales/check; northstar-owner://sales/policy; northstar-owner://sales/investigation]\n\nSaved draft: Executive Net Sales Coverage & Channel Check, card-executive-net-sales-coverage-channel-check-3a4b11bc, version 2; sole required source superset|chart:10 and comparison window previous calendar month. The source chart was captured Oct 16 with latest order_date Sep 19; the source declares no freshness SLA, metric/population/grain contract, or comparison-window contract. Automatic notify/investigate routing remains blocked pending that source definition. Draft remains unapproved. No approval, evaluation, schedule, or message send occurred.",
+        "unresolved": [
+          "What freshness or ingestion cadence should be expected when chart:10 was captured 2026-10-16 but its latest order_date is 2026-09-19?",
+          "Can the source steward provide an adapter-owned net_sales definition, population, grain, and comparable monthly window for chart:10 before automatic notify/investigate routing is reviewed?",
+          "The source does not declare a currency; values are reported as net_sales numbers.",
+          "Formal review after the version 2 comparison-window correction remains outstanding; the review endpoint uses Jev-ranked catalog candidates, which was explicitly disallowed."
+        ]
+      },
+      "notes": "Reusable BI brief — Executive net sales and channel check\nRecorded 2026-10-16. This is a historical example readout; its measurements and source health are not future/current run evidence.\n\nOwner-declared references (ask_owner returned these declarations as reference only, not measurements or consent):\n- northstar-owner://sales/meaning: Executive Command Center source-reported net_sales is the official management sales figure; use its own channel categories. Not GAAP revenue, settled cash, marketing-attributed revenue, or unique-customer metric.\n- northstar-steward://sales/coverage: Executive daily-detail is declared complete through its latest observed order_date, with earlier calendar months complete; latest calendar month is full only when that date is its last day.\n- northstar-owner://sales/check: compare latest reported Executive month with prior calendar month; if partial/unknown, insufficient_data to Data Trust and still show the two latest fully covered months when supported.\n- northstar-owner://sales/policy: complete comparable monthly decline >=15% => notify Leadership; otherwise absolute change >=10% => investigate Analytics; smaller absolute changes => ignore/no triggered recipient.\n- northstar-owner://sales/investigation: channel contribution is for explaining the total; digital funnel/marketing are follow-up evidence, different populations, do not combine or claim causality.\n- northstar-owner://sales/delivery: proposed recipients only; no card approval, message or schedule has been authorized.\n\nPrimary source and contract:\n- Explicit selected source: superset|chart:10, “NS | 01 | Executive Command Center | Executive daily detail” (required source on card key executive_daily_detail).\n- Saved query reads order_date, channel, region, net_sales from gold.mart_executive_daily with no filter, GROUP BY all four fields, row limit 10,000. 8,937 rows returned; raw date range 2024-01-01 to 2026-09-19; chart captured 2026-10-16. Source contract says warehouse completeness unknown, has no metric definition, population, grain, comparison key/window or freshness SLA. Chart inspection flags semantic_status partial because time buckets are not aggregated in the saved chart. Manual monthly totals below aggregate returned net_sales rows by order_date month and channel; the owner completeness declaration applies only through 2026-09-19. Unit is reported as number; currency is unspecified.\n- Dashboard: superset|dashboard:1, Executive Command Center. Its revenue trend also compares Sep and Aug buckets and labels period coverage unverified. It is supplementary, not selected on the card.\n\nHistorical measurements from superset|chart:10:\n- Latest two declared fully covered months: July 2026 total 2,158,994.74; August 2026 total 2,292,267.50; increase 133272.76 (6.2%).\n- Online was 781,780.69 in July and 843,730.63 in August; increase 61949.94 (7.9%), accounting for 46.5% of the total increase. Other channel contributions: Store +4,394.84; Marketplace +18,701.69; Mobile +48,226.29. These are accounting contributions, not causes.\n- September is partial through Sep 19: total 1,371,704.27 and Online 484,648.16, versus full August 2,292,267.50 and Online 843,730.63. Raw differences are -40.2% total and -42.6% Online, but these compare 19 days with 31 days and are not a business decline. The source was captured Oct 16 but ends Sep 19; without a freshness SLA, the 27-day gap is unexplained.\n- No diagnostic marketing/funnel assets were inspected; no causal explanation is supported or asserted.\n\nSaved card:\n- ID card-executive-net-sales-coverage-channel-check-3a4b11bc, version 2, draft, fixed retrieval, only required source superset|chart:10, comparison_windows=[\"previous_period\"], numeric_conditions empty because inspection exposed no valid AnalyticalComparison.\n- Owner policy is in decision_guidance; proposed outcomes are notify Leadership, investigate Analytics, insufficient_data Data Trust, and ignore without recipient below 10%.\n- Initial deterministic onboarding review (caller-selected source; Jev not used) blocked automatic routing: source has no compatible comparison-window contract and lacks adapter-owned metric definition/population/grain/window. Comparison window was then corrected from tool defaults to the owner-declared prior calendar month. The current v2 has been read and manually checked; formal review after revision remains outstanding. Do not treat the draft as approved. No evaluation, approval, schedule or send occurred.\n- Review endpoint returns Jev-ranked catalog candidates; it was not called because Jev catalog ranking was explicitly disallowed.\n\nOpen questions:\n1. What freshness/ingestion cadence should be expected when the chart is captured Oct 16 but its latest date is Sep 19?\n2. Can the data steward publish an adapter-owned metric/grain/population and monthly comparison contract for this chart (or provide a source that does), so automatic policy routing can be reviewed?\n",
+      "draft_checks": {
+        "exactly_one_saved_draft": true,
+        "submitted_id_matches_saved_draft": true,
+        "explicit_review_returned": false
+      },
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 607488,
+        "input_tokens": 688837,
+        "input_tokens_details": {
+          "cached_tokens": 607488
+        },
+        "output_tokens": 29187,
+        "reasoning_output_tokens": 23548
+      },
+      "tool_counts": {
+        "get_signalweave_guide": 1,
+        "list_insight_cards": 1,
+        "ask_owner": 1,
+        "search_catalog": 4,
+        "inspect_resource": 2,
+        "find_dashboards": 1,
+        "profile_saved_chart": 1,
+        "list_dashboard_charts": 1,
+        "read_chart_rows": 38,
+        "onboard_insight_card": 1,
+        "revise_insight_card": 1,
+        "get_insight_card": 1,
+        "save_working_notes": 1,
+        "record_setup": 1
+      },
+      "source_telemetry": {
+        "logical_tool_calls": 40,
+        "chart_query_http_requests": 1
+      },
+      "saved_card": {
+        "id": "card-executive-net-sales-coverage-channel-check-3a4b11bc",
+        "version": 2,
+        "status": "draft",
+        "title": "Executive Net Sales Coverage & Channel Check",
+        "what_to_watch": "Track the latest reported Executive daily-detail net_sales month, its coverage status, the prior fully covered calendar month, and each source-reported channel's contribution to the total change. Highlight Online as an optional channel breakdown.",
+        "why_watch": "The owner wants a reusable check to determine whether an apparent online-sales hit is a real movement in the official Executive management sales figure and how channels account for the total movement.",
+        "watch_for": [
+          "Coverage of the latest reported calendar month from the Executive daily-detail model's latest order_date",
+          "Comparable full-month movement in official net_sales",
+          "Online and other channel contributions to the total net_sales change"
+        ],
+        "questions": [],
+        "sources": [
+          {
+            "key": "executive_daily_detail",
+            "adapter": "superset",
+            "resource": "chart:10",
+            "label": "Executive daily detail — official reported net_sales by order_date, channel, and region",
+            "parameters": {},
+            "required": true,
+            "required_comparison_keys": []
+          }
+        ],
+        "comparison_windows": [
+          "previous_period"
+        ],
+        "decision_guidance": "Use only the Executive daily-detail model's source-reported net_sales and channel categories. This is the official management sales figure, not GAAP revenue, settled cash, marketing-attributed revenue, or a unique-customer metric. Determine the latest observed order_date from this same model. Per the owner's declared policy, daily reporting is complete through that date and earlier calendar months are complete; the final observed calendar month is complete only if that date reaches its last calendar day. Do not compare a partial latest month with a full prior month as a business decline. If the latest month is partial or coverage cannot be established, return insufficient_data to Data Trust for that comparison, and still report the two most recent fully covered months when supported. For an established complete comparable monthly comparison, a net_sales decline of at least 15% means notify Leadership. Otherwise, an absolute net_sales change of at least 10% means investigate with Analytics. Smaller absolute changes mean ignore with no triggered recipient. Show Online and other channel contributions as an accounting decomposition of total change. Channel, digital-funnel, or marketing detail is explanatory follow-up only; do not combine marketing-attributed revenue or digital-commerce revenue with Executive net_sales and do not claim causality from correlation.",
+        "follow_up_guidance": "When the latest month is partial or its coverage is unknown, state the measured coverage gap, route the comparison to Data Trust, and give the latest two fully covered months if available. For a valid movement, show total net_sales change and channel accounting contributions; suggest deeper funnel or marketing investigation only as a question when evidence supports it.",
+        "delivery_methods": [
+          {
+            "key": "notify_leadership",
+            "outcome": "notify",
+            "label": "Notify Leadership",
+            "destination": "Leadership",
+            "instructions": "Only for a complete comparable monthly net_sales decline of at least 15%."
+          },
+          {
+            "key": "investigate_analytics",
+            "outcome": "investigate",
+            "label": "Investigate with Analytics",
+            "destination": "Analytics",
+            "instructions": "For an absolute monthly net_sales change of at least 10% that is not a decline of at least 15%."
+          },
+          {
+            "key": "insufficient_data_data_trust",
+            "outcome": "insufficient_data",
+            "label": "Check coverage with Data Trust",
+            "destination": "Data Trust",
+            "instructions": "When the latest month is partial or its coverage cannot be established."
+          }
+        ],
+        "compiled_plan": null
+      }
+    }
+  ],
+  "interpretation": "Actual first answers and saved artifacts can be inspected, but no expert qualification, approved workflow, live Jev outcome, enterprise or full-workflow comparative win was proven. Numerical claims require independent checking. Runtime/messaging are separate from draft persistence."
+}

@@ -1,0 +1,290 @@
+{
+  "schema_version": 1,
+  "kind": "synthetic_cached_readout_audit",
+  "protocol": "evidence-first-pair-v1",
+  "scope": "One known historical Pine Courier period; two fresh reporters on different layouts. Audit excerpt, not raw trace, native ABI, customer evidence, or a general accuracy/cost estimate.",
+  "provenance": {
+    "source_commit": "bb0d2cf0cb945c7eacfc3b596a4219d553ceec49",
+    "report_sha256": "61306c9d53c292cb8d019bebb20dd5c37143dfde450c8d36af377b1e608fc8b8",
+    "trace_sha256": "9f08adbb3787986f1ec2cc82913d601dfe0f6b73442e79901656ef658d79bc19",
+    "masked_packet_sha256": "64617209e5da283c6da5aa480accf3296aded62c26a7b5bb8c7cd0c676a034ff"
+  },
+  "source_comparison": {
+    "baseline_end": "2026-09-21T00:00:00Z",
+    "baseline_start": "2026-09-14T00:00:00Z",
+    "baseline_total": {
+      "denominator": 5800,
+      "numerator": 5220,
+      "value": null
+    },
+    "comparable": true,
+    "comparison_window": "previous_period",
+    "coverage": "complete",
+    "current_end": "2026-09-28T00:00:00Z",
+    "current_start": "2026-09-21T00:00:00Z",
+    "current_total": {
+      "denominator": 11600,
+      "numerator": 10440,
+      "value": null
+    },
+    "definition": "SLA attainment is parcels delivered by the promised window divided by all parcels due, including overdue undelivered parcels. Cancelled parcels are excluded.",
+    "dimension": "cohort",
+    "disjoint_segments": true,
+    "key": "on_time_delivery",
+    "kind": "rate",
+    "metric": "on_time_delivery",
+    "population": "Eligible entities in the source glossary",
+    "query_refs": [
+      "company_mcp|resource-050a0fa424fb5741afb0"
+    ],
+    "require_equal_duration": false,
+    "required": true,
+    "segments": [
+      {
+        "baseline": {
+          "denominator": 2900,
+          "numerator": 2610,
+          "value": null
+        },
+        "current": {
+          "denominator": 5800,
+          "numerator": 5220,
+          "value": null
+        },
+        "segment": "priority"
+      },
+      {
+        "baseline": {
+          "denominator": 2900,
+          "numerator": 2610,
+          "value": null
+        },
+        "current": {
+          "denominator": 5800,
+          "numerator": 5220,
+          "value": null
+        },
+        "segment": "standard"
+      }
+    ],
+    "unit": "ratio"
+  },
+  "owner_answers": {
+    "context_review": "The agreed definition can be shared within this fictional tenant, with review due in 30 days. Show the saved artifact before requesting consent. Hypotheses remain advisory.",
+    "data_gaps": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer.",
+    "materiality": "Notify the business destination when SLA attainment drops by at least 0.05 ratio units against the prior complete week. Volume alone is ignore. A missing eligible denominator requires insufficient_data to the data destination.",
+    "metric_scope": "SLA attainment is parcels delivered by the promised window divided by all parcels due, including overdue undelivered parcels. Cancelled parcels are excluded.",
+    "routing": "business destination: team-f1f9b333eb06561bdd7e; data destination: team-ea2dc93e9c685f281a5b. Only these routes are authorized; no destructive actions.",
+    "source_scope": "For our recurring dispatch check, Delivery service is the metric-of-record export of all parcels due, including overdue undelivered parcels and excluding cancellations, across the service tiers in the export. That is the intended operating population, not just completed parcels. Dispatch handbook supplies calendar/eligibility context, not extra parcel rows. Completed parcels excludes overdue undelivered parcels and is not the metric of record. Driver activity is not service attainment. I confirm the selected sources' declared scopes on that basis; do not join separate source populations."
+  },
+  "period": {
+    "as_of": "2026-09-28T00:00:00+00:00",
+    "captured_at": "2026-10-15T09:45:52.116819+00:00",
+    "period_id": "period-4c56e63afb124f373c3e"
+  },
+  "readouts": [
+    {
+      "case_id": "report-b255c5027894",
+      "layout": "candidate",
+      "recorded_report": {
+        "outcome": "ignore",
+        "recipients": [],
+        "summary": "Pine Courier dispatch report — historical period only (cached evidence; no new evaluation or fresh-data claim). For the complete UTC week 21–28 Sep 2026, on-time delivery was 90.0% (10,440/11,600 parcels due), unchanged from 90.0% (5,220/5,800) in 14–21 Sep 2026 [company_mcp|resource-050a0fa424fb5741afb0]. The 0.00 ratio-unit change does not meet the policy trigger of a drop by at least 0.05, so there is no policy-triggered alert route; outcome: ignore. The eligible parcel count doubled, but volume alone is explicitly not adverse under the owner's policy. This is an accounting comparison, not evidence of what caused performance; the aggregates do not estimate statistical significance [company_mcp|resource-050a0fa424fb5741afb0]. The weekly attainment comparison is marked complete and comparable, but the optional volume-context watch remains unresolved, so this report does not establish a separate volume finding. Routine audience: business owner. Next step: continue monitoring the next complete UTC week and notify the business destination only if the defined drop threshold is met."
+      },
+      "recording_result": {
+        "delivery_enabled": false,
+        "recorded": true
+      }
+    },
+    {
+      "case_id": "report-b3ce6d5edc22",
+      "layout": "current",
+      "recorded_report": {
+        "outcome": "ignore",
+        "recipients": [],
+        "summary": "Pine Courier dispatch report — historical period 21–28 Sep 2026 UTC, compared with 14–21 Sep. On-time delivery attainment was unchanged at 90.0% (10,440/11,600 parcels due, versus 5,220/5,800); policy threshold for notifying the business owner is a drop of at least 5 percentage points, so no alert route is triggered. Delivery service source: company_mcp|resource-050a0fa424fb5741afb0. The accounting decomposition attributes 0.0 ratio units to both priority and standard segments, with no mix effect; this describes the measured change and does not establish a cause. The source comparison declares complete coverage and comparable weeks, under the definition including overdue undelivered parcels and excluding cancellations. Parcel volume as context is unresolved, so no volume claim is made. Aggregates do not estimate statistical significance. Useful next step: continue the routine weekly check; if future evidence is stale, incomplete, or lacks the eligible denominator, request a corrected export or versioned definition. The cached workflow receipt records an earlier shadow run with delivery disabled (receipt-50f4dba8af7a47c7a507976b6a56d2f6); it is not a new execution or delivery."
+      },
+      "recording_result": {
+        "delivery_enabled": false,
+        "recorded": true
+      }
+    }
+  ],
+  "reviews": [
+    {
+      "reviewer": "reviewer-a",
+      "original_sha256": "86364e6a3105d7fa8dae2b953492920f8dc78b33b6233311b63bc41a34ab12ff",
+      "cases": [
+        {
+          "case_id": "report-b255c5027894",
+          "gates": {
+            "policy_routes": {
+              "status": "pass",
+              "reason": "The supplied delta is 0.00 ratio units, so it does not meet the owner's <= -0.05 notify condition. Outcome ignore and empty recipients are correct; the report identifies the business owner only as a routine audience, not an alert route."
+            },
+            "known_facts": {
+              "status": "pass",
+              "reason": "The report's 10,440/11,600 = 90.0% and 5,220/5,800 = 90.0% are correct; the change is zero and the eligible denominator doubled. Its two UTC weekly intervals, all-parcels-due definition (including overdue undelivered and excluding cancellations), and source reference match the supplied comparison."
+            },
+            "optional_uncertainty": {
+              "status": "pass",
+              "reason": "The report calls the optional volume-context watch unresolved and says it establishes no separate volume finding. It does not treat that optional semantic unknown as absent measurements; the known parcel denominators remain reported."
+            },
+            "missingness": {
+              "status": "pass",
+              "reason": "The required comparison is marked complete and comparable with both denominators present. The report preserves that scope and makes no current-rate or trend claim from missing data. It identifies the historical period; the Oct 15 capture is not presented as the measurement period or proof of freshness."
+            },
+            "explanation": {
+              "status": "pass",
+              "reason": "The report describes an accounting comparison, explicitly disclaims causal explanation, and says these aggregates do not estimate statistical significance. It makes no unsupported causal or statistical claim."
+            },
+            "workflow_truth": {
+              "status": "pass",
+              "reason": "The report does not claim a message was sent or cite a receipt. The successful record result says delivery_enabled=false, and the final reply says no message was sent; the cached receipt is an ignore outcome with delivery disabled."
+            },
+            "human_usefulness": {
+              "status": "pass",
+              "reason": "The one-paragraph readout gives the result, policy reason, material counts, limits, no-alert status, routine audience, source reference, and a sensible next step in business-readable language."
+            }
+          },
+          "minor_issues": [],
+          "overall_pass": true
+        },
+        {
+          "case_id": "report-b3ce6d5edc22",
+          "gates": {
+            "policy_routes": {
+              "status": "pass",
+              "reason": "The supplied delta is 0.00 ratio units, so the <= -0.05 notify condition is false. Outcome ignore and empty recipients are correct; no alert route is claimed."
+            },
+            "known_facts": {
+              "status": "pass",
+              "reason": "The report's 10,440/11,600 and 5,220/5,800 both recompute to 90.0%; the change is zero. Its 5 percentage point trigger wording is equivalent to the 0.05 ratio-unit policy. Both segment rates are 2,610/2,900 and 5,220/5,800 = 90.0%, so the stated zero segment contributions and zero mix effect are consistent. Dates, UTC scope, definition, and source reference match the supplied comparison."
+            },
+            "optional_uncertainty": {
+              "status": "pass",
+              "reason": "The report calls the volume-context judgment unresolved and makes no separate volume finding. It does not describe optional policy uncertainty as missing measurements; known parcel counts are preserved."
+            },
+            "missingness": {
+              "status": "pass",
+              "reason": "The required comparison has complete coverage, both denominators, and comparable consecutive UTC weeks. The report calls the period historical and makes no current-rate or freshness claim; the later capture clock is not confused with the measurement interval."
+            },
+            "explanation": {
+              "status": "pass",
+              "reason": "The segment decomposition is framed as accounting, with an explicit statement that it does not establish cause; the report also states that aggregates do not estimate statistical significance."
+            },
+            "workflow_truth": {
+              "status": "pass",
+              "reason": "The cited receipt ID matches the supplied historical receipt. The report accurately calls it an earlier shadow run with delivery disabled and explicitly says it is not a new execution or delivery. The successful record result also confirms delivery_enabled=false."
+            },
+            "human_usefulness": {
+              "status": "pass",
+              "reason": "The concise readout explains the unchanged measure, trigger and route, segment accounting, data limits, source, and next step in terms a dispatch reader can act on."
+            }
+          },
+          "minor_issues": [],
+          "overall_pass": true
+        }
+      ]
+    },
+    {
+      "reviewer": "reviewer-b",
+      "original_sha256": "4616c036c725afa6cb6b91ae303b453c06e933d7dd824d2f954236bf575deced",
+      "cases": [
+        {
+          "case_id": "report-b255c5027894",
+          "gates": {
+            "policy_routes": {
+              "status": "pass",
+              "reason": "The supplied delta is zero, so ignore with no triggered recipients is consistent with the owner’s -0.05 threshold. Naming a routine business-owner audience is explicitly allowed and is distinguished from an alert route."
+            },
+            "known_facts": {
+              "status": "fail",
+              "reason": "The rates, counts, and week labels agree with the supplied totals, but the message does not state the material metric definition and scope: deliveries within the promised window divided by all parcels due across service tiers, including overdue undelivered parcels and excluding cancellations. ‘Parcels due’ alone leaves those boundaries unstated."
+            },
+            "optional_uncertainty": {
+              "status": "pass",
+              "reason": "The report preserves the known doubling in due counts and separately labels the optional volume-context watch unresolved. It does not say that the counts are missing or absent."
+            },
+            "missingness": {
+              "status": "pass",
+              "reason": "Both period denominators are supplied, and the comparison is declared complete and comparable. The report does not invent a rate for missing data; its future-data caveat is conditional."
+            },
+            "explanation": {
+              "status": "pass",
+              "reason": "It identifies an accounting comparison, says it does not establish cause, and states that the aggregates do not estimate statistical significance."
+            },
+            "workflow_truth": {
+              "status": "pass",
+              "reason": "The report makes no sent-message claim. Its final reply accurately says recording succeeded and delivery was disabled; the successful record result confirms recorded=true and delivery_enabled=false. It cites no receipt as proof of this report’s execution."
+            },
+            "human_usefulness": {
+              "status": "pass",
+              "reason": "It gives the unchanged result, the policy reason, an inspectable source reference, and a reasonable next step in concise language. The omitted scope definition is recorded under known_facts."
+            }
+          },
+          "minor_issues": [
+            "‘Does not establish a separate volume finding’ is imprecise after the report says the known eligible parcel count doubled; state that the optional interpretation is unresolved while the counts remain known."
+          ],
+          "overall_pass": false
+        },
+        {
+          "case_id": "report-b3ce6d5edc22",
+          "gates": {
+            "policy_routes": {
+              "status": "pass",
+              "reason": "The supplied zero delta is above the -0.05 trigger, so ignore with no policy-triggered recipients is correct. The report distinguishes the absence of an alert from its routine weekly audience and next step."
+            },
+            "known_facts": {
+              "status": "pass",
+              "reason": "The report preserves the 90.0% rates and counts, both periods, the ratio change and threshold, and the key denominator inclusions/exclusion. Its values reconcile to the supplied comparison totals."
+            },
+            "optional_uncertainty": {
+              "status": "fail",
+              "reason": "The sentence says the unresolved optional volume watch means ‘no volume claim is made,’ although the same report supplies known due-count denominators of 11,600 and 5,800. Unknown semantic judgment does not erase these measurements; the wording obscures a known 2x change."
+            },
+            "missingness": {
+              "status": "pass",
+              "reason": "Both denominators are present and the source comparison is declared complete and comparable. The report does not invent a current rate or trend; its missing-denominator guidance is framed as a future condition."
+            },
+            "explanation": {
+              "status": "pass",
+              "reason": "Segment contributions are presented as an accounting decomposition, explicitly not a cause; statistical significance is not claimed and its absence is stated."
+            },
+            "workflow_truth": {
+              "status": "pass",
+              "reason": "The cited receipt ID matches the supplied receipt for this historical period and the report explicitly calls it an earlier shadow run, with delivery disabled; it does not claim that this report was sent. The separate record result confirms this report was recorded and delivery was disabled."
+            },
+            "human_usefulness": {
+              "status": "pass",
+              "reason": "The reader gets the result, policy threshold, source reference, coverage limits, and a useful next step. The contradictory volume wording is a specific correction under optional_uncertainty, but the main outcome and action remain understandable."
+            }
+          },
+          "minor_issues": [
+            "The priority/standard zero-contribution detail adds little to a zero overall change and could be removed from a dispatch-facing message."
+          ],
+          "overall_pass": false
+        }
+      ]
+    }
+  ],
+  "reporter_usage": {
+    "input_tokens": 104527,
+    "cached_input_tokens": 70144,
+    "uncached_input_tokens": 34383,
+    "output_tokens": 1020,
+    "responses": 2
+  },
+  "observed_audit_counts": {
+    "source_reads": 0,
+    "jev_requests": 0,
+    "native_evaluations": 0
+  },
+  "limitations": [
+    "Source totals and coverage are supplied synthetic aggregates, not authenticated against underlying warehouse rows.",
+    "Layout labels were masked for review, but content may reveal the projection. Fixed order, one pair, and reviewer disagreement prevent an efficacy or causal-layout claim.",
+    "Reviewer/coordinator costs are not included in the two reporter invocations.",
+    "Raw traces, accepted setup and full native state are not included; this supports independent arithmetic and message review, not a turnkey end-to-end rerun."
+  ],
+  "coordinator_note": "The candidate explicitly states count doubling but has an imprecise separate-volume caveat. Reviewer A passes both; reviewer B fails omitted eligibility detail in candidate and volume-unknown wording in current. Eligibility detail is in the input but not spelled out in candidate prose. Do not replace the disagreement with a consensus pass."
+}

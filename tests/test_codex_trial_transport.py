@@ -8,6 +8,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+import tomllib
 
 from evaluations import bootstrap_agent_trial as trial
 from evaluations import codex_trial_transport as transport
@@ -128,6 +129,17 @@ async def test_completed_onboarding_does_not_block_monitoring():
     bridge = transport.TrialMCP(session, trial.Audit(), await session.specs(), max_calls=1)
     assert not (await bridge.call("list_catalog", {})).isError
     session.call.assert_awaited_once()
+
+
+async def test_budget_visibility_does_not_rewrite_the_company_payload():
+    session, audit = session_stub(), trial.Audit()
+    bridge = transport.TrialMCP(session, audit, await session.specs(), max_calls=3,
+                                report_remaining_budget=True)
+    result = await bridge.call("list_catalog", {})
+    assert json.loads(result.content[0].text) == {"ok": True}
+    assert "2 company-tool calls remain" in result.content[1].text
+    assert "reserve one" in result.content[1].text
+    assert "not business/source evidence" in result.content[1].text
 
 
 @pytest.mark.parametrize("max_calls", [0, 2])
@@ -265,11 +277,17 @@ def fake_episode(monkeypatch):
     monkeypatch.setattr(transport, "serve_trial", serve)
     monkeypatch.setattr(transport.asyncio, "create_subprocess_exec", state.spawn)
     monkeypatch.setattr(transport, "child_environment", lambda: {"PATH": "/offline"})
+    monkeypatch.setattr(transport, "verify_trial_registry", AsyncMock(return_value={
+        "overrides": ["mcp_servers.trial.enabled=true"], "enabled_servers": ["trial"],
+        "registry": [{"name": "trial", "enabled": True}], "registry_sha256": "offline",
+    }))
 
     async def run(events=(), **kwargs):
         episode_model = kwargs.pop("model", None)
         episode_effort = kwargs.pop("effort", "low")
-        if events is None:
+        if callable(events):
+            process.stdout.readline.side_effect = events
+        elif events is None:
             process.stdout.readline.side_effect = asyncio.Event().wait
         else:
             process.stdout.readline.side_effect = [
@@ -288,7 +306,9 @@ def fake_episode(monkeypatch):
 
 async def test_selected_model_and_effort_reach_codex_process_and_audit(fake_episode):
     result = await fake_episode.run([
-        {"type": "turn.completed", "usage": {"input_tokens": 5, "output_tokens": 2}},
+        {"type": "turn.completed", "usage": {
+            "input_tokens": 5, "output_tokens": 2, "cached_input_tokens": 0,
+        }},
     ], model="gpt-6-luna", effort="xhigh")
     command = list(fake_episode.spawn.call_args.args)
     assert command[command.index("--model") + 1] == "gpt-6-luna"
@@ -346,10 +366,279 @@ async def test_final_agent_handoff_is_preserved_in_episode_result(fake_episode):
     fake.session.submission = {}
     result = await fake.run([
         {"type": "item.completed", "item": {"type": "agent_message", "text": "Submitted report."}},
-        {"type": "turn.completed", "usage": {"input_tokens": 10, "output_tokens": 2}},
+        {"type": "turn.completed", "usage": {
+            "input_tokens": 10, "output_tokens": 2, "cached_input_tokens": 0,
+        }},
     ])
     assert result["status"] == "complete"
     assert result["final_message"] == "Submitted report."
+
+
+async def test_accounting_drain_records_usage_but_fails_exhausted_submission(fake_episode):
+    fake = fake_episode
+
+    async def record_submission(name, arguments):
+        if name == "submit_analysis":
+            fake.session.submission = {"recorded": True}
+        return {"ok": True}
+
+    fake.session.call.side_effect = record_submission
+    output = [
+        {"type": "item.completed", "item": {"type": "agent_message", "text": "Submitted report."}},
+        {"type": "turn.completed", "usage": {
+            "input_tokens": 40, "output_tokens": 8, "cached_input_tokens": 0,
+        }},
+    ]
+    first_read = True
+
+    async def read_output():
+        nonlocal first_read
+        if first_read:
+            first_read = False
+            for name in ("list_catalog", "list_catalog", "submit_analysis"):
+                result = await fake.bridge.call(name, {})
+                assert not result.isError
+            assert fake.session.submission == {"recorded": True}
+            rejected = await fake.bridge.call("list_catalog", {})
+            assert rejected.isError
+            return json.dumps(output.pop(0)).encode() + b"\n"
+        if output:
+            return json.dumps(output.pop(0)).encode() + b"\n"
+        return b""
+
+    result = await fake.run(read_output, accounting_drain=True)
+
+    assert result["status"] == "failed"
+    assert result["error"] == "tool_call_budget_exhausted"
+    assert result["tool_calls"] == 3
+    assert result["final_message"] == "Submitted report."
+    assert fake.bridge.exhausted and fake.bridge.rejected_calls == 1
+    assert fake.session.call.await_count == 3
+    assert fake.session.call.await_args_list[-1].args == ("submit_analysis", {})
+    fake.process.terminate.assert_not_called()
+    response = next(event for event in fake.audit.events if event["kind"] == "api.response")
+    assert response["usage"]["input_tokens"] == 40
+    assert response["usage"]["output_tokens"] == 8
+
+
+async def test_accounting_drain_audits_cancelled_call_queued_before_dispatch():
+    session, audit = session_stub(), trial.Audit()
+    bridge = transport.TrialMCP(
+        session, audit, await session.specs(), max_calls=2, accounting_drain=True,
+    )
+    ingress_seen = asyncio.Event()
+    emit = audit.emit
+
+    def signal_ingress(kind, **fields):
+        emit(kind, **fields)
+        if kind == "tool.ingress":
+            ingress_seen.set()
+
+    audit.emit = signal_ingress
+    await bridge.lock.acquire()
+    task = asyncio.create_task(bridge.call("list_catalog", {}))
+    try:
+        await asyncio.wait_for(ingress_seen.wait(), timeout=1)
+        assert bridge.ingress_calls == 1
+        assert bridge.calls == 0
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+    finally:
+        if not task.done():
+            task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+        bridge.lock.release()
+
+    ingress, cancelled = audit.events
+    assert ingress["kind"] == "tool.ingress"
+    assert ingress["stage"] == "bridge_handler_entered"
+    assert cancelled["kind"] == "tool.cancelled"
+    assert cancelled["stage"] == "waiting_for_bridge_lock"
+    assert cancelled["reason"] == "cancelled_before_dispatch"
+    assert cancelled["ingress_call"] == ingress["ingress_call"] == 1
+    assert bridge.calls == 0
+    session.call.assert_not_awaited()
+
+
+async def test_accounting_drain_aborts_after_third_refusal_without_dispatch(fake_episode):
+    fake = fake_episode
+
+    async def exhaust_and_stall():
+        for _ in range(fake.bridge.max_calls):
+            assert not (await fake.bridge.call("list_catalog", {})).isError
+        for _ in range(transport.ACCOUNTING_DRAIN_ABORT_AFTER_REJECTIONS):
+            assert (await fake.bridge.call("list_catalog", {})).isError
+        assert (await fake.bridge.call("list_catalog", {})).isError
+        assert fake.bridge.rejected_calls == transport.ACCOUNTING_DRAIN_ABORT_AFTER_REJECTIONS + 1
+        await asyncio.Event().wait()
+
+    result = await fake.run(exhaust_and_stall, accounting_drain=True)
+
+    assert result["status"] == "failed"
+    assert result["error"] == "tool_call_budget_exhausted"
+    assert fake.bridge.calls == fake.bridge.max_calls == 3
+    assert fake.bridge.rejected_calls == transport.ACCOUNTING_DRAIN_ABORT_AFTER_REJECTIONS + 1
+    assert fake.bridge.rejection_limit_event.is_set()
+    assert fake.session.call.await_count == 3
+    assert sum(event["kind"] == "tool.rejected" for event in fake.audit.events) == 4
+    fake.process.terminate.assert_called_once()
+    assert fake.audit.events[-1]["kind"] == "api.error"
+    assert fake.audit.events[-1]["usage_known"] is False
+
+
+async def test_parallel_overbudget_calls_are_all_counted_and_audited():
+    session, audit = session_stub(), trial.Audit()
+    bridge = transport.TrialMCP(
+        session, audit, await session.specs(), max_calls=1, accounting_drain=True,
+    )
+    rejection_event_states = []
+    emit = audit.emit
+
+    def record_rejection_event_state(kind, **fields):
+        emit(kind, **fields)
+        if kind == "tool.rejected":
+            rejection_event_states.append(bridge.rejection_limit_event.is_set())
+
+    audit.emit = record_rejection_event_state
+    assert not (await bridge.call("list_catalog", {})).isError
+
+    results = await asyncio.gather(*(
+        bridge.call("list_catalog", {}) for _ in range(4)
+    ))
+
+    assert all(result.isError for result in results)
+    assert bridge.calls == 1
+    assert bridge.ingress_calls == 5
+    assert bridge.rejected_calls == 4
+    assert bridge.rejection_limit_event.is_set()
+    assert rejection_event_states == [False, False, True, True]
+    assert sum(event["kind"] == "tool.ingress" for event in audit.events) == 5
+    assert sum(event["kind"] == "tool.rejected" for event in audit.events) == 4
+    session.call.assert_awaited_once_with("list_catalog", {})
+
+
+@pytest.mark.parametrize("event,expected_error", [
+    ({"type": "turn.completed", "usage": {}}, "invalid_usage"),
+    ({"type": "turn.completed"}, "missing_usage"),
+    ({"type": "turn.completed", "usage": {
+        "input_tokens": 5, "output_tokens": 2,
+    }}, "invalid_usage"),
+    ({"type": "turn.completed", "usage": {
+        "input_tokens": True, "output_tokens": 2, "cached_input_tokens": 0,
+    }}, "invalid_usage"),
+    ({"type": "turn.completed", "usage": {
+        "input_tokens": 5, "output_tokens": False, "cached_input_tokens": 0,
+    }}, "invalid_usage"),
+    ({"type": "turn.completed", "usage": {
+        "input_tokens": 5, "output_tokens": 2, "cached_input_tokens": True,
+    }}, "invalid_usage"),
+    ({"type": "turn.completed", "usage": {
+        "input_tokens": -1, "output_tokens": 2, "cached_input_tokens": 0,
+    }}, "invalid_usage"),
+    ({"type": "turn.completed", "usage": {
+        "input_tokens": 5, "output_tokens": 2, "cached_input_tokens": -1,
+    }}, "invalid_usage"),
+    ({"type": "turn.completed", "usage": {
+        "input_tokens": 5, "output_tokens": 2, "cached_input_tokens": 6,
+    }}, "invalid_usage"),
+])
+@pytest.mark.parametrize("accounting_drain", [False, True])
+async def test_malformed_usage_is_unknown_and_raw_event_is_preserved(
+        fake_episode, event, expected_error, accounting_drain):
+    result = await fake_episode.run([event], accounting_drain=accounting_drain)
+
+    assert result["status"] == "failed"
+    assert any(audit_event.get("kind") == "codex.event"
+               and audit_event.get("event") == event
+               for audit_event in fake_episode.audit.events)
+    assert fake_episode.audit.events[-1]["kind"] == "api.error"
+    assert fake_episode.audit.events[-1]["error_type"] == expected_error
+    assert fake_episode.audit.events[-1]["usage_known"] is False
+    assert not any(audit_event.get("kind") == "api.response"
+                   for audit_event in fake_episode.audit.events)
+
+
+async def test_accounting_drain_timeout_retains_unknown_usage(fake_episode, monkeypatch):
+    fake = fake_episode
+    monkeypatch.setattr(transport, "ACCOUNTING_DRAIN_SECONDS", .01)
+
+    async def exhaust_and_stall():
+        for _ in range(fake.bridge.max_calls):
+            await fake.bridge.call("list_catalog", {})
+        await fake.bridge.call("list_catalog", {})
+        await asyncio.Event().wait()
+
+    result = await fake.run(exhaust_and_stall, accounting_drain=True)
+
+    assert result["status"] == "failed"
+    assert result["error"] == "tool_call_budget_exhausted"
+    assert fake.session.call.await_count == 3
+    fake.process.terminate.assert_called_once()
+    assert fake.audit.events[-1]["kind"] == "api.error"
+    assert fake.audit.events[-1]["usage_known"] is False
+
+
+async def test_accounting_drain_stays_inside_outer_episode_deadline(fake_episode):
+    fake = fake_episode
+
+    async def exhaust_and_stall():
+        for _ in range(fake.bridge.max_calls):
+            await fake.bridge.call("list_catalog", {})
+        await fake.bridge.call("list_catalog", {})
+        await asyncio.Event().wait()
+
+    result = await fake.run(exhaust_and_stall, accounting_drain=True, timeout_seconds=.01)
+
+    assert result["status"] == "failed" and result["error"] == "episode_timeout"
+    assert fake.bridge.exhausted
+    fake.process.kill.assert_called_once()
+    assert fake.audit.events[-1]["kind"] == "api.error"
+    assert fake.audit.events[-1]["usage_known"] is False
+
+
+async def test_foreign_tool_still_aborts_immediately_during_accounting_drain(fake_episode):
+    fake = fake_episode
+
+    async def exhaust_then_report_foreign_tool():
+        for _ in range(fake.bridge.max_calls):
+            await fake.bridge.call("list_catalog", {})
+        await fake.bridge.call("list_catalog", {})
+        return json.dumps({"type": "item.completed", "item": {
+            "type": "command_execution",
+        }}).encode() + b"\n"
+
+    result = await fake.run(exhaust_then_report_foreign_tool, accounting_drain=True)
+
+    assert result["status"] == "failed" and result["error"] == "foreign_tool_used"
+    assert result["foreign_tools"] == ["command_execution"]
+    fake.process.terminate.assert_called_once()
+    assert fake.audit.events[-1]["kind"] == "api.error"
+    assert fake.audit.events[-1]["usage_known"] is False
+
+
+async def test_default_episode_keeps_immediate_budget_hard_stop(fake_episode):
+    fake = fake_episode
+
+    async def exhaust_then_return_message():
+        for _ in range(fake.bridge.max_calls):
+            await fake.bridge.call("list_catalog", {})
+        with pytest.raises(ValueError, match="tool_call_budget_exhausted"):
+            await fake.bridge.call("list_catalog", {})
+        return json.dumps({"type": "item.completed", "item": {
+            "type": "agent_message", "text": "This should not be drained.",
+        }}).encode() + b"\n"
+
+    result = await fake.run(exhaust_then_return_message)
+
+    assert result["status"] == "failed" and result["error"] == "tool_call_budget_exhausted"
+    assert result["final_message"] == "This should not be drained."
+    fake.process.terminate.assert_called_once()
+    assert fake.audit.events[-1]["kind"] == "api.error"
+    assert fake.audit.events[-1]["usage_known"] is False
 
 
 async def test_custom_episode_preserves_precomputed_signalweave_bundle(fake_episode):
@@ -358,7 +647,9 @@ async def test_custom_episode_preserves_precomputed_signalweave_bundle(fake_epis
     bundle = {"status": "complete", "evidence": [{"source_key": "company_mcp|offline"}],
               "outcome": "investigate"}
     result = await fake.run(
-        [{"type": "turn.completed", "usage": {"input_tokens": 10, "output_tokens": 2}}],
+        [{"type": "turn.completed", "usage": {
+            "input_tokens": 10, "output_tokens": 2, "cached_input_tokens": 0,
+        }}],
         instructions_override="Custom episode instructions",
         prompt_override={"brief": "same brief"},
         bundle=bundle,
@@ -387,7 +678,9 @@ async def test_treatment_bundle_prompt_requires_full_numeric_provenance(fake_epi
         },
     }
     await fake.run(
-        [{"type": "turn.completed", "usage": {"input_tokens": 10, "output_tokens": 2}}],
+        [{"type": "turn.completed", "usage": {
+            "input_tokens": 10, "output_tokens": 2, "cached_input_tokens": 0,
+        }}],
         bundle=bundle,
     )
     request = next(e for e in fake.audit.events if e.get("transport") == "codex_cli")
@@ -401,6 +694,8 @@ async def test_treatment_bundle_prompt_requires_full_numeric_provenance(fake_epi
     *[({"type": "item.completed", "item": {"type": kind}}, "foreign_tool_used")
       for kind in ("command_execution", "web_search", "file_change")],
     ({"type": "item.completed", "item": {"type": "mcp_tool_call", "server": "other"}}, "foreign_tool_used"),
+    ({"type": "item.started", "item": {"type": "mcp_tool_call", "server": "codex",
+                                         "tool": "list_mcp_resources", "arguments": {}}}, "foreign_tool_used"),
 ])
 async def test_episode_rejects_failure_and_foreign_tools_even_after_submission(fake_episode, event, expected):
     fake = fake_episode
@@ -412,6 +707,107 @@ async def test_episode_rejects_failure_and_foreign_tools_even_after_submission(f
     assert fake.closed
     assert fake.audit.events[-1]["kind"] == "api.error"
     assert fake.audit.events[-1]["usage_known"] is False
+
+
+@pytest.mark.parametrize("tool", ["list_mcp_resources", "list_mcp_resource_templates"])
+@pytest.mark.parametrize("server", ["codex", "trial"])
+async def test_scoped_builtin_resource_discovery_is_explicit_and_counted_once(fake_episode, tool, server):
+    fake = fake_episode
+    fake.session.submission = {"summary": "Synthetic completed result"}
+    item = {"type": "mcp_tool_call", "server": server, "tool": tool, "id": "metadata-1", "arguments": {}}
+    result = await fake.run([
+        {"type": "item.started", "item": item}, {"type": "item.completed", "item": item},
+        {"type": "turn.completed", "usage": {"input_tokens": 10, "output_tokens": 2, "cached_input_tokens": 0}},
+    ], allow_trial_resource_discovery=True)
+    assert result["status"] == "complete" and not result["foreign_tools"]
+    assert result["resource_discovery_calls"] == 1
+    assert len([e for e in fake.audit.events if e["kind"] == "codex.resource_discovery"]) == 1
+    fake.process.terminate.assert_not_called()
+
+
+async def test_valid_resource_discovery_still_requires_explicit_protocol_opt_in(fake_episode):
+    item = {"type": "mcp_tool_call", "server": "codex", "tool": "list_mcp_resources", "id": "one", "arguments": {}}
+    result = await fake_episode.run([{"type": "item.started", "item": item}])
+    assert result["status"] == "failed" and result["foreign_tools"] == ["codex"]
+    assert result["resource_discovery_calls"] == 0
+
+
+@pytest.mark.parametrize("change", [
+    {"tool": "read_mcp_resource"}, {"tool": "arbitrary_builtin"}, {"server": "other"},
+    {"arguments": {"server": "other"}}, {"arguments": {"uri": "private://data"}},
+    {"arguments": {"server": {}}}, {"arguments": None}, {"id": None},
+])
+async def test_discovery_opt_in_does_not_allow_foreign_resources_or_other_builtin_tools(fake_episode, change):
+    item = {"type": "mcp_tool_call", "server": "codex", "tool": "list_mcp_resources", "id": "one", "arguments": {}}
+    item.update(change)
+    result = await fake_episode.run([{"type": "item.started", "item": item}], allow_trial_resource_discovery=True)
+    assert result["status"] == "failed" and result["resource_discovery_calls"] == 0
+    fake_episode.process.terminate.assert_called_once()
+
+
+async def test_resource_discovery_has_a_separate_small_audited_budget(fake_episode):
+    events = [{"type": "item.started", "item": {"type": "mcp_tool_call", "server": "codex",
+              "tool": "list_mcp_resources", "id": f"metadata-{n}", "arguments": {}}}
+              for n in range(transport.MAX_RESOURCE_DISCOVERY_CALLS + 1)]
+    result = await fake_episode.run(events, allow_trial_resource_discovery=True)
+    assert result["status"] == "failed"
+    assert result["foreign_tools"] == ["resource_discovery_budget_exhausted"]
+    assert result["resource_discovery_calls"] == transport.MAX_RESOURCE_DISCOVERY_CALLS
+    assert result["resource_discovery_attempts"] == transport.MAX_RESOURCE_DISCOVERY_CALLS + 1
+    assert result["observed_tool_calls_including_discovery"] == transport.MAX_RESOURCE_DISCOVERY_CALLS + 1
+
+
+async def test_registry_probe_disables_merged_entries_without_leaking_credentials(monkeypatch):
+    outputs = [json.dumps([{"name": "company.private", "enabled": True, "secret": "never-log-this", "transport": {"type": "stdio"}}]).encode(),
+               json.dumps([{"name": "company.private", "enabled": False, "transport": {"type": "stdio"}}, {"name": "trial", "enabled": True, "transport": {"type": "streamable_http"}}]).encode()]
+    calls = []
+
+    async def spawn(*command, **kwargs):
+        calls.append(command)
+        return SimpleNamespace(returncode=0, communicate=AsyncMock(return_value=(outputs.pop(0), None)))
+
+    monkeypatch.setattr(transport.asyncio, "create_subprocess_exec", spawn)
+    proof = await transport.verify_trial_registry("/offline/codex", "/offline", "http://127.0.0.1:1/trial")
+    assert '"company.private"={enabled=false,command="signalweave-disabled-no-launch"}' in proof["overrides"][0]
+    assert proof["overrides"][0] in calls[1]
+    assert proof["enabled_servers"] == ["trial"]
+    assert "never-log-this" not in json.dumps(proof)
+    configured = tomllib.loads(proof["overrides"][0])["mcp_servers"]
+    assert configured["company.private"]["enabled"] is False
+    assert configured["trial"]["required"] is True
+    assert configured["trial"]["default_tools_approval_mode"] == "approve"
+
+
+@pytest.mark.parametrize("first,second", [
+    ([{"name": "trial", "enabled": True, "transport": {"type": "stdio"}}], []),
+    ([{"name": "other", "enabled": True, "transport": {"type": "stdio"}}], [{"name": "other", "enabled": True, "transport": {"type": "stdio"}}, {"name": "trial", "enabled": True, "transport": {"type": "streamable_http"}}]),
+    ([{"name": "other", "enabled": "yes"}], []),
+])
+async def test_registry_probe_rejects_collisions_or_nonisolated_effective_state(monkeypatch, first, second):
+    outputs = [json.dumps(first).encode(), json.dumps(second).encode()]
+
+    async def spawn(*command, **kwargs):
+        return SimpleNamespace(returncode=0, communicate=AsyncMock(return_value=(outputs.pop(0), None)))
+
+    monkeypatch.setattr(transport.asyncio, "create_subprocess_exec", spawn)
+    with pytest.raises(ValueError):
+        await transport.verify_trial_registry("/offline/codex", "/offline", "http://127.0.0.1:1/trial")
+
+
+async def test_changed_registry_fails_before_any_frontier_process_is_spawned(fake_episode):
+    with pytest.raises(ValueError, match="changed after preflight"):
+        await fake_episode.run([], allow_trial_resource_discovery=True, expected_registry_sha256="different")
+    fake_episode.spawn.assert_not_awaited()
+
+
+async def test_strict_single_completion_usage_does_not_silently_replace_a_second_turn(fake_episode):
+    fake_episode.session.submission = {"message": "synthetic report"}
+    completion = {"type": "turn.completed", "usage": {"input_tokens": 20, "cached_input_tokens": 5, "output_tokens": 2}}
+    result = await fake_episode.run([completion, completion], strict_single_turn_usage=True)
+    assert result["status"] == "failed" and result["error"] == "ambiguous_codex_turn_usage"
+    assert len(result["completion_usage_reports"]) == 2
+    assert fake_episode.audit.events[-1]["kind"] == "api.error"
+    assert fake_episode.audit.events[-1]["usage_known"] is False
 
 
 @pytest.mark.parametrize("exit_code,error", [(0, "no_structured_submission"), (7, "codex_exit")])
@@ -432,6 +828,73 @@ async def test_episode_timeout_kills_process_and_closes_server(fake_episode):
     fake_episode.process.wait.assert_awaited_once()
     assert fake_episode.closed
     assert fake_episode.audit.events[-1]["error_type"] == "episode_timeout"
+
+
+@pytest.mark.parametrize("accounting_drain", [False, True])
+async def test_opt_in_wall_deadline_reaches_episode_result_without_inventing_usage(fake_episode, monkeypatch, accounting_drain):
+    killed = asyncio.Event()
+    fake_episode.process.kill.side_effect = killed.set
+    actual_guard = transport._wall_response_guard
+
+    async def jumped_guard(process, seconds, audit, **_kwargs):
+        wall, monotonic = iter([0.0, 1000.0]), iter([10.0, 10.5])
+        return await actual_guard(process, seconds, audit,
+            wall_clock=lambda: next(wall), monotonic_clock=lambda: next(monotonic))
+
+    async def output_after_kill():
+        await killed.wait()
+        return b""
+
+    monkeypatch.setattr(transport, "_wall_response_guard", jumped_guard)
+    result = await fake_episode.run(output_after_kill, timeout_seconds=90,
+        accounting_drain=accounting_drain, enforce_wall_response_timeout=True)
+    assert result["status"] == "failed" and result["error"] == "wall_episode_timeout"
+    assert result["wall_response_censoring"]["wall_elapsed_seconds"] == 1000
+    assert result["wall_response_censoring"]["monotonic_elapsed_seconds"] == .5
+    assert result["wall_response_timeout_enabled"] is True
+    assert result["completion_usage_reports"] == []
+    assert fake_episode.audit.events[-1]["usage_known"] is False
+    fake_episode.process.kill.assert_called_once()
+    assert fake_episode.closed
+
+
+@pytest.mark.parametrize("accounting_drain", [False, True])
+async def test_late_completion_is_censored_even_if_watchdog_never_polled(fake_episode, monkeypatch, accounting_drain):
+    stamps = iter([(0.0, 10.0), (1000.0, 10.5)])
+    monkeypatch.setattr(transport, "_response_clock_stamp", lambda: next(stamps))
+
+    async def unscheduled_guard(*args, **kwargs):
+        await asyncio.Event().wait()
+
+    monkeypatch.setattr(transport, "_wall_response_guard", unscheduled_guard)
+    result = await fake_episode.run([{"type": "turn.completed", "usage": {
+        "input_tokens": 5, "output_tokens": 2, "cached_input_tokens": 0,
+    }}], enforce_wall_response_timeout=True, accounting_drain=accounting_drain)
+    assert result["status"] == "failed" and result["error"] == "wall_episode_timeout"
+    assert result["wall_response_censoring"]["wall_elapsed_seconds"] == 1000
+    assert len(result["completion_usage_reports"]) == 1
+    assert fake_episode.audit.events[-1]["kind"] == "api.response"
+    assert fake_episode.audit.events[-1]["usage"]["input_tokens"] == 5
+    assert fake_episode.closed
+
+
+@pytest.mark.parametrize("accounting_drain", [False, True])
+async def test_on_time_completion_is_not_censored_by_final_clock_check(fake_episode, monkeypatch, accounting_drain):
+    stamps = iter([(100.0, 10.0), (101.0, 11.0)])
+    monkeypatch.setattr(transport, "_response_clock_stamp", lambda: next(stamps))
+
+    async def unscheduled_guard(*args, **kwargs):
+        await asyncio.Event().wait()
+
+    fake_episode.session.submission = {"outcome": "ignore"}
+    monkeypatch.setattr(transport, "_wall_response_guard", unscheduled_guard)
+    result = await fake_episode.run([{"type": "turn.completed", "usage": {
+        "input_tokens": 5, "output_tokens": 2, "cached_input_tokens": 0,
+    }}], timeout_seconds=90, enforce_wall_response_timeout=True, accounting_drain=accounting_drain)
+    assert result["status"] == "complete" and result["error"] is None
+    assert result["wall_response_censoring"] is None
+    assert len(result["completion_usage_reports"]) == 1
+    fake_episode.process.kill.assert_not_called()
 
 
 async def test_exhausted_jev_budget_does_not_abort_codex_agent(fake_episode):

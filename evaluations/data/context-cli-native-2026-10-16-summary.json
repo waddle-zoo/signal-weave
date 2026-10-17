@@ -1,0 +1,104 @@
+{
+  "scope": "Native context configuration/lifecycle and Python compatibility evidence; not a business-value study, real-human usability panel or enterprise-readiness certification.",
+  "source_commit": "0ad2d72f423e22c2429b5328d12e8179cb4bde6d",
+  "reproduction": {
+    "prerequisites": "Build the current checkout with scripts/build_binary.py; the native/source verifier must match. Start an authorized synthetic Superset fixture at 127.0.0.1:18089 with readable chart 1. The lifecycle test does not bootstrap that BI fixture.",
+    "normal_suite": "make verify",
+    "native_checks": "RUN_CONTEXT_CARD_INTEGRATION=1 RUN_CONTEXT_HTTP_INTEGRATION=1 SIGNALWEAVE_BINARY=\"$PWD/dist/signalweave\" SUPERSET_URL=http://127.0.0.1:18089 SUPERSET_USERNAME=admin SUPERSET_PASSWORD=admin uv run pytest -q tests/test_context_native_card_integration.py tests/test_context_native_http_integration.py",
+    "warning": "Use only a deliberately configured local test fixture, not production credentials or a production tunnel. These checks create synthetic local context/card state, not business outcomes."
+  },
+  "observed_cli_startup": {
+    "scope": "One local invocation per command on the already-used binary; cache state unassessed. Diagnostic friction, not an analysis or cross-machine latency benchmark.",
+    "commands": [
+      {"arguments": ["--help"], "seconds": 7.158},
+      {"arguments": ["context", "--help"], "seconds": 6.370},
+      {"arguments": ["--build-info"], "seconds": 6.729}
+    ],
+    "conclusion": "Command startup still needs improvement before claiming seamless first use."
+  },
+  "native_build": {
+    "dirty": false,
+    "format_version": 1,
+    "frozen": true,
+    "git_commit": "0ad2d72f423e22c2429b5328d12e8179cb4bde6d",
+    "python": "3.12.10",
+    "source_sha256": "05860c6fcb5325c3fa60c04026648cd5f4d5ae661684ff11a86eb47998f41208",
+    "version": "0.2.0rc3",
+    "binary_sha256": "dfb6e6a6c17de79e6a841a9b4524054f3be78aac1437f43a76b93871a5f6a39f"
+  },
+  "software_verification": {
+    "normal_suite": {
+      "passed": 4171,
+      "opt_in_skipped": 12
+    },
+    "python311_focused": {
+      "python": "3.11.6",
+      "passed": 198
+    },
+    "native_opt_in_command": {
+      "passed": 12,
+      "integration_journeys": 2,
+      "url_validation_cases": 10,
+      "scope": "The 10 URL cases also run in the normal suite; counts must not be added as independent business samples."
+    }
+  },
+  "native_journeys": [
+    {
+      "test": "test_native_agent_context_binding_lifecycle",
+      "properties": {
+        "native_mcp_tool_calls": "21",
+        "context_enabled_via_persistent_cli": "True",
+        "context_disable_preserved_card_and_history": "True",
+        "context_enablement_environment_override": "False",
+        "native_binary_sha256": "dfb6e6a6c17de79e6a841a9b4524054f3be78aac1437f43a76b93871a5f6a39f",
+        "native_source_sha256": "05860c6fcb5325c3fa60c04026648cd5f4d5ae661684ff11a86eb47998f41208",
+        "native_git_commit": "0ad2d72f423e22c2429b5328d12e8179cb4bde6d",
+        "observed_typesafe_systemone_posts": "0",
+        "observed_superset_metadata_reads": "14"
+      }
+    },
+    {
+      "test": "test_current_native_http_context_reuse_roles_and_restart",
+      "properties": {
+        "native_git_commit": "0ad2d72f423e22c2429b5328d12e8179cb4bde6d",
+        "native_source_sha256": "05860c6fcb5325c3fa60c04026648cd5f4d5ae661684ff11a86eb47998f41208",
+        "native_binary_sha256": "dfb6e6a6c17de79e6a841a9b4524054f3be78aac1437f43a76b93871a5f6a39f",
+        "provider_attempts": "0",
+        "transport": "native-http-synthetic-oidc-local-superset-metadata"
+      }
+    }
+  ],
+  "capabilities_verified": [
+    "Private setup followed by context enable/disable/status commands; enablement persisted without environment injection.",
+    "Normal agent-profile guide and tools changed on reconnect, not claimed active before restart.",
+    "Source-linked context saved/reviewed/pinned; same context and card survived process restart.",
+    "Disabling/re-enabling kept saved card bindings and context revision history.",
+    "Signed HTTP context reuse, role scopes, tenant boundaries and restart with a synthetic issuer and local Superset metadata."
+  ],
+  "routing_safety_scope": "A separate unit test verifies disabled tools cannot bypass an approved card required pin. The native CLI lifecycle card remains draft; it does not prove a delivered analytical outcome.",
+  "compatibility_repair": {
+    "observed_failure": "Python 3.11 CI lost one chart observation after a deeply nested saved-params JSON decoding failure.",
+    "ci_failure": "https://github.com/waddle-zoo/signal-weave/actions/runs/38940283449/job/117105866834",
+    "fix": "Tolerant parsing preserves returned observations. Query reconstruction requires readable object parameters and raises before POST; authoritative saved query context and valid large parameters retain filters and time range.",
+    "coverage": "Synthetic metadata/HTTP fixtures on actual Python 3.11.6 and 3.12.10, including direct/fallback no-POST assertions; not a malformed live Superset asset trial."
+  },
+  "review": {
+    "type": "Independent internal code review, not external peer review",
+    "initial_query_scope_blocker": "A tolerant shared parser could have broadened a reconstruction request. Reviewer rejected it; explicit strict reconstruction and no-POST tests close that blocker.",
+    "decision": "Scoped GO for the corrected code; native and software results were gathered afterward."
+  },
+  "retained_attempts": "The first full suite was explicitly stopped after the query-scope review finding. The preliminary candidate native pass is retained but not substituted for these final-source checks.",
+  "artifacts": {
+    "artifacts/context-cli-reviewed-native-junit.xml": "e0d5bccd0ff2afe1c2566c4a75754bf258d71b6e80aa1ab72c5734945e9a8470",
+    "artifacts/context-cli-reviewed-native-verification.log": "9b6068f27fd1d8ca6d72896e32b123669744e19b59a1ee3abffc80b00b3e460d",
+    "artifacts/context-cli-reviewed-full-verify.log": "aad86599cce7fa145c5d10850ca3579870dfd902235c6ce5001e50bf73009042",
+    "artifacts/context-cli-python311-focused.log": "f1d2e5e0a67c2b41ad2b6cf97a7d88d4e6c08aad31ea84a9fdfb49ace46c417f"
+  },
+  "limits": [
+    "Built from the feature checkout on macOS arm64; not a new published download or cross-platform native release certification.",
+    "Noninteractive scripted setup and synthetic owner review; no personal agent config changed.",
+    "No live Jev evaluation, new frontier business report or actual notification delivery in these native checks. Earlier live studies and negative comparisons remain unchanged.",
+    "Synthetic OIDC verifies protocol behavior, not a customer identity-provider deployment.",
+    "Comparative value, clean expert-led onboarding on new raw companies and scaled period-varying business workflows remain open."
+  ]
+}

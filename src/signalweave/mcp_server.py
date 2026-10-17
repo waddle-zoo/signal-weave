@@ -12,12 +12,12 @@ from typing import Annotated, Any, Literal
 from uuid import uuid4
 
 from mcp.server.fastmcp import Context, FastMCP
-from pydantic import Field, StrictBool
+from pydantic import Field, StrictBool, StrictInt
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from .bootstrap import BootstrapManifest, BootstrapService
-from .engine import EvaluationPayloadError
+from .engine import ContextReviewRequired, EvaluationPayloadError
 from .evaluation import (
     CardEvaluationCase,
     CardEvaluationThresholds,
@@ -26,7 +26,15 @@ from .evaluation import (
     card_acceptance_digest,
     has_current_evidence_admission_policy,
 )
-from .getting_started import GuideTask, agent_getting_started, getting_started, provider_label
+from .getting_started import (
+    EVIDENCE_INTERPRETATION,
+    GuideTask,
+    agent_getting_started,
+    getting_started,
+    provider_label,
+)
+from .knowledge_dependencies import ContextDependencies
+from .knowledge_mcp import KNOWLEDGE_TOOLS, register_knowledge_tools
 from .models import (
     CardDeliveryMethods,
     CertificationRecord,
@@ -36,8 +44,10 @@ from .models import (
     DecisionFeedbackKind,
     DecisionReceipt,
     DeliveryMethod,
+    EvidenceBundle,
     EvidenceRequirementKey,
     InsightCard,
+    InsightCardOnboardingReview,
     InsightCardStatus,
     InvestigationMode,
     InvestigationQuestions,
@@ -103,6 +113,7 @@ def _evaluation_fingerprint(
         # boundary by themselves. Include the executable card contract so a
         # same-version overwrite cannot replay a receipt for different policy.
         "execution_payload": card.execution_payload(),
+        "context_bindings": [pin.model_dump(mode="json") for pin in card.context_bindings],
         "context": (
             context.model_dump(mode="json", exclude={"captured_at"}) if context else None
         ),
@@ -113,10 +124,13 @@ def _evaluation_fingerprint(
 
 def _evaluation_card(card: InsightCard) -> dict[str, Any]:
     """Keep active policy; authoring history remains available through get_insight_card."""
-    return card.model_dump(
+    payload = card.model_dump(
         mode="json",
         exclude={"onboarding_review", "onboarding_review_history", "onboarding_corrections", "compiled_plan"},
     )
+    if card.onboarding_review and card.onboarding_review.warnings:
+        payload["onboarding_warnings"] = list(card.onboarding_review.warnings)
+    return payload
 
 
 ResponseMode = Literal["compact", "full"]
@@ -127,6 +141,7 @@ AGENT_PROFILE_TOOLS = frozenset({
     "search_catalog",
     "inspect_resource",
     "onboard_insight_card",
+    "revise_insight_card",
     "review_insight_card",
     "approve_insight_card",
     "list_insight_cards",
@@ -442,12 +457,60 @@ def _compact_card(card: Any) -> dict[str, Any]:
     if result.get("status") == InsightCardStatus.APPROVED.value:
         # The approval review can contain the full discovery candidate catalog.
         # It remains in storage and is available through response_mode="full".
-        result.pop("onboarding_review", None)
+        review = result.pop("onboarding_review", None)
+        if isinstance(review, dict) and review.get("warnings"):
+            result["onboarding_warnings"] = review["warnings"]
     elif result.get("onboarding_review"):
         result["onboarding_review"] = _compact_review(result["onboarding_review"])
     if result.get("compiled_plan"):
         result["compiled_plan"] = _compact_plan(result["compiled_plan"])
     return result
+
+
+def _approval_handoff(card: InsightCard, review: InsightCardOnboardingReview, adapter: str | None) -> dict:
+    """Exact existing API arguments for an owner-reviewed handoff, never consent."""
+    if card.status == InsightCardStatus.APPROVED:
+        return {"approval_arguments_included": False, "instruction": "This card is already approved. Review findings may still need attention; this response does not reapprove or certify it."}
+    arguments: dict[str, Any] = {
+        "card_id": card.id, "source_selection_fingerprint": review.source_selection_fingerprint,
+        "source_scope_confirmations": expected_source_scope_confirmations(review),
+    }
+    if adapter is not None:
+        arguments["adapter"] = adapter
+    populations = {candidate.ref: candidate.metadata.get("population", "")
+                   for candidate in review.source_candidates if candidate.selected}
+    if _json_bytes({"arguments": arguments, "populations": populations}) > 8192:
+        return {
+            "tool": "get_insight_card", "arguments": {"card_id": card.id, "response_mode": "full"},
+            "approval_arguments_included": False, "readiness_status": review.readiness_status,
+            "instruction": "The exact scope map exceeds this handoff's size budget. Review the full saved source scopes; no partial map or approval is implied.",
+        }
+    return {
+        "tool": "approve_insight_card", "arguments_after_owner_confirmation": arguments,
+        "declared_populations": populations,
+        "owner_confirmation": {
+            "card_id": card.id, "card_version": card.version,
+            "question": "Approve this saved policy and the displayed source scopes for evaluation? This does not authorize scheduling or sending messages.",
+        },
+        "owner_input_required": ["confirm_saved_policy_and_source_scopes", *(
+            ["dynamic_scope_acknowledged"]
+            if card.retrieval_mode != RetrievalMode.FIXED or card.investigation_mode != InvestigationMode.NONE else []
+        )],
+        "agent_input_after_confirmation": ["source_selection_reason"],
+        "dynamic_scope_requires_separate_acknowledgment": (
+            card.retrieval_mode != RetrievalMode.FIXED or card.investigation_mode != InvestigationMode.NONE
+        ),
+        "readiness_status": review.readiness_status,
+        "instruction": (
+            "Show these exact declared source scopes and the saved policy to the owner or explicitly authorized delegate. "
+            "After actual confirmation, use these arguments and record the confirmed source/definition choice "
+            "in source_selection_reason. The agent may summarize that confirmation; the owner need not write an API field. "
+            "Do not invent a different population from a generic label or infer consent. "
+            "Set dynamic_scope_acknowledged=true only after separate owner acknowledgment when required. "
+            "Unresolved material ambiguity still needs clarification; all approval checks remain active. "
+            "This handoff is not approval, certification, scheduling or delivery permission."
+        ),
+    }
 
 
 def _compact_summary(summary: Any) -> dict[str, Any]:
@@ -713,6 +776,50 @@ def _receipt_result_page(result: dict[str, Any], path: list[str], offset: int, l
     return page
 
 
+def _separate_optional_judgments(compact: dict[str, Any]) -> dict[str, Any]:
+    """Label advisory assessments without changing facts or the durable result.
+
+    Only move a complete, unambiguously mapped optional criterion group. Legacy
+    receipts, mixed required groups and unfamiliar keys retain their shape.
+    Required checks, policy outcomes and report warnings always remain inline.
+    """
+    result = compact["result"]
+    plan = result.get("evidence_plan")
+    slots = plan.get("slots") if isinstance(plan, dict) else None
+    if not isinstance(slots, list):
+        return compact
+    moved = {}
+    for field, role in (("watch_results", "watch"), ("question_results", "question")):
+        values = result.get(field)
+        criteria = [slot for slot in slots if isinstance(slot, dict) and slot.get("role") == role]
+        if not isinstance(values, list) or not values or len(criteria) != len(values):
+            continue
+        by_key = {slot.get("key"): slot for slot in criteria if isinstance(slot.get("key"), str)}
+        if len(by_key) != len(values):
+            continue
+        if all(
+            isinstance(item, dict)
+            and isinstance(item.get("key"), str)
+            and item.get("key") in {f"{role}_{index}", f"{role}:{index + 1}", str(index)}
+            and by_key.get(f"{role}:{index + 1}", {}).get("required") is False
+            for index, item in enumerate(values)
+        ):
+            moved[field] = values
+    if not moved:
+        return compact
+    candidate = {
+        **compact,
+        "result": {key: value for key, value in result.items() if key not in moved},
+        "optional_policy_diagnostics": {
+            "scope": "Optional card-criterion judgments; not measurements or measurement availability.",
+            "values": moved,
+        },
+    }
+    # Presentation is optional too: do not displace facts or introduce another
+    # truncation/paging path just to add this label near the byte boundary.
+    return candidate if _json_bytes(candidate) <= AGENT_HANDOFF_BYTES else compact
+
+
 def _compact_evaluation_response(response: dict[str, Any]) -> dict[str, Any]:
     """Return one evidence bundle without repeating the same payload three times.
 
@@ -733,13 +840,40 @@ def _compact_evaluation_response(response: dict[str, Any]) -> dict[str, Any]:
         ]
     if isinstance(result.get("retrieval"), dict):
         result["retrieval"] = _compact_bundle(result["retrieval"])
+    # Structured reports and workflow handoffs repeat these same sections.
+    # Keep one canonical copy; only coalesce exact matches so report-specific
+    # evidence or a different follow-up plan cannot disappear. Receipt paths
+    # still resolve against the untouched durable result, including when the
+    # canonical section itself later needs paging.
+    for parent_key, field in (("report", "evidence"), ("workflow", "evidence_plan")):
+        parent = result.get(parent_key)
+        canonical = result.get(field)
+        if (
+            isinstance(parent, dict)
+            and isinstance(canonical, (dict, list))
+            and field in parent
+            and parent[field] == canonical
+            and f"{field}_ref" not in parent
+            # Python equality alone equates True with 1 and 1.0 with 1.
+            # Coalescing must preserve the actual serialized facts/types.
+            and json.dumps(parent[field], sort_keys=True, ensure_ascii=False)
+            == json.dumps(canonical, sort_keys=True, ensure_ascii=False)
+        ):
+            parent = dict(parent)
+            parent.pop(field)
+            parent[f"{field}_ref"] = {"result_path": [field]}
+            result[parent_key] = parent
     compact: dict[str, Any] = {
         "receipt": response.get("receipt"),
         "replayed": bool(response.get("replayed", False)),
         "result": result,
         "response_mode": "compact",
         "details_available": True,
+        "evidence_interpretation": EVIDENCE_INTERPRETATION,
     }
+    for key in ("current_context_dependencies", "current_card_state", "policy_result_is_historical", "policy_action_available"):
+        if key in response:
+            compact[key] = response[key]
     if "card" in response:
         compact["card"] = _compact_card(response.get("card"))
     compact["report_markdown_available"] = had_markdown
@@ -959,7 +1093,7 @@ def _compact_evaluation_response(response: dict[str, Any]) -> dict[str, Any]:
             compact["card_details_available"] = True
         if _json_bytes(compact) > AGENT_HANDOFF_BYTES:
             raise ValueError("Compact receipt metadata exceeds the handoff bound; explicitly request the full audit")
-    return compact
+    return _separate_optional_judgments(compact)
 
 
 CARD_AUTHORING_GUIDANCE = (
@@ -1088,6 +1222,9 @@ def create_mcp(
             "fetches only its approved source scope, and calls Jev for the card's typed policy judgment. "
             "Use search_catalog and inspect_resource to discover and verify sources, onboard_insight_card "
             "to save the owner's intent and exact source references, then review and obtain explicit approval. "
+            "Keep other authorized BI, glossary, knowledge and owner-clarification tools available during "
+            "onboarding and investigation; this profile limits SignalWeave operations, not the whole agent. "
+            "Use revise_insight_card to apply an owner's answers to an existing card, then review it again. "
             "Give the person a useful current analysis from inspected evidence, with each source's scope and "
             "period. Pending alert criteria require confirmation before automation; they do not prevent "
             "reporting supported facts. Honor an owner's explicit fallback rather than demanding an "
@@ -1113,7 +1250,19 @@ def create_mcp(
                 "and webhook capabilities are also exposed in this profile. A caller-owned scheduler "
                 "handles delivery."
             ) + CARD_AUTHORING_GUIDANCE
-        ).replace("Jev", provider_label(decision_provider)),
+        ).replace("Jev", provider_label(decision_provider)) + " " + EVIDENCE_INTERPRETATION + (
+            " Optional domain context is enabled. Use retrieve_domain_context before broad discovery "
+            "to reuse attributed definitions and findings. Save clarifications as draft context, then "
+            "obtain owner-authorized review. Saving or reviewing context does not attach it to a card. "
+            "When a recurring card depends on reviewed shared meaning, put the relevant rule into its "
+            "guidance and use bind_insight_context for the exact reviewed revision before final card "
+            "review and approval. Binding returns the card to draft; it does not rewrite policy or "
+            "retrieve note text. Retrieve authorized context separately when interpretation needs it. "
+            "Only mark a dependency required for action when the owner requires it; supporting "
+            "hypotheses stay advisory. Stale context and hypotheses are not current facts; "
+            "retrieval never expands approved card scope. Agents own analysis and review reminders."
+            if runtime.knowledge is not None else ""
+        ),
         auth=auth_settings,
         token_verifier=token_verifier,
     )
@@ -1146,6 +1295,20 @@ def create_mcp(
         card = runtime.card_store.get_card(card_id)
         assert_card_scope(card, principal)
         return card
+
+    async def card_dependencies(card: InsightCard, principal: PrincipalContext | None) -> dict | None:
+        if not card.context_bindings:
+            return None
+        if runtime.knowledge is not None and principal is not None:
+            return await ContextDependencies(runtime.knowledge).inspect(card.context_bindings, principal)
+        return {
+            "entries": [{"entry_id": pin.entry_id, "revision": pin.revision,
+                         "required_for_action": pin.required_for_action, "status": "unavailable"}
+                        for pin in card.context_bindings],
+            "all_current": False,
+            "required_current": not any(pin.required_for_action for pin in card.context_bindings),
+            "warnings": ["Context dependency validation requires the enabled store and authenticated identity."],
+        }
 
     def assert_metric_card_scope(
         card: MetricQueryCard, principal: PrincipalContext | None
@@ -1293,7 +1456,8 @@ def create_mcp(
         assert_card_scope(card, principal)
         if card.status != InsightCardStatus.APPROVED:
             raise ValueError(
-                f"Insight card {card_id} is a draft; simulate it, then approve it before evaluation"
+                f"Insight card {card_id} is a draft; review it and obtain explicit owner approval "
+                "before a delivery-disabled evaluation"
             )
         key = (idempotency_key or f"manual:{card_id}:{uuid4().hex}").strip()
         if not key:
@@ -1308,7 +1472,10 @@ def create_mcp(
                 raise ValueError("parent_receipt_id does not identify a decision receipt")
             if parent.card_id != card.id:
                 raise ValueError("parent_receipt_id belongs to a different insight card")
-        context = await context_for_card(card, context, principal)
+        dependencies = await card_dependencies(card, principal)
+        defer_for_context = dependencies is not None and not dependencies["required_current"]
+        # Idempotency binds the caller's request, not mutable provider-derived facts.
+        # A retry recovers history without fetching new context or source snapshots.
         fingerprint = _evaluation_fingerprint(
             card,
             actor=actor,
@@ -1318,7 +1485,10 @@ def create_mcp(
         )
         existing = decision_receipts.get_by_idempotency_key(key)
         if existing is not None:
-            if existing.request_fingerprint and existing.request_fingerprint != fingerprint:
+            if (existing.card_id != card.id or existing.card_version != card.version
+                    or existing.actor != (actor or "mcp-client")
+                    or existing.parent_receipt_id != parent_id or existing.workflow_step_key != step_key
+                    or (existing.request_fingerprint and existing.request_fingerprint != fingerprint)):
                 raise ValueError(
                     "idempotency key is already bound to a different card, actor, version, "
                     "or context"
@@ -1332,6 +1502,9 @@ def create_mcp(
                 "replayed": True,
                 "result": existing.result,
             }
+        # Do not invoke external context discovery when required meaning is unresolved.
+        if not defer_for_context:
+            context = await context_for_card(card, context, principal)
         prepared = DecisionReceipt(
             receipt_id=f"receipt-{uuid4().hex}",
             idempotency_key=key,
@@ -1347,7 +1520,12 @@ def create_mcp(
         )
         if not decision_receipts.claim(prepared):
             existing = decision_receipts.get_by_idempotency_key(key)
-            if existing is not None and existing.request_fingerprint and existing.request_fingerprint != fingerprint:
+            if existing is not None and (
+                existing.card_id != card.id or existing.card_version != card.version
+                or existing.actor != (actor or "mcp-client")
+                or existing.parent_receipt_id != parent_id or existing.workflow_step_key != step_key
+                or (existing.request_fingerprint and existing.request_fingerprint != fingerprint)
+            ):
                 raise ValueError(
                     "idempotency key is already bound to a different card, actor, version, "
                     "or context"
@@ -1364,6 +1542,15 @@ def create_mcp(
                 "result": existing.result,
             }
         try:
+            if defer_for_context:
+                bundle = EvidenceBundle(
+                    card_id=card.id, goal=card.what_to_watch,
+                    anchor_source_keys=[source.key for source in card.sources],
+                    selected_sources=card.sources, candidate_count=len(card.sources),
+                    candidate_limit=max(1, len(card.sources)), evaluator="approved-anchor-evidence-only",
+                    warnings=["Required context needs review; no related-source expansion or policy inference was attempted."],
+                )
+                raise ContextReviewRequired(await runtime.engine.prepare_evidence(card, principal))
             evaluation_card, bundle = await prepare_insight_card(
                 card, context, principal=principal
             )
@@ -1372,6 +1559,8 @@ def create_mcp(
             )
             evaluated_result = run.result.model_copy(update={"retrieval": bundle})
             result = evaluated_result.model_dump(mode="json")
+            if dependencies is not None:
+                result["context_dependencies_at_run"] = dependencies
             result["source_contracts"] = [
                 {
                     "source_key": resource.source_key,
@@ -1392,8 +1581,8 @@ def create_mcp(
         except Exception as error:  # noqa: BLE001 - persist failed claims for replay safety
             handoff = getattr(error, "prepared_handoff", None)
             if (
-                isinstance(error, JevPayloadError)
-                and error.stage == "judgment"
+                (isinstance(error, ContextReviewRequired)
+                 or (isinstance(error, JevPayloadError) and error.stage == "judgment"))
                 and isinstance(handoff, dict)
             ):
                 deferred_card = handoff["card"]
@@ -1412,20 +1601,20 @@ def create_mcp(
                     "source_keys": list(source_by_key),
                     "judgment": {
                         "status": "deferred",
-                        "reason": "local_judgment_payload_over_budget",
-                        "input_budget": {
+                        "reason": "context_review_required" if isinstance(error, ContextReviewRequired) else "local_judgment_payload_over_budget",
+                        "input_budget": None if isinstance(error, ContextReviewRequired) else {
                             "stage": error.stage,
                             "observed_bytes": error.observed_bytes,
                             "budget_bytes": error.budget_bytes,
                             "observed_tokens": error.observed_tokens,
                             "budget_tokens": error.budget_tokens,
                         },
-                        "provider_call_attempts": error.provider_call_attempts,
+                        "provider_call_attempts": getattr(error, "provider_call_attempts", 0),
                         "attempt_scope": "current_judgment",
                         "provider_call_attempted": (
                             None
-                            if error.provider_call_attempts is None
-                            else error.provider_call_attempts > 0
+                            if getattr(error, "provider_call_attempts", 0) is None
+                            else getattr(error, "provider_call_attempts", 0) > 0
                         ),
                     },
                     "judgment_state": materials.state,
@@ -1447,6 +1636,8 @@ def create_mcp(
                     ],
                     "retrieval": bundle.model_dump(mode="json"),
                 }
+                if dependencies is not None:
+                    result["context_dependencies_at_run"] = dependencies
                 receipt = prepared.model_copy(
                     update={
                         "delivery_mode": "shadow",
@@ -1528,6 +1719,30 @@ def create_mcp(
                 parent_receipt_id=parent_receipt_id,
                 workflow_step_key=workflow_step_key,
             )
+            # A receipt is historical. Check today's dependencies separately, even on replay.
+            current_card = get_scoped_card(card_id, principal)
+            card_changed = (current_card.version != response["receipt"]["card_version"]
+                            or current_card.status != InsightCardStatus.APPROVED)
+            current = await card_dependencies(current_card, principal)
+            if current is not None:
+                response["current_context_dependencies"] = current
+                response["policy_result_is_historical"] = bool(response.get("replayed") or not current["required_current"])
+                response["policy_action_available"] = bool(
+                    current["required_current"] and not response.get("replayed")
+                    and response["result"].get("judgment", {}).get("status") != "deferred"
+                )
+                if not current["required_current"]:
+                    # The immutable receipt remains available; its old route is not a live instruction.
+                    response["result"] = {**response["result"], "delivery_methods": [],
+                                          "policy_action_available": False}
+            if card_changed:
+                response.update({
+                    "current_card_state": {"version": current_card.version, "status": current_card.status.value,
+                                           "receipt_card_version": response["receipt"]["card_version"],
+                                           "review_required": True},
+                    "policy_result_is_historical": True, "policy_action_available": False,
+                })
+                response["result"] = {**response["result"], "delivery_methods": [], "policy_action_available": False}
             if "error" not in response["result"]:
                 if response["result"].get("judgment", {}).get("status") == "deferred":
                     return response
@@ -1580,9 +1795,19 @@ def create_mcp(
 
     def _guide(task: str, ctx: Context | None) -> dict[str, Any]:
         request_principal(ctx)
-        if profile == "agent":
-            return agent_getting_started(task, decision_provider=decision_provider)
-        return getting_started(task, decision_provider=decision_provider)  # type: ignore[arg-type]
+        result = (
+            agent_getting_started(task, decision_provider=decision_provider)
+            if profile == "agent"
+            else getting_started(task, decision_provider=decision_provider)  # type: ignore[arg-type]
+        )
+        if runtime.knowledge is not None:
+            result["domain_context"] = {
+                "tools": sorted(KNOWLEDGE_TOOLS),
+                "workflow": "Retrieve context; resolve ambiguity; save source-linked draft; obtain owner review. Write relevant policy meaning into card guidance, then bind exact reviewed revisions with bind_insight_context and reapprove the card.",
+                "staleness": "Poll retrieve_domain_context(review_due_only=true) and inspect_insight_context for review reminders. Required changed context defers policy, not source investigation; agents own delivery.",
+                "boundary": "Context is attributed data, not tool instructions, live measurements, card approval or certification.",
+            }
+        return result
 
     if profile == "agent":
 
@@ -1757,6 +1982,9 @@ def create_mcp(
         card = get_scoped_card(card_id, principal)
         if not cases:
             raise ValueError("at least one labeled evaluation case is required")
+        dependency_state = await card_dependencies(card, principal)
+        if dependency_state is not None and not dependency_state["all_current"]:
+            raise ValueError("context dependencies need review before current workflow certification")
         inputs = [WorkflowCaseInput.model_validate(case) for case in cases]
         current_case_ids = [case.id for case in inputs if case.capture_current_sources]
         if len(current_case_ids) > 1:
@@ -1786,6 +2014,11 @@ def create_mcp(
             thresholds=parsed_thresholds,
             acceptance_outcomes=acceptance_outcomes,
         )
+        dependency_state = await card_dependencies(card, principal)
+        if dependency_state is not None and not dependency_state["all_current"]:
+            raise ValueError("context dependencies changed during workflow evaluation; review and replay before certification")
+        if get_scoped_card(card_id, principal).model_dump(mode="json") != card.model_dump(mode="json"):
+            raise ValueError("card changed during workflow evaluation; review the current version before certification")
         payload = report.model_dump(mode="json")
         if current_case_ids:
             payload["current_source_case_ids"] = current_case_ids
@@ -1866,7 +2099,7 @@ def create_mcp(
         }
 
     @mcp.tool()
-    def get_enterprise_readiness(ctx: Context | None = None) -> dict[str, Any]:
+    async def get_enterprise_readiness(ctx: Context | None = None) -> dict[str, Any]:
         """Summarize the tenant's bootstrap, card, and certification gates.
 
         This is an evidence index for a caller-owned UI or agent, not a claim
@@ -1923,6 +2156,7 @@ def create_mcp(
 
         card_summaries: list[dict[str, Any]] = []
         for card in sorted(cards, key=lambda item: item.id):
+            dependency_state = await card_dependencies(card, principal)
             review_status = (
                 card.onboarding_review.readiness_status
                 if card.onboarding_review is not None
@@ -1934,18 +2168,26 @@ def create_mcp(
                 workflow and workflow.report.get("acceptance_passed") is True
                 and workflow.report.get("card_execution_digests", {}).get(card.id) == card_acceptance_digest(card)
             )
+            if dependency_state is not None and not dependency_state["all_current"]:
+                acceptance_current = False
+                gates.append({"code": "card-context-needs-review", "severity": "review",
+                              "message": f"Card {card.id} has changed or unavailable context dependencies."})
             summary = {
                 "card_id": card.id,
                 "version": card.version,
                 "status": card.status.value,
                 "onboarding_status": review_status,
+                "context_dependencies": dependency_state,
                 "workflow_certification": (
                     {
                         "report_id": workflow.report_id,
                         "status": workflow.status,
                         "created_at": workflow.created_at.isoformat(),
                         "subject_version": workflow.subject_version,
-                        "stale": workflow.subject_version != str(card.version) or not policy_current,
+                        "stale": (
+                            workflow.subject_version != str(card.version) or not policy_current
+                            or bool(dependency_state is not None and not dependency_state["all_current"])
+                        ),
                         "evidence_admission_policy_current": policy_current,
                         "acceptance_current": acceptance_current,
                     }
@@ -2295,7 +2537,7 @@ def create_mcp(
         elif review["readiness_status"] == "needs_human_review":
             next_action = "review_candidate_sources"
         else:
-            next_action = "simulate_then_approve"
+            next_action = "confirm_then_approve"
         return {
             "status": review["readiness_status"],
             "next_action": next_action,
@@ -2305,11 +2547,80 @@ def create_mcp(
             "plan": proposal["plan"],
             "discovery": proposal["discovery"],
             "review": review,
+            "approval_handoff": _approval_handoff(
+                InsightCard.model_validate(proposal["card"]), InsightCardOnboardingReview.model_validate(review), adapter,
+            ),
             "setup_questions": proposal["setup_questions"],
             "summary": result["summary"],
             "response_mode": response_mode,
             "details_available": True,
         }
+
+    @mcp.tool()
+    def revise_insight_card(
+        card_id: str,
+        expected_card_version: StrictInt,
+        changes: dict[str, Any],
+        reason: str,
+        response_mode: ResponseMode = default_card_response_mode,
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Apply clarified business policy to the same card, returning it to draft.
+
+        Only the authenticated card owner may revise it. Get the current card,
+        then provide only changed fields; lists/maps replace the whole field.
+        Allowed: title, what_to_watch, why_watch, watch_for, questions,
+        numeric_conditions, evidence_requirements, decision_guidance,
+        follow_up_guidance, comparison_windows, delivery_methods, owner.
+        Empty lists/maps can clear optional fields. Source identities/parameters,
+        execution settings and context pins cannot be changed here. Existing
+        source requirements may gain exact keys needed by new numeric conditions.
+        Every revision increments the version, clears approval, compiled plan
+        and current review, and needs fresh review/approval. No source reads,
+        inference, scheduling or delivery occurs. Recent correction history is
+        bounded to 100 entries; historical receipts remain unchanged.
+        Compact responses preserve active policy, source scope and context pins,
+        but omit historical review/correction packets. Full responses retain
+        the stored card; get_insight_card(include_history=true,response_mode="full")
+        also exposes the retained audit history.
+        """
+        principal = request_principal(ctx)
+        card = get_scoped_card(card_id, principal)
+        if principal is None or card.principal_id != principal.principal_id:
+            raise ValueError("only the authenticated card owner may revise its policy")
+        if type(expected_card_version) is not int or card.version != expected_card_version:
+            raise ValueError("card version changed; get and review the current card before revising")
+        allowed = {"title", "what_to_watch", "why_watch", "watch_for", "questions", "numeric_conditions",
+                   "evidence_requirements", "decision_guidance", "follow_up_guidance", "comparison_windows",
+                   "delivery_methods", "owner"}
+        if not changes or set(changes) - allowed:
+            raise ValueError("provide only nonempty changes to the documented business-policy fields")
+        if (len(json.dumps(changes, ensure_ascii=False, allow_nan=False).encode()) > 32_000
+                or not reason.strip() or len(reason) > 2000):
+            raise ValueError("provide bounded changes and a nonempty revision reason up to 2000 characters")
+        payload = {**card.model_dump(mode="json"), **changes,
+                   "version": card.version + 1, "status": "draft", "approved_by": None,
+                   "approved_at": None, "compiled_plan": None, "onboarding_review": None}
+        if "numeric_conditions" in changes:
+            conditions = [NumericCondition.model_validate(item) for item in payload["numeric_conditions"]]
+            payload["sources"] = [source.model_dump(mode="json") for source in bind_numeric_condition_requirements(
+                card.sources, conditions,
+            )]
+        correction = OnboardingCorrection(
+            correction_id=f"correction-{uuid4().hex}", card_id=card.id, card_version=card.version + 1,
+            kind=OnboardingCorrectionKind.INTENT_CLARIFIED, note=reason.strip(),
+            principal_id=principal.principal_id, principal_tenant=principal.tenant_id,
+        )
+        payload["onboarding_corrections"] = [
+            *[item.model_dump(mode="json") for item in card.onboarding_corrections[-99:]],
+            correction.model_dump(mode="json"),
+        ]
+        updated = InsightCard.model_validate(payload)
+        runtime.card_store.save_card_if_version(updated, expected_card_version, expected_card=card)
+        payload = updated.model_dump(mode="json")
+        return {"card": _compact_card(payload) if response_mode == "compact" else payload,
+                "approval_required": True, "response_mode": response_mode, "details_available": True,
+                "delivery_enabled": False, "next_action": "review_insight_card"}
 
     @mcp.tool()
     async def bootstrap_insight_card(
@@ -2654,6 +2965,10 @@ def create_mcp(
         automatically. Additional external facts may use a versioned context
         object; its provider/version fields belong inside that object. Do not
         copy already-fetched source observations into context.
+        Caller context remains unverified even if it declares trust or provenance;
+        it supports review, not automatic notify/escalate. A new policy route
+        needs evidence fetched from approved sources or a trusted runtime context
+        provider. Supported agent analysis need not wait for that policy repair.
         """
         principal = request_principal(ctx)
         trusted_actor = principal.principal_id if principal else actor
@@ -2678,7 +2993,7 @@ def create_mcp(
         )
 
     @mcp.tool()
-    def get_decision_receipt(
+    async def get_decision_receipt(
         idempotency_key: str | None = None,
         receipt_id: str | None = None,
         result_path: Annotated[list[str] | None, Field(
@@ -2705,7 +3020,9 @@ def create_mcp(
         indexes for a byte-bounded page. Objects return key/value entries;
         lists retain exact items. offset and limit count collection items, not
         tokens or bytes. Follow next_offset until has_more is false.
-        Pages do not rerun sources or models. Omit result_path for the full audit.
+        Pages do not rerun sources or models. Omit result_path for the full audit:
+        receipt contains metadata and result contains the complete stored result
+        once, rather than duplicating it inside the receipt envelope.
         """
         principal = request_principal(ctx)
         key = idempotency_key.strip() if idempotency_key else None
@@ -2723,17 +3040,29 @@ def create_mcp(
         )
         if receipt is None:
             raise ValueError("unknown decision receipt")
-        get_scoped_card(receipt.card_id, principal)
+        receipt_card = get_scoped_card(receipt.card_id, principal)
+        current_dependencies = await card_dependencies(receipt_card, principal)
+        dependency_warning = ({"current_context_dependencies": current_dependencies,
+                               "policy_result_is_historical": True, "policy_action_available": False}
+                              if current_dependencies is not None else {})
+        if receipt_card.version != receipt.card_version or receipt_card.status != InsightCardStatus.APPROVED:
+            dependency_warning.update({
+                "current_card_state": {"version": receipt_card.version, "status": receipt_card.status.value,
+                                       "receipt_card_version": receipt.card_version, "review_required": True},
+                "policy_result_is_historical": True, "policy_action_available": False,
+            })
         if result_path is not None:
             return {
+                **dependency_warning,
                 "status": "found",
                 "receipt": receipt.model_dump(mode="json", exclude={"result"}),
                 "result_page": _receipt_result_page(receipt.result, result_path, offset, limit),
             }
         feedback = decision_feedback.list(receipt_id=receipt.receipt_id)
         return {
+            **dependency_warning,
             "status": "found",
-            "receipt": receipt.model_dump(mode="json"),
+            "receipt": receipt.model_dump(mode="json", exclude={"result"}),
             "result": receipt.result,
             "feedback": [item.model_dump(mode="json") for item in feedback],
         }
@@ -2751,6 +3080,13 @@ def create_mcp(
         """Preview the bounded Jev-ranked evidence bundle for a stored card."""
         principal = request_principal(ctx)
         card = get_scoped_card(card_id, principal)
+        dependencies = await card_dependencies(card, principal)
+        if dependencies is not None and not dependencies["required_current"]:
+            return {
+                "status": "context_review_required", "current_context_dependencies": dependencies,
+                "card": _evaluation_card(card), "provider_call_attempted": False,
+                "next_step": "Use the approved card sources for factual investigation; review context before semantic expansion.",
+            }
         context_snapshot = (
             ContextSnapshot.model_validate(context).model_copy(update={"trust": "unverified"})
             if context
@@ -2789,12 +3125,11 @@ def create_mcp(
         ] = "full",
         ctx: Context | None = None,
     ) -> dict[str, Any]:
-        """Review a draft's source coverage before a human approves it.
+        """Review a draft's source coverage, declared comparison contracts, and policy blockers.
 
-        This is an onboarding review, not an automatic policy change. It shows
-        bounded Jev-ranked candidates, why they were surfaced, and which
-        recommendations the draft omitted so a client-owned UI or agent can ask
-        for confirmation or revise the card.
+        Fixed-source review uses the declared sources and bounded adapter metadata without Jev
+        ranking; dynamic discovery or ranked expansion may call the configured Jev evaluator,
+        and its candidate rankings remain recommendations for owner review.
         """
         principal = request_principal(ctx)
         card = get_scoped_card(card_id, principal)
@@ -2808,8 +3143,9 @@ def create_mcp(
         )
         if get_scoped_card(card_id, principal).model_dump(mode="json") != original:
             raise ValueError("Card changed during review; review the current card before approval.")
-        card = append_onboarding_review(card, review)
-        runtime.card_store.save_card(card)
+        reviewed = append_onboarding_review(card, review)
+        runtime.card_store.save_card_if_unchanged(reviewed, expected_card=card)
+        card = reviewed
         review_payload = review.model_dump(mode="json")
         return {
             # The stored card carries the complete latest review for auditability.
@@ -2823,6 +3159,7 @@ def create_mcp(
             "review": _compact_review(review_payload)
             if response_mode == "compact"
             else review_payload,
+            "approval_handoff": _approval_handoff(card, review, adapter),
             "response_mode": response_mode,
             "details_available": True,
         }
@@ -2840,6 +3177,21 @@ def create_mcp(
         """Evaluate a draft without treating the result as an approved push action."""
         principal = request_principal(ctx)
         card = get_scoped_card(card_id, principal)
+        dependencies = await card_dependencies(card, principal)
+        if dependencies is not None and not dependencies["required_current"]:
+            handoff = await runtime.engine.prepare_evidence(card, principal)
+            # No durable receipt for previews; preserve source facts without a policy outcome.
+            return {
+                "status": "preview_deferred", "delivery_enabled": False,
+                "card": _evaluation_card(card), "current_context_dependencies": dependencies,
+                "policy_action_available": False,
+                "result": {"card_id": card.id, "outcome": None, "delivery_methods": [],
+                           "judgment": {"status": "deferred", "reason": "context_review_required",
+                                        "provider_call_attempted": False},
+                           "observations": [item.model_dump(mode="json") for item in handoff["materials"].observations],
+                           "evidence": [item.model_dump(mode="json") for item in handoff["materials"].evidence]},
+                "coverage": "Selected anchors only; no related-source expansion or policy inference.",
+            }
         context_snapshot = (
             ContextSnapshot.model_validate(context).model_copy(update={"trust": "unverified"})
             if context
@@ -3074,29 +3426,42 @@ def create_mcp(
         workflow_report_id: str | None = None,
         ctx: Context | None = None,
     ) -> dict[str, Any]:
-        """Approve only after explicit owner review and a delivery-disabled simulation.
+        """Approve the reviewed card only after explicit owner authorization.
+
+        The default agent profile does not expose draft simulation. After
+        approval, evaluate_insight_card can run a delivery-disabled shadow check.
+        Approval alone is not workflow certification, scheduling, or permission
+        to deliver a message. A full-profile acceptance report remains optional
+        proof through workflow_report_id, not a prerequisite for the first
+        owner-authorized shadow run.
 
         For a fixed card with no dynamic investigation, an owner may confirm its
         exact selected sources despite duplicate titles or omitted recommendations. A
-        source-owned comparison contract is still required for automatic notify or
-        escalate routes; owner prose cannot create a missing window, comparison key,
-        population, or grain. For a card that explicitly requests bounded related-source
+        missing adapter definition or comparison window stays unverified, but does not
+        prevent an owner-authorized shadow run merely because recipients are mapped.
+        Owner prose cannot create a provider guarantee about a comparison key,
+        population, grain or coverage; approval is not unattended-delivery certification.
+        An explicitly incompatible declared window still blocks approval.
+        For a card that explicitly requests bounded related-source
         retrieval or investigation, pass dynamic_scope_acknowledged=true alongside the
         current review fingerprint and owner reason. This acknowledges the bounded runtime
         expansion; it does not authorize unbounded discovery. These confirmations do not
         override a source that declares an incompatible window, source health, permissions,
         or runtime evidence-quality gates.
         Pass the same optional adapter scope used by review_insight_card, plus its
-        source_selection_fingerprint and the owner's
-        source_selection_reason explaining which definitions/populations were chosen
+        source_selection_fingerprint and a
+        source_selection_reason recording the owner-confirmed definitions/populations
         and why. Changed policy/catalog invalidates that confirmation. This cannot
         override source health, permissions, missing policy or other blockers.
+        Copy the fingerprint returned in approval_handoff when asking an owner
+        for confirmation; it binds their reply to that reviewed snapshot.
         Clients that have just reviewed the current card may set
-        use_current_source_selection_review=true and provide the owner reason
+        use_current_source_selection_review=true and record the owner's actual confirmation
         instead of copying the opaque fingerprint. The server binds approval to
         the current stored review and still revalidates its fingerprint against
         the current catalog; this is a convenience for agents and does not waive
-        any blocker or owner confirmation.
+        any blocker or owner confirmation. It resolves the latest stored review,
+        so do not use this convenience to apply a reply to an earlier handoff.
         If the review lists selected source scopes, also pass
         source_scope_confirmations with the exact declared scope text by source ref.
         This makes the scope decision auditable; it does not make an incompatible
@@ -3108,6 +3473,7 @@ def create_mcp(
         """
         principal = request_principal(ctx)
         card = get_scoped_card(card_id, principal)
+        original_card = card
         assert_dynamic_review_scope(card, adapter)
         if use_current_source_selection_review:
             if source_selection_fingerprint is not None:
@@ -3123,6 +3489,9 @@ def create_mcp(
                 )
             source_selection_fingerprint = current_review.source_selection_fingerprint
         original = card.model_dump(mode="json")
+        dependency_state = await card_dependencies(card, principal)
+        if dependency_state is not None and not dependency_state["all_current"]:
+            raise ValueError("context dependencies need review and rebinding before card approval")
         if not card.sources:
             raise ValueError("an insight card needs at least one selected source before approval")
         acceptance_record = None
@@ -3226,18 +3595,22 @@ def create_mcp(
         if card.compiled_plan is None:
             plan = await runtime.engine.compile(card)
             card = card.model_copy(update={"compiled_plan": plan})
+        dependency_state = await card_dependencies(card, principal)
+        if dependency_state is not None and not dependency_state["all_current"]:
+            raise ValueError("context dependencies changed during approval; review and rebind before approval")
         if get_scoped_card(card_id, principal).model_dump(mode="json") != original:
-            raise ValueError("Card changed during approval; review and simulate the current card "
+            raise ValueError("Card changed during approval; review the current card "
                              "and obtain its owner's approval again.")
-        runtime.card_store.save_card(card)
-        approved = runtime.card_store.set_card_status(card_id, InsightCardStatus.APPROVED)
-        approved = approved.model_copy(
-            update={
+        approved_payload = card.model_dump(mode="json")
+        approved_payload.update(
+            {
+                "status": InsightCardStatus.APPROVED.value,
                 "approved_by": principal.principal_id if principal else actor,
-                "approved_at": datetime.now(timezone.utc),
+                "approved_at": datetime.now(timezone.utc).isoformat(),
             }
         )
-        runtime.card_store.save_card(approved)
+        approved = InsightCard.model_validate(approved_payload)
+        runtime.card_store.save_card_if_unchanged(approved, expected_card=original_card)
         return {
             "status": approved.status.value,
             "card": _evaluation_card(approved),
@@ -3251,20 +3624,46 @@ def create_mcp(
 
     @mcp.tool()
     def list_insight_cards(
-        status: str | None = None, ctx: Context | None = None
+        status: str | None = None,
+        response_mode: ResponseMode = default_card_response_mode,
+        offset: Annotated[StrictInt, Field(ge=0)] = 0,
+        limit: Annotated[StrictInt, Field(ge=1, le=100)] = 25,
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
-        """List stored cards for a client-owned UI or agent."""
+        """Browse stored cards in bounded, ID-sorted pages.
+
+        Compact pages contain identity/status summaries, not execution policy.
+        Read a chosen card with get_insight_card before interpreting or revising
+        it. Full pages include stored audit fields. Follow next_offset for more;
+        count is the authorized, status-filtered total, not this page's length.
+        Offsets refer to the current listing; concurrent writes can change pages.
+        This bounds response size, not database scan cost. No source/model calls.
+        """
+        if type(offset) is not int or offset < 0:
+            raise ValueError("offset must be a nonnegative integer")
+        if type(limit) is not int or not 1 <= limit <= 100:
+            raise ValueError("limit must be between 1 and 100")
         principal = request_principal(ctx)
         selected_status = InsightCardStatus(status) if status else None
-        cards = [
+        cards = sorted((
             card
             for card in runtime.card_store.list_cards()
             if principal is None or card.principal_tenant == principal.tenant_id
             if selected_status is None or card.status == selected_status
-        ]
+        ), key=lambda card: card.id)
+        page = cards[offset:offset + limit]
+        has_more = offset + len(page) < len(cards)
+        summaries = [
+            {"id": card.id, "title": card.title, "owner": card.owner,
+             "status": card.status.value, "version": card.version,
+             "source_count": len(card.sources), "context_binding_count": len(card.context_bindings)}
+            for card in page
+        ] if response_mode == "compact" else [card.model_dump(mode="json") for card in page]
         return {
-            "cards": [card.model_dump(mode="json") for card in cards],
-            "count": len(cards),
+            "cards": summaries, "count": len(cards), "returned_count": len(page),
+            "offset": offset, "limit": limit, "has_more": has_more,
+            "next_offset": offset + len(page) if has_more else None,
+            "response_mode": response_mode, "details_available": True,
         }
 
     @mcp.tool()
@@ -3343,6 +3742,7 @@ def create_mcp(
             "jev_used": False,
             "decision_made": False,
             "delivery_enabled": False,
+            "context_dependencies": await card_dependencies(card, principal),
             "agent_contract": (
                 "Analyze only the returned source evidence in the context of the card. Separate "
                 "observations from hypotheses; verify source health, freshness, definition, and "
@@ -3472,11 +3872,17 @@ def create_mcp(
             return JSONResponse({"error": str(error)}, status_code=status_code)
         return JSONResponse(result)
 
+    if runtime.knowledge is not None:
+        register_knowledge_tools(
+            mcp, runtime.knowledge, request_principal, require_scopes=principal_resolver is not None,
+            card_store=runtime.card_store,
+        )
+
     if profile == "full":
         mcp.custom_route("/webhooks/evaluate", methods=["POST"])(evaluate_webhook)
     else:
         for tool in mcp._tool_manager.list_tools():
-            if tool.name not in AGENT_PROFILE_TOOLS:
+            if tool.name not in AGENT_PROFILE_TOOLS | (KNOWLEDGE_TOOLS if runtime.knowledge else frozenset()):
                 mcp.remove_tool(tool.name)
 
     return mcp

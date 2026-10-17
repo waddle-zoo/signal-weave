@@ -104,6 +104,10 @@ and `delivery_methods` names the destinations for each outcome.
 See an [example card](examples/insight-card.json) and the
 [onboarding walkthrough](docs/local-investigations.md#set-up-a-card).
 
+For definitions shared across cards, use optional
+[domain context](docs/domain-context.md): source-linked notes with review dates
+and revision history, available to your connected agents.
+
 ## Evidence + decisions + your agent
 
 ```text

@@ -1,0 +1,784 @@
+{
+  "protocol": "raw-northstar-workflow-v2",
+  "scope": "One known local fictional company and one historical workflow observation. Six agent episodes with phase-specific tool sets, not six raw model round trips. Fresh private noninteractive CLI/MCP setup; not a downloaded-binary/terminal-wizard or real-human trial. Source fixture is an existing local installation, not bundled by this runner.",
+  "method_commit": "39b4f78b70f85241062562f13bd7051839b47229",
+  "frozen_build": {
+    "dirty": false,
+    "format_version": 1,
+    "frozen": true,
+    "git_commit": "39b4f78b70f85241062562f13bd7051839b47229",
+    "python": "3.12.10",
+    "source_sha256": "5a96678d8a00bdea06086c7539bda2f375fd8dd5ce012647f7aeb89b5bad3479",
+    "version": "0.2.0rc3",
+    "binary_sha256": "705067faef93c2bcb88aed55ddd9d4b36e6fe71b21fd6ce6b7d514ac37ab699a"
+  },
+  "raw_report_sha256": "2a4c0b4ebbfd09b23fe97b6be3ed89c8857ef347aaaae0fe841e8003a3d712e4",
+  "raw_trace_sha256": "d759fdb5f2e2d73f2742409cc0be97fe1eb5ca83f90996c93ee13580906c5c28",
+  "result": {
+    "completed": true,
+    "paired_reporting_complete": true,
+    "qualified_arms": [
+      "baseline",
+      "signalweave"
+    ],
+    "card_policy_unchanged": true,
+    "binary_unchanged": true,
+    "credential_scrubbed": true,
+    "usage_known": true,
+    "invocations": 6,
+    "upstream_jev_requests": 1,
+    "usage_scope": "Frontier-agent accounting for six episodes; not all underlying model HTTP responses. The separate Jev response is recorded in native_decision.telemetry.",
+    "usage": {
+      "input_tokens": 1399721,
+      "cached_input_tokens": 1059712,
+      "uncached_input_tokens": 340009,
+      "output_tokens": 68608,
+      "responses": 6
+    }
+  },
+  "owner_reference": "raw-northstar-onboarding-v1.json:brief and owner_declarations only",
+  "actual_agent_authored_card_policy_projection": {
+    "id": "card-executive-monthly-net-sales-and-online-contribution-4da3a6cb",
+    "title": "Executive monthly net sales and online contribution",
+    "version": 1,
+    "what_to_watch": "For each reporting run, compare the latest reported Executive calendar month with the prior calendar month using the Executive model's net_sales field and its own channel categories. Establish coverage from the Executive daily-detail source. Explain Online's absolute and relative contribution to the overall net_sales movement using the same model and period.",
+    "why_watch": "Give leadership a reliable view of whether official management net sales changed, how much Online contributed to that movement, and whether the comparison is complete enough to act on.",
+    "sources": [
+      {
+        "key": "primary_sales",
+        "adapter": "superset",
+        "resource": "chart:1",
+        "label": "Executive Revenue trend monthly channel aggregate",
+        "parameters": {},
+        "required": true,
+        "required_comparison_keys": []
+      },
+      {
+        "key": "coverage_detail",
+        "adapter": "superset",
+        "resource": "chart:10",
+        "label": "Executive daily detail for reporting cutoff",
+        "parameters": {},
+        "required": true,
+        "required_comparison_keys": []
+      }
+    ],
+    "comparison_windows": [
+      "prior_calendar_month"
+    ],
+    "watch_for": [
+      "Whether the requested latest-month comparison has complete coverage.",
+      "How much Online and the other Executive channels contributed arithmetically to overall net_sales movement."
+    ],
+    "questions": [
+      "Which Executive channel contributed most in absolute terms to the overall net_sales movement?"
+    ],
+    "evidence_requirements": {},
+    "decision_guidance": "Use the Executive Command Center model's source-reported net_sales as the official management sales figure and the model's own channel categories. net_sales is not GAAP revenue, settled cash, marketing-attributed revenue, or a unique-customer metric. Compare the latest reported calendar month with the prior calendar month only after establishing from Executive daily detail whether both are fully covered and comparable. The detail model is declared complete through its latest observed order_date; the latest calendar month is complete only if that date reaches the month's final day. Never describe a partial-month total compared with a full-month total as a business decline. If the latest month is partial or coverage cannot be established, return insufficient_data to Data Trust for that monthly comparison, and still report the most recent two fully covered months when supported. For an established complete comparable primary monthly comparison: a net_sales decline of at least 15% relative to prior month means notify Leadership; otherwise, any absolute net_sales change of at least 10% means investigate with Analytics; smaller absolute changes mean ignore with no triggered recipient. Optional channel or funnel detail explains the primary finding and is not an extra required alert condition. If same-period channel values are available, report each channel's signed change and its arithmetic contribution to the overall change; contributions describe accounting movement, not cause. Missing optional diagnostic context is a limit and does not erase supported primary sales facts. Do not add attributed marketing revenue or digital-commerce revenue to Executive net_sales, and do not claim campaigns caused sales movement from correlation alone. Preserve source units as reported; do not infer a currency.",
+    "follow_up_guidance": "",
+    "delivery_methods": [
+      {
+        "key": "notify_leadership",
+        "outcome": "notify",
+        "label": "Leadership",
+        "destination": "Leadership",
+        "instructions": "Proposed destination for a complete comparable monthly decline of at least 15%; no delivery is authorized."
+      },
+      {
+        "key": "investigate_analytics",
+        "outcome": "investigate",
+        "label": "Analytics",
+        "destination": "Analytics",
+        "instructions": "Proposed destination for any other complete comparable absolute monthly change of at least 10%; no delivery is authorized."
+      },
+      {
+        "key": "insufficient_data_trust",
+        "outcome": "insufficient_data",
+        "label": "Data Trust",
+        "destination": "Data Trust",
+        "instructions": "Proposed destination when latest-month completeness or coverage cannot be established; no delivery is authorized."
+      }
+    ]
+  },
+  "synthetic_owner_consent": {
+    "reply": "After the independent expert accepts this exact saved policy and source scope, I approve this saved card version for one delivery-disabled shadow check. Missing provider contracts stay unverified; this is not certification or permission to deliver. This is synthetic consent, not a real person's approval. Do not schedule or send anything.",
+    "card_id": "card-executive-monthly-net-sales-and-online-contribution-4da3a6cb",
+    "version": 1,
+    "policy_digest": "970a730838db97e05d31e753f8052d87f7b7fcfb3140bd7dcf44f3a82184e54b"
+  },
+  "native_approval": {
+    "status": "approved",
+    "card_status": "approved",
+    "onboarding_warnings": [
+      "Comparison windows are undeclared; compatibility is unverified for: superset|chart:1, superset|chart:10",
+      "Source metric/comparison meaning is unverified by an adapter-owned definition, comparison binding, population, grain and window for: superset|chart:1, superset|chart:10. Preserve the owner's reviewed meaning in the card and verify each run's evidence. A destination mapping or card approval does not certify unattended delivery or establish missing source guarantees."
+    ]
+  },
+  "native_run_receipt": {
+    "receipt_id": "receipt-134632e7393b45ce87792b6008abbf9c",
+    "card_id": "card-executive-monthly-net-sales-and-online-contribution-4da3a6cb",
+    "card_version": 1,
+    "idempotency_key": "raw-northstar-workflow-v2:report",
+    "status": "delivery_disabled",
+    "delivery_enabled": false,
+    "delivery_mode": "shadow",
+    "outcome": "insufficient_data",
+    "delivery_method_keys": ["insufficient_data_trust"]
+  },
+  "workflow_acceptance": {
+    "status": "unassessed",
+    "report_id": null,
+    "human_authorization_required": true
+  },
+  "phases": [
+    {
+      "stage": "author",
+      "arm": "baseline",
+      "tool_calls": 31,
+      "seconds": 171.46523579201312,
+      "frontier_usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 133760,
+        "input_tokens": 208684,
+        "input_tokens_details": {
+          "cached_tokens": 133760
+        },
+        "output_tokens": 16896,
+        "reasoning_output_tokens": 12921,
+        "uncached_input_tokens": 74924
+      },
+      "submission": {
+        "card_id": null,
+        "message": "**First readout:** The Executive Command Center reports source-model `net_sales` as management sales; the owner says this is distinct from GAAP revenue, settled cash, marketing-attributed revenue and unique-customer sales (owner reference: northstar-owner://sales/meaning). In the two latest fully covered months, total net_sales rose from $2,158,994.74 in July to $2,292,267.50 in August (+$133,272.76, +6.2%). Online rose from $781,780.69 to $843,730.63 (+$61,949.94, +7.9%), accounting for 46.5% of the total increase; Mobile contributed +$48,226.29, Marketplace +$18,701.69, Store +$4,394.84. No decline appears in this complete-month comparison. (Executive Command Center, chart 1 “Revenue trend,” saved definition and returned rows; calculations from channel-month values.)\n\nSeptember is only reported through September 19. Its partial values are Online $484,648.16 and all-channel net_sales $1,371,704.27; these cannot be compared with full August to claim a decline. The latest date comes from chart 10 “Executive daily detail” profile, with coverage interpreted under the owner’s Executive-model declaration (northstar-steward://sales/coverage). September vs August is therefore `insufficient_data` under the requested full-month check. No cause is established. A matched September 1–19 vs August 1–19 Online comparison remains unresolved. (chart 1 rows; chart 10 profile.)\n\n**Proposed recurring brief (draft):** Compare the latest reported Executive month with the prior calendar month after checking coverage. If partial or unknown, label `insufficient_data` for Data Trust and show the latest two fully covered months. For complete comparable periods, a net_sales decline of at least 15% goes to Leadership; otherwise an absolute change of at least 10% goes to Analytics; smaller changes have no recipient. Include channel contributions as context only; keep marketing attribution and digital-commerce populations separate and do not assert cause from correlation. (Owner references: northstar-owner://sales/check, northstar-owner://sales/policy, northstar-owner://sales/investigation.)\n\n**Status:** Reusable brief saved in working notes. Actual saved card ID: none. No approval, card, schedule or message was created.",
+        "unresolved": [
+          "Was Online net_sales down in September 1–19 versus August 1–19 on a matched-day basis? The monthly aggregate does not answer this.",
+          "If a matched-period decline is established, what direct operational or funnel evidence supports an explanation? No cause was established from the sources reviewed."
+        ]
+      },
+      "notes": "Northstar Executive sales check — reusable analyst brief\n\nOwner declarations read with ask_owner; these are reference policy, not source evidence or consent.\n- Official management figure is the Executive model's reported net_sales and its own channel categories. It is not GAAP revenue, settled cash, marketing-attributed revenue, or unique-customer sales. (northstar-owner://sales/meaning)\n- The Executive daily-detail model is declared complete through its latest observed order_date; earlier calendar months are fully covered. Its last month is full only if the last calendar day is observed. Do not assume that guarantee for other models. (northstar-steward://sales/coverage)\n- The recurring comparison is latest reported Executive month vs prior calendar month. Establish coverage first; if latest month is partial or coverage is unknown, propose insufficient_data to Data Trust and still show the latest two fully covered months. For full comparable months: net_sales decline >=15% -> Leadership; otherwise absolute change >=10% -> Analytics; smaller absolute changes -> no recipient. Channel/funnel evidence explains but does not add alert rules. (northstar-owner://sales/check; northstar-owner://sales/policy)\n- Online and other channels can explain accounting contribution to net_sales movement. Marketing-attributed and digital-commerce revenue are separate populations; do not add them to Executive net_sales or claim causality from correlation. (northstar-owner://sales/investigation)\n- Owner described a draft-only process; expert review is needed before activation. No message/card/schedule approval was given. (northstar-owner://sales/delivery)\n\nSaved assets inspected:\n- Dashboard 1, “01 | Executive Command Center”.\n- Chart 1, “Revenue trend”: saved definition is unfiltered SUM(net_sales) grouped by month and channel from gold.mart_executive_daily; 132 returned rows (33 monthly bins x 4 channels). Used for primary monthly trend and contribution. (Executive Command Center, chart id 1 profile and rows)\n- Chart 5, “Sales mix by channel”: unfiltered all-time SUM(net_sales) by channel; not used for month comparison. (chart id 5 profile and rows)\n- Chart 10, “Executive daily detail”: saved query selects order_date, channel, region, net_sales; profile range 2024-01-01 through 2026-09-19, 8,937 query rows. Combined with the steward declaration to establish the latest observed date and that September is partial. (chart id 10 profile)\n\nMeasured readout (source-reported net_sales):\n- July 2026 total $2,158,994.74: Online $781,780.69; Store $950,920.29; Marketplace $141,312.48; Mobile $284,981.28.\n- August 2026 total $2,292,267.50: Online $843,730.63; Store $955,315.13; Marketplace $160,014.17; Mobile $333,207.57.\n- August vs July: +$133,272.76 (+6.17%) overall. Online +$61,949.94 (+7.92%), 46.48% of the net increase; Mobile +$48,226.29 (+16.92%); Marketplace +$18,701.69 (+13.23%); Store +$4,394.84 (+0.46%). Contributions sum to the overall change. The two latest fully covered months show an increase, not a decline. (chart id 1 rows; arithmetic derived from the returned channel-month sums)\n- September 2026 through Sep 19 only: Online $484,648.16; Store $591,797.89; Marketplace $91,391.86; Mobile $203,866.36; total $1,371,704.27. Do not compare this partial amount with full August as a business decline. (chart id 1 rows; latest date from chart id 10 profile; coverage scope from northstar-steward://sales/coverage)\n- Therefore September vs August under the recurring full-month rule is insufficient_data, proposed for Data Trust. August vs July changed +6.17%, below the 10% threshold, so it triggers no recipient under the declared policy. This is accounting decomposition, not a causal explanation.\n\nReusable morning brief:\n1. Read the latest monthly channel aggregate and establish the latest observed date from Executive daily detail.\n2. If the latest month or coverage is partial/unknown, report insufficient_data for latest-vs-prior-month to Data Trust; show the two latest fully covered months separately.\n3. For a complete comparable primary net_sales change, apply the declared -15% / +/-10% thresholds above. Include channel contributions. Keep digital/funnel and marketing attribution distinct and state causal claims only with direct supporting evidence.\n4. Ask a specific follow-up if cause or optional diagnostic context is missing.\n\nUnresolved: a matched Sep 1–19 vs Aug 1–19 Online comparison was not established; the saved aggregate is monthly, while daily-detail rows were not fully analyzed for this specific window. If a matched-period check confirms a decline, inspect direct operational/funnel evidence before proposing causes. No such cause is established from the sources reviewed.\nNo actual card ID; no card, schedule, or message was created/sent.",
+      "source_telemetry": {
+        "logical_tool_calls": 11,
+        "chart_query_http_requests": 3
+      }
+    },
+    {
+      "stage": "author",
+      "arm": "signalweave",
+      "tool_calls": 26,
+      "seconds": 208.28891000000294,
+      "frontier_usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 401024,
+        "input_tokens": 519140,
+        "input_tokens_details": {
+          "cached_tokens": 401024
+        },
+        "output_tokens": 19614,
+        "reasoning_output_tokens": 14119,
+        "uncached_input_tokens": 118116
+      },
+      "submission": {
+        "card_id": "card-executive-monthly-net-sales-and-online-contribution-4da3a6cb",
+        "message": "## First readout\n\nThe Revenue trend chart shows September net_sales of 1,371,704.27, including 484,648.16 for Online, against August's full-month 2,292,267.50 and Online 843,730.63. Its raw bucket arithmetic is -40.2% overall and -42.6% Online. But the Executive daily detail's latest order_date is September 19, so September is partial; this is not a valid month-to-month decline. [superset|chart:1; superset|chart:10; northstar-steward://sales/coverage]\n\nThe latest two fully covered months rose from 2,158,994.74 in July to 2,292,267.50 in August: +133,272.76 (+6.17%). Online contributed +61,949.94 (+7.92%), or 46.5% of that increase; the other channels together contributed +71,322.82. This is accounting contribution, not evidence of cause. The source does not declare a currency. [superset|chart:1]\n\nUnder the owner's policy, September versus August is insufficient_data for the requested comparison and goes to the proposed Data Trust destination; it is not a quiet-success result. The July-August fallback is below the 10% investigation threshold. [northstar-owner://sales/check; northstar-owner://sales/policy]\n\n## Proposed recurring brief — draft\n\nCompare the latest Executive calendar month with the prior calendar month using source-reported net_sales and the model's channel categories. Verify full coverage from Executive daily detail first. A partial or unknown-coverage comparison is insufficient_data for Data Trust, while still reporting the two latest fully covered months. On a complete comparison, a decline of at least 15% maps to Leadership; otherwise an absolute change of at least 10% maps to Analytics; smaller changes are ignored. Channel contributions explain the total movement and do not establish causation. [northstar-owner://sales/meaning; northstar-steward://sales/coverage; northstar-owner://sales/check; northstar-owner://sales/policy; northstar-owner://sales/investigation]\n\nSaved card: card-executive-monthly-net-sales-and-online-contribution-4da3a6cb (v1). Explicit fixed sources: superset|chart:1 and superset|chart:10. Standalone review: ready_for_approval, no blockers. Review warns that adapter metadata does not declare the comparison window, metric/population, or grain; keep this gap visible and validate each run's evidence. The card remains a draft, with delivery disabled.",
+        "unresolved": [
+          "The source does not declare the currency/unit for absolute net_sales values; what label should be used if monetary labels are needed?",
+          "Adapter metadata does not declare the selected assets' comparison window, metric/population, or grain contract. Their saved definitions and owner policy were used, but actual coverage and comparability must be checked on each run."
+        ]
+      },
+      "notes": "# Executive sales check — reusable brief\nAs of 2026-10-16. Current measurements below are historical onboarding evidence, not current/future run conditions.\n\n## Owner policy\n- Use the Executive Command Center model's source-reported net_sales as the official management sales figure and its own channel categories. It is not GAAP revenue, settled cash, marketing-attributed revenue, or a unique-customer metric. [northstar-owner://sales/meaning]\n- Compare latest reported Executive sales month with prior calendar month after checking full coverage. Executive daily detail is complete through its latest observed order_date; the final calendar month is complete only if that date reaches month-end. If latest month is partial or coverage is unknown, the requested comparison is insufficient_data to Data Trust, while still reporting the latest two fully covered months when supported. [northstar-steward://sales/coverage; northstar-owner://sales/check]\n- On a complete comparable month: decline >=15% -> notify Leadership; otherwise absolute change >=10% -> investigate with Analytics; smaller changes -> ignore/no triggered recipient. Channel/funnel evidence is explanatory and optional; contributions are arithmetic, not causal. Never combine attributed marketing or digital-commerce populations with Executive net_sales. [northstar-owner://sales/policy; northstar-owner://sales/investigation]\n- Destinations are proposed only. No card approval, evaluation, schedule, message or delivery is authorized. [northstar-owner://sales/delivery]\n\n## Selected assets and inspected definitions\n- superset|chart:1, Executive Command Center Revenue trend: saved query SUM(net_sales), grouped by channel and DATE_TRUNC('month', order_date) / P1M, no time filter or adhoc filter, row limit 10,000, query on gold.mart_executive_daily; returned 132 aggregate rows (33 months x 4 channels). It is the primary existing monthly aggregate. Saved chart rows and normalized observations were inspected.\n- superset|chart:10, Executive daily detail: saved query selects order_date, channel, region, net_sales from the same gold.mart_executive_daily, no time or adhoc filter, row limit 10,000; 8,937 returned rows. Used only to establish the latest order_date, not to recreate totals. Profile raw max is 2026-09-19.\n- The adapter catalog contract is sparse: it does not declare metric definitions, population, grain or comparison windows for either asset. Review warns to verify periods and current evidence on each run; this warning is not a current measurement. No funnel/marketing diagnostic source was selected or inspected.\n\n## Historical onboarding readout\n- Chart 1's latest month bucket (Sep 2026) reports total net_sales 1,371,704.27 and Online 484,648.16, versus Aug's full-month 2,292,267.50 and Online 843,730.63; the chart's raw last-bucket arithmetic is -40.16% overall and -42.56% Online. Sep is partial through the detail max date, so these are not valid full-month declines. [superset|chart:1; superset|chart:10; northstar-steward://sales/coverage]\n- Latest two fully covered months Jul -> Aug: total net_sales 2,158,994.74 -> 2,292,267.50, +133,272.76 (+6.17%). Online +61,949.94 (+7.92%), which is 46.48% of the overall increase; Store, Mobile and Marketplace together added 71,322.82. These are source-unit accounting contributions, not causation. The source does not declare currency. [superset|chart:1]\n- Applying the owner's policy manually: Sep vs Aug is insufficient_data for the requested comparison, not quiet success; the valid Jul-Aug fallback is below the 10% investigation threshold. No SignalWeave evaluation was run.\n\n## Saved draft\n- ID card-executive-monthly-net-sales-and-online-contribution-4da3a6cb, version 1, status draft / ready_for_approval.\n- Explicit fixed sources: superset|chart:1 primary aggregate; superset|chart:10 coverage cutoff. No Jev catalog ranking. Draft policy retains owner period, coverage fallback, thresholds and proposed destinations; delivery remains disabled.\n- Standalone review: ready_for_approval, zero blockers. Warnings: comparison windows and adapter-owned metric/population/grain/comparison meaning are not declared. Keep that uncertainty visible and validate each run's actual evidence.",
+      "draft_checks": {
+        "submitted_saved_draft": true
+      },
+      "legacy_draft_diagnostics": {
+        "exactly_one_saved_draft": true,
+        "submitted_id_matches_saved_draft": true,
+        "explicit_review_returned": true
+      },
+      "source_telemetry": {
+        "logical_tool_calls": 5,
+        "chart_query_http_requests": 2
+      }
+    },
+    {
+      "stage": "review",
+      "arm": "baseline",
+      "tool_calls": 6,
+      "seconds": 60.700485999986995,
+      "frontier_usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 50560,
+        "input_tokens": 79869,
+        "input_tokens_details": {
+          "cached_tokens": 50560
+        },
+        "output_tokens": 6516,
+        "reasoning_output_tokens": 5813,
+        "uncached_input_tokens": 29309
+      },
+      "submission": {
+        "ready_for_shadow": true,
+        "issues": [
+          "Open analytical follow-up: no matched Sep 1–19 vs Aug 1–19 Online comparison is reported, and no direct operational or funnel cause is established. The notes call this unresolved and name it as a next question; do not present a September Online decline or causal explanation as established. This is not a blocker for the recurring full-month shadow check. Source support: capture 4 has the complete monthly aggregates; capture 2 records the Executive daily-detail range through Sep 19, under the supplied steward coverage declaration."
+        ],
+        "owner_message": "The first readout is useful and faithful: Executive net_sales rose $133,272.76 (+6.17%) from July to August; Online added $61,949.94 (46.5% of the increase). September is covered only through Sep 19, so its comparison with full August is insufficient_data for Data Trust, not evidence of a decline. The notes preserve your thresholds, quiet behavior, distinct revenue populations, and recipient routes. The matched-period Online question remains open, and the follow-up guidance leaves room for the frontier agent’s authorized companion tools. No card or approval was created. Ready for one delivery-disabled shadow report only."
+      },
+      "evidence_reads": [
+        {
+          "index": 2,
+          "path": [],
+          "source_ref": "superset|chart:10"
+        },
+        {
+          "index": 0,
+          "path": [],
+          "source_ref": "superset|chart:1"
+        },
+        {
+          "index": 5,
+          "path": [],
+          "source_ref": "superset|chart:10"
+        },
+        {
+          "index": 4,
+          "path": [],
+          "source_ref": "superset|chart:1"
+        },
+        {
+          "index": 6,
+          "path": [],
+          "source_ref": "superset|chart:10"
+        }
+      ]
+    },
+    {
+      "stage": "review",
+      "arm": "signalweave",
+      "tool_calls": 7,
+      "seconds": 49.59186770900851,
+      "frontier_usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 58112,
+        "input_tokens": 89905,
+        "input_tokens_details": {
+          "cached_tokens": 58112
+        },
+        "output_tokens": 5444,
+        "reasoning_output_tokens": 4720,
+        "uncached_input_tokens": 31793
+      },
+      "submission": {
+        "issues": [],
+        "owner_message": "The first readout is useful and source-grounded. Captures 0 and 4 support the Executive net_sales channel totals and the raw September-to-August arithmetic; capture 3 shows the daily-detail cutoff at September 19, so the readout correctly treats September as partial rather than a business decline. July–August is the latest fully covered comparison: total net_sales rises from 2,158,994.74 to 2,292,267.50 (+6.17%); Online adds 61,949.94 (+7.92%), or 46.5% of the total increase, with no causal claim. Capture 2 and the steward declaration support the cutoff interpretation. The draft card preserves the owner-defined metric, calendar-month window, coverage fallback, quiet behavior, thresholds, and proposed Leadership, Analytics, and Data Trust routes; its fixed sources match captures 0/4 and 2/3. The empty follow_up_guidance does not restrict the frontier agent's separately authorized companion tools, and no missing optional diagnostic source invalidates the supported sales facts. Ready for one delivery-disabled shadow report only. Adapter metadata still lacks metric/population/grain/window contracts, and runtime evidence must establish the comparison on that run. This is not card approval or certification for unattended operation.",
+        "ready_for_shadow": true
+      },
+      "evidence_reads": [
+        {
+          "index": 0,
+          "path": [],
+          "source_ref": "superset|chart:1"
+        },
+        {
+          "index": 2,
+          "path": [],
+          "source_ref": "superset|chart:10"
+        },
+        {
+          "index": 3,
+          "path": [],
+          "source_ref": "superset|chart:10"
+        },
+        {
+          "index": 4,
+          "path": [
+            "rows"
+          ],
+          "source_ref": "superset|chart:1"
+        },
+        {
+          "index": 4,
+          "path": [
+            "rows"
+          ],
+          "source_ref": "superset|chart:1"
+        },
+        {
+          "index": 5,
+          "path": [],
+          "source_ref": "superset|chart:1"
+        }
+      ]
+    },
+    {
+      "stage": "report",
+      "arm": "signalweave",
+      "tool_calls": 19,
+      "seconds": 85.26638516699313,
+      "frontier_usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 283392,
+        "input_tokens": 338995,
+        "input_tokens_details": {
+          "cached_tokens": 283392
+        },
+        "output_tokens": 9591,
+        "reasoning_output_tokens": 8196,
+        "uncached_input_tokens": 55603
+      },
+      "submission": {
+        "outcome": "insufficient_data",
+        "recipients": [
+          "Data Trust"
+        ],
+        "message": "September Executive net_sales is 1,371,704.27, including Online 484,648.16, but daily detail’s latest observed order_date is Sep 19, 2026. September is partial, so the apparent Online hit versus August is not a supported full-month decline and its month-over-month contribution cannot be validly measured. [Monthly channel aggregate](http://127.0.0.1:18089/explore/?slice_id=1) · [daily detail/cutoff](http://127.0.0.1:18089/explore/?slice_id=10)\n\nThe latest two fully covered months, July→August, rose from 2,158,994.74 to 2,292,267.50 (+133,272.76; +6.17%). Channel contributions: Online +61,949.94 (46.5%); Store +4,394.84 (3.3%); Marketplace +18,701.69 (14.0%); Mobile +48,226.29 (36.2%). These are source-unit accounting movements, not causes. The fallback is below the 10% investigation trigger. Next: compare Sep 1–19 with Aug 1–19 using a daily Executive channel aggregate; the current detail supports the cutoff, not sales reconstruction."
+      },
+      "source_telemetry": {
+        "logical_tool_calls": 2,
+        "chart_query_http_requests": 2
+      }
+    },
+    {
+      "stage": "report",
+      "arm": "baseline",
+      "tool_calls": 15,
+      "seconds": 115.74059995799325,
+      "frontier_usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 132864,
+        "input_tokens": 163128,
+        "input_tokens_details": {
+          "cached_tokens": 132864
+        },
+        "output_tokens": 10547,
+        "reasoning_output_tokens": 8960,
+        "uncached_input_tokens": 30264
+      },
+      "submission": {
+        "message": "September’s apparent Online hit is not established: Revenue trend (chart 1) reports September net_sales of 1,371,704.27 through Sep 19 only (Online 484,648.16), so that partial amount cannot be treated as a decline against full August (2,292,267.50; Online 843,730.63). Daily detail (chart 10) confirms Sep 19 as the latest observed order_date. For the two latest fully covered months, Jul→Aug net_sales rose 133,272.76 (+6.17%); channel movements were Online +61,949.94 (46.48% of the increase), Mobile +48,226.29 (36.19%), Marketplace +18,701.69 (14.03%), and Store +4,394.84 (3.30%). Online contributed most by amount. Route: insufficient_data → Data Trust for the latest-month comparison; Jul→Aug triggers no additional route. Next, compare Sep 1–19 with Aug 1–19 in daily detail, then inspect direct operational or funnel evidence if an Online decline remains. Sources: Executive Command Center, Revenue trend (chart 1); Executive daily detail (chart 10).",
+        "outcome": "insufficient_data",
+        "recipients": [
+          "Data Trust"
+        ]
+      },
+      "source_telemetry": {
+        "logical_tool_calls": 3,
+        "chart_query_http_requests": 2
+      }
+    }
+  ],
+  "native_decision": {
+    "outcome": "insufficient_data",
+    "summary": "Evaluated 6 observations and 0 computed analyses across 2 sources; 2 watch items and 1 questions were checked.",
+    "rationale": "Jev evaluated the card's typed watch, question, and outcome judgments; selected=insufficient_data, support=0.97; routed=insufficient_data.",
+    "confidence": 0.97,
+    "probabilities": {
+      "ignore": 0,
+      "investigate": 0.01,
+      "insufficient_data": 0.97,
+      "notify": 0.02
+    },
+    "delivery_methods": [
+      {
+        "key": "insufficient_data_trust",
+        "outcome": "insufficient_data",
+        "label": "Data Trust",
+        "destination": "Data Trust",
+        "instructions": "Proposed destination when latest-month completeness or coverage cannot be established; no delivery is authorized."
+      }
+    ],
+    "observations": [
+      {
+        "source_key": "primary_sales",
+        "subject_id": "1:SUM(net_sales)",
+        "subject_label": "NS | 01 | Executive Command Center | Revenue trend",
+        "subject_type": "superset_chart",
+        "metric": "SUM(net_sales)",
+        "unit": "number",
+        "current": 1371704.27,
+        "baseline": null,
+        "previous": null,
+        "change_pct": null,
+        "comparison_baselines": {
+          "previous_period": 2292267.5,
+          "trailing_4_period_average": 2200546.18
+        },
+        "dimensions": {},
+        "freshness": null,
+        "source_url": "http://127.0.0.1:18089/explore/?slice_id=1",
+        "attributes": {
+          "viz_type": "echarts_timeseries_line",
+          "time_column": "order_date",
+          "current_period": 1788220800000,
+          "baseline_period": 1785542400000,
+          "comparison_basis": "last_two_returned_time_buckets",
+          "period_coverage": "unverified; bucket labels do not establish complete or comparable periods",
+          "time_bucket_count": 33,
+          "current_period_iso": "2026-09-01T00:00:00+00:00",
+          "baseline_period_iso": "2026-08-01T00:00:00+00:00",
+          "time_encoding": "superset_epoch_milliseconds"
+        }
+      },
+      {
+        "source_key": "primary_sales",
+        "subject_id": "1:SUM(net_sales):d9b7a68da0749bad",
+        "subject_label": "NS | 01 | Executive Command Center | Revenue trend — channel=Online",
+        "subject_type": "superset_chart",
+        "metric": "SUM(net_sales)",
+        "unit": "number",
+        "current": 484648.16,
+        "baseline": null,
+        "previous": null,
+        "change_pct": null,
+        "comparison_baselines": {
+          "previous_period": 843730.63,
+          "trailing_4_period_average": 805279.3875
+        },
+        "dimensions": {
+          "channel": "Online"
+        },
+        "freshness": null,
+        "source_url": "http://127.0.0.1:18089/explore/?slice_id=1",
+        "attributes": {
+          "viz_type": "echarts_timeseries_line",
+          "time_column": "order_date",
+          "current_period": 1788220800000,
+          "baseline_period": 1785542400000,
+          "comparison_basis": "last_two_returned_time_buckets",
+          "period_coverage": "unverified; bucket labels do not establish complete or comparable periods",
+          "time_bucket_count": 33,
+          "dimensions": {
+            "channel": "Online"
+          },
+          "current_period_iso": "2026-09-01T00:00:00+00:00",
+          "baseline_period_iso": "2026-08-01T00:00:00+00:00",
+          "time_encoding": "superset_epoch_milliseconds"
+        }
+      },
+      {
+        "source_key": "primary_sales",
+        "subject_id": "1:SUM(net_sales):98edd075ba9e4ab7",
+        "subject_label": "NS | 01 | Executive Command Center | Revenue trend — channel=Store",
+        "subject_type": "superset_chart",
+        "metric": "SUM(net_sales)",
+        "unit": "number",
+        "current": 591797.89,
+        "baseline": null,
+        "previous": null,
+        "change_pct": null,
+        "comparison_baselines": {
+          "previous_period": 955315.13,
+          "trailing_4_period_average": 929593.1275
+        },
+        "dimensions": {
+          "channel": "Store"
+        },
+        "freshness": null,
+        "source_url": "http://127.0.0.1:18089/explore/?slice_id=1",
+        "attributes": {
+          "viz_type": "echarts_timeseries_line",
+          "time_column": "order_date",
+          "current_period": 1788220800000,
+          "baseline_period": 1785542400000,
+          "comparison_basis": "last_two_returned_time_buckets",
+          "period_coverage": "unverified; bucket labels do not establish complete or comparable periods",
+          "time_bucket_count": 33,
+          "dimensions": {
+            "channel": "Store"
+          },
+          "current_period_iso": "2026-09-01T00:00:00+00:00",
+          "baseline_period_iso": "2026-08-01T00:00:00+00:00",
+          "time_encoding": "superset_epoch_milliseconds"
+        }
+      },
+      {
+        "source_key": "primary_sales",
+        "subject_id": "1:SUM(net_sales):d6ae91410727e878",
+        "subject_label": "NS | 01 | Executive Command Center | Revenue trend — channel=Marketplace",
+        "subject_type": "superset_chart",
+        "metric": "SUM(net_sales)",
+        "unit": "number",
+        "current": 91391.86,
+        "baseline": null,
+        "previous": null,
+        "change_pct": null,
+        "comparison_baselines": {
+          "previous_period": 160014.17,
+          "trailing_4_period_average": 155919.6375
+        },
+        "dimensions": {
+          "channel": "Marketplace"
+        },
+        "freshness": null,
+        "source_url": "http://127.0.0.1:18089/explore/?slice_id=1",
+        "attributes": {
+          "viz_type": "echarts_timeseries_line",
+          "time_column": "order_date",
+          "current_period": 1788220800000,
+          "baseline_period": 1785542400000,
+          "comparison_basis": "last_two_returned_time_buckets",
+          "period_coverage": "unverified; bucket labels do not establish complete or comparable periods",
+          "time_bucket_count": 33,
+          "dimensions": {
+            "channel": "Marketplace"
+          },
+          "current_period_iso": "2026-09-01T00:00:00+00:00",
+          "baseline_period_iso": "2026-08-01T00:00:00+00:00",
+          "time_encoding": "superset_epoch_milliseconds"
+        }
+      },
+      {
+        "source_key": "primary_sales",
+        "subject_id": "1:SUM(net_sales):eb5489fb2166f77a",
+        "subject_label": "NS | 01 | Executive Command Center | Revenue trend — channel=Mobile",
+        "subject_type": "superset_chart",
+        "metric": "SUM(net_sales)",
+        "unit": "number",
+        "current": 203866.36,
+        "baseline": null,
+        "previous": null,
+        "change_pct": null,
+        "comparison_baselines": {
+          "previous_period": 333207.57,
+          "trailing_4_period_average": 309754.0275
+        },
+        "dimensions": {
+          "channel": "Mobile"
+        },
+        "freshness": null,
+        "source_url": "http://127.0.0.1:18089/explore/?slice_id=1",
+        "attributes": {
+          "viz_type": "echarts_timeseries_line",
+          "time_column": "order_date",
+          "current_period": 1788220800000,
+          "baseline_period": 1785542400000,
+          "comparison_basis": "last_two_returned_time_buckets",
+          "period_coverage": "unverified; bucket labels do not establish complete or comparable periods",
+          "time_bucket_count": 33,
+          "dimensions": {
+            "channel": "Mobile"
+          },
+          "current_period_iso": "2026-09-01T00:00:00+00:00",
+          "baseline_period_iso": "2026-08-01T00:00:00+00:00",
+          "time_encoding": "superset_epoch_milliseconds"
+        }
+      },
+      {
+        "source_key": "coverage_detail",
+        "subject_id": "10:net_sales",
+        "subject_label": "NS | 01 | Executive Command Center | Executive daily detail",
+        "subject_type": "superset_chart",
+        "metric": "net_sales",
+        "unit": "number",
+        "current": null,
+        "baseline": null,
+        "previous": null,
+        "change_pct": null,
+        "comparison_baselines": {},
+        "dimensions": {},
+        "freshness": null,
+        "source_url": "http://127.0.0.1:18089/explore/?slice_id=10",
+        "attributes": {
+          "viz_type": "table",
+          "time_column": "order_date",
+          "current_period": 1789776000000,
+          "baseline_period": 1789689600000,
+          "comparison_basis": "last_two_returned_time_buckets",
+          "period_coverage": "unverified; bucket labels do not establish complete or comparable periods",
+          "time_bucket_count": 993,
+          "current_period_iso": "2026-09-19T00:00:00+00:00",
+          "baseline_period_iso": "2026-09-18T00:00:00+00:00",
+          "time_encoding": "superset_epoch_milliseconds"
+        }
+      }
+    ],
+    "analyses": [],
+    "telemetry": {
+      "wall_time_ms": 1050.5278749915306,
+      "source_fetch_ms": 565.4224589816295,
+      "source_count": 2,
+      "observation_count": 6,
+      "evidence_count": 8,
+      "jev_requests": 1,
+      "jev_input_tokens": 10032,
+      "jev_output_tokens": 152,
+      "jev_payload_bytes": 28924,
+      "jev_payload_budget_bytes": 4000000,
+      "query_calls": 0,
+      "query_bytes_scanned": 0,
+      "query_cache_hits": 0,
+      "query_cache_misses": 0,
+      "warnings": []
+    },
+    "source_contracts": [
+      {
+        "source_key": "primary_sales",
+        "adapter": "superset",
+        "resource": "chart:1",
+        "source_url": "http://127.0.0.1:18089/explore/?slice_id=1",
+        "captured_at": "2026-10-16T09:26:51.197301+00:00",
+        "source_captured_at": null,
+        "contract": {
+          "tenant_id": "local",
+          "domain": "bi",
+          "scope": "",
+          "metric_names": [],
+          "metric_definitions": [],
+          "available_comparison_windows": [],
+          "required_comparison_keys": [],
+          "population": "",
+          "grain": "",
+          "freshness_sla_hours": null,
+          "lineage": [],
+          "roles": [
+            "primary"
+          ],
+          "source_status": "healthy",
+          "authorized": true
+        }
+      },
+      {
+        "source_key": "coverage_detail",
+        "adapter": "superset",
+        "resource": "chart:10",
+        "source_url": "http://127.0.0.1:18089/explore/?slice_id=10",
+        "captured_at": "2026-10-16T09:26:51.346124+00:00",
+        "source_captured_at": null,
+        "contract": {
+          "tenant_id": "local",
+          "domain": "bi",
+          "scope": "",
+          "metric_names": [],
+          "metric_definitions": [],
+          "available_comparison_windows": [],
+          "required_comparison_keys": [],
+          "population": "",
+          "grain": "",
+          "freshness_sla_hours": null,
+          "lineage": [],
+          "roles": [
+            "primary"
+          ],
+          "source_status": "healthy",
+          "authorized": true
+        }
+      }
+    ]
+  },
+  "recorded_source_excerpt": {
+    "monthly_capture_event_index": 54,
+    "query": [
+      {
+        "query_index": 0,
+        "sql": "SELECT channel AS channel, DATE_TRUNC('month', order_date) AS order_date, sum(net_sales) AS \"SUM(net_sales)\" \nFROM gold.mart_executive_daily GROUP BY channel, DATE_TRUNC('month', order_date) \n LIMIT 10000;\n\n"
+      }
+    ],
+    "query_definition": {
+      "chart_id": "1",
+      "description": "Synthetic Northstar example. Grain is owned by gold.mart_executive_daily; inspect the agent notes before interpreting it.",
+      "params": "{\"viz_type\": \"echarts_timeseries_line\", \"datasource\": \"1__table\", \"time_range\": \"No filter\", \"adhoc_filters\": [], \"row_limit\": 10000, \"show_legend\": true, \"rich_tooltip\": true, \"metrics\": [{\"expressionType\": \"SIMPLE\", \"column\": {\"column_name\": \"net_sales\"}, \"aggregate\": \"SUM\", \"label\": \"SUM(net_sales)\"}], \"groupby\": [\"channel\"], \"show_labels\": false, \"line_interpolation\": \"linear\", \"order_desc\": true, \"granularity_sqla\": \"order_date\", \"time_grain_sqla\": \"P1M\", \"x_axis\": \"order_date\", \"x_axis_format\": \"%Y-%m\"}",
+      "query_context": null,
+      "slice_name": "NS | 01 | Executive Command Center | Revenue trend",
+      "viz_type": "echarts_timeseries_line"
+    },
+    "query_scope": {
+      "dashboard_filters_applied": false,
+      "kind": "saved_chart_query",
+      "warehouse_completeness": "unknown"
+    },
+    "columns": [
+      "channel",
+      "order_date",
+      "SUM(net_sales)"
+    ],
+    "distinct_month_channel_rows_captured": 132,
+    "selected_raw_monthly_rows": [
+      {
+        "SUM(net_sales)": 141312.48,
+        "channel": "Marketplace",
+        "order_date": 1782864000000
+      },
+      {
+        "SUM(net_sales)": 284981.28,
+        "channel": "Mobile",
+        "order_date": 1782864000000
+      },
+      {
+        "SUM(net_sales)": 781780.69,
+        "channel": "Online",
+        "order_date": 1782864000000
+      },
+      {
+        "SUM(net_sales)": 950920.29,
+        "channel": "Store",
+        "order_date": 1782864000000
+      },
+      {
+        "SUM(net_sales)": 160014.17,
+        "channel": "Marketplace",
+        "order_date": 1785542400000
+      },
+      {
+        "SUM(net_sales)": 333207.57,
+        "channel": "Mobile",
+        "order_date": 1785542400000
+      },
+      {
+        "SUM(net_sales)": 843730.63,
+        "channel": "Online",
+        "order_date": 1785542400000
+      },
+      {
+        "SUM(net_sales)": 955315.13,
+        "channel": "Store",
+        "order_date": 1785542400000
+      },
+      {
+        "SUM(net_sales)": 91391.86,
+        "channel": "Marketplace",
+        "order_date": 1788220800000
+      },
+      {
+        "SUM(net_sales)": 203866.36,
+        "channel": "Mobile",
+        "order_date": 1788220800000
+      },
+      {
+        "SUM(net_sales)": 484648.16,
+        "channel": "Online",
+        "order_date": 1788220800000
+      },
+      {
+        "SUM(net_sales)": 591797.89,
+        "channel": "Store",
+        "order_date": 1788220800000
+      }
+    ],
+    "daily_profile_event_index": 46,
+    "daily_date_ranges": {
+      "order_date": {
+        "missing_count": 0,
+        "null_count": 0,
+        "range_status": "raw_values",
+        "raw_max": 1789776000000,
+        "raw_min": 1704067200000
+      }
+    }
+  },
+  "post_run_internal_review": {
+    "model": "gpt-6-luna xhigh",
+    "scope": "Fresh restricted-artifact senior-data-scientist/PM review, not external human peer review.",
+    "findings": [
+      "Both fresh reports preserve the partial-month caveat and correct July-August arithmetic and proposed Data Trust route; no cause is established.",
+      "Baseline first answer invents dollar currency; its qualification reviewer misses and repeats it. Final baseline report removes that currency claim. Qualification opinions remain unchanged in the record.",
+      "The structured recipient is Data Trust; the treatment narrative omits the destination by name.",
+      "Matched-day investigation remains unresolved; the exposed saved-query paging tools and 24-tool cap cannot retrieve all 8937 daily rows (36 pages at 250 rows). A bounded aggregate/SQL path is missing from this harness."
+    ]
+  },
+  "limitations": [
+    "No comparative business or cost superiority, accuracy estimate, statistical speed claim, enterprise readiness or unattended-delivery certification follows from one pair.",
+    "Same-model reviewer contexts and fixed arm order; live source reads are not an atomic warehouse snapshot.",
+    "Both arms retain identical companion BI tools and exact approved policy; neither has arbitrary SQL or shell. This is not the strongest production baseline or an isolated Jev/memory ablation.",
+    "Native query_calls=0 is not measured zero warehouse execution/cost; source/warehouse query telemetry is incomplete. Raw companion-tool counts exclude native reads.",
+    "Jev support is an uncalibrated model signal. The native result has no analytical comparisons; the frontier agents compute the July-August readout from captured chart rows.",
+    "Only proposed recipient roles were recorded. No delivery endpoint was resolved, no message was sent and no recurrence was scheduled."
+  ]
+}

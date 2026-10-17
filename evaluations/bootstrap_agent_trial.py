@@ -23,7 +23,7 @@ import statistics
 import subprocess
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -316,20 +316,43 @@ def calculate(expression: str) -> float:
     return result
 
 
-def shift_timestamps(value: Any, delta) -> Any:
+def shift_timestamps(value: Any, delta, *, shift_datetime_objects: bool = False) -> Any:
     """Rebase the synthetic clock equally, preserving freshness ages and intervals."""
+    if isinstance(value, datetime):
+        if shift_datetime_objects and (value.tzinfo is None or value.utcoffset() is None):
+            raise ValueError("measurement datetime must include a timezone")
+        return value + delta if shift_datetime_objects else value
     if isinstance(value, dict):
-        return {key: shift_timestamps(item, delta) for key, item in value.items()}
+        return {key: shift_timestamps(item, delta, shift_datetime_objects=shift_datetime_objects)
+                for key, item in value.items()}
     if isinstance(value, list):
-        return [shift_timestamps(item, delta) for item in value]
+        return [shift_timestamps(item, delta, shift_datetime_objects=shift_datetime_objects)
+                for item in value]
     if isinstance(value, str) and "T" in value:
         try:
             parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-            if parsed.tzinfo:
-                return (parsed + delta).isoformat()
         except ValueError:
-            pass
+            return value
+        if shift_datetime_objects and (parsed.tzinfo is None or parsed.utcoffset() is None):
+            raise ValueError("measurement timestamp must include a timezone")
+        if parsed.tzinfo:
+            return (parsed + delta).isoformat()
     return value
+
+
+def _aware_datetime(value: Any, field: str) -> datetime:
+    if isinstance(value, datetime):
+        parsed = value
+    elif isinstance(value, str):
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise ValueError(f"{field} must be an ISO datetime") from exc
+    else:
+        raise ValueError(f"{field} must be an aware datetime")
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError(f"{field} must include a timezone")
+    return parsed.astimezone(timezone.utc)
 
 
 class PublicSourceAdapter:
@@ -349,11 +372,43 @@ class PublicSourceAdapter:
         self.inspected: set[str] = set()
         self.inspections = 0
 
-    def set_period(self, period: dict, clock: datetime) -> None:
-        self.clock = clock
-        self.period_context = {"period_id": period["period_id"], "as_of": clock.isoformat()}
-        delta = clock - datetime.fromisoformat(period["as_of"])
-        self.snapshots = shift_timestamps(copy.deepcopy(period["snapshots"]), delta)
+    def set_period(self, period: dict, clock: datetime, *,
+                   measurement_offset: timedelta | None = None) -> None:
+        if measurement_offset is None:
+            # Keep legacy trial rebasing byte-for-byte equivalent by default.
+            self.clock = clock
+            self.period_context = {"period_id": period["period_id"], "as_of": clock.isoformat()}
+            delta = clock - datetime.fromisoformat(period["as_of"])
+            self.snapshots = shift_timestamps(copy.deepcopy(period["snapshots"]), delta)
+        else:
+            if not isinstance(measurement_offset, timedelta):
+                raise TypeError("measurement_offset must be a timedelta")
+            capture_at = _aware_datetime(clock, "clock")
+            original_as_of = _aware_datetime(period["as_of"], "period.as_of")
+            original_snapshots = period["snapshots"]
+            source_ages = {}
+            for ref, snapshot in original_snapshots.items():
+                captured = snapshot.get("source_captured_at")
+                source_ages[ref] = (
+                    None if captured is None else
+                    _aware_datetime(captured, f"snapshots.{ref}.source_captured_at") - original_as_of
+                )
+
+            self.clock = capture_at
+            rebased_as_of = original_as_of + measurement_offset
+            self.period_context = {
+                "period_id": period["period_id"],
+                "as_of": rebased_as_of.isoformat(),
+                "captured_at": capture_at.isoformat(),
+            }
+            self.snapshots = shift_timestamps(
+                copy.deepcopy(original_snapshots), measurement_offset, shift_datetime_objects=True,
+            )
+            for ref, snapshot in self.snapshots.items():
+                snapshot["captured_at"] = capture_at.isoformat()
+                age = source_ages[ref]
+                if age is not None:
+                    snapshot["source_captured_at"] = (capture_at + age).isoformat()
         self.inspected.clear()
         self.inspections = 0
 

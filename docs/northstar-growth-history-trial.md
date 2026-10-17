@@ -23,9 +23,10 @@ or conflicting movement, a corroborated decline, and source failure across:
 The decision register in
 [`examples/northstar-growth-historical-decisions.json`](../examples/northstar-growth-historical-decisions.json)
 contains eight dated operating periods and six recurring decision shapes. It
-expands to 48 cases: 24 train, 12 validation, and 12 holdout. Every case uses
-the same real local Northstar seed rows and the same card; only the
-counterfactual movements and the external human disposition change.
+expands to 48 cases: 24 train, 12 validation, and 12 holdout. The SignalWeave
+arm runs the same card over the same real local Northstar seed rows for every
+case; the register varies counterfactual movements and external human
+dispositions.
 
 The disposition labels stay outside the Jev payload. Jev sees the card and
 bounded source snapshots. The evaluator scores the result afterwards against
@@ -38,15 +39,19 @@ holdout-style slice. Its seven errors were all low-movement cases routed to
 investigate. The only change was to the human-authored card: it now states the
 policy priority explicitly—below 10% means suppress, even when mild supporting
 movement exists. No runtime or evaluator rule was changed. The final card was
-then locked and rerun across all 48 cases. Because this is a simulated register
-and the card was iterated once, the holdout result below is a strong
-repeatability check, not independent customer validation.
+then locked and rerun across all 48 cases. Because the first pass reported
+train, validation, and holdout results before the card wording was revised, the
+12-case holdout split is not an untouched or unseen holdout. The final metrics
+below are a repeatability check on this simulated register, not independent
+customer validation.
 
-The control represents a common current-state workflow: push whenever primary
-revenue moves by at least 10%, without interpreting the connected evidence.
-SignalWeave uses the production `InsightEngine` with live Jev, then maps its
-typed outcome to the caller-owned delivery route and records the evidence
-bundle, rationale, probabilities, and source recall.
+The control represents a common current-state workflow: a fixed rule that
+pushes whenever primary revenue moves by at least 10%, without interpreting the
+connected evidence. It is a movement-only baseline, not another provider
+evaluating the card. SignalWeave uses the production `InsightEngine` with live
+Jev and the same card for every case, then maps its typed outcome to the
+caller-owned delivery route and records the evidence bundle, rationale,
+probabilities, and source recall.
 
 ## Live result: 2026-09-27
 
@@ -66,16 +71,19 @@ below reproduces it.
 | Exact delivery route | not applicable | 48/48 (100.0%) |
 | Required-source recall | not available | 48/48 (100.0%) |
 | Complete evidence bundle | not available | 48/48 (100.0%) |
-| Agent workflow complete | not available | 48/48 (100.0%) |
+| Evaluator handoff checks met | not available | 48/48 (100.0%) |
 | Median decision latency | no semantic decision | 283.49 ms |
 | p95 decision latency | no semantic decision | 517.75 ms |
 
-On the unseen 12-case holdout, SignalWeave + Jev also achieved 12/12 exact
-outcomes, 12/12 exact delivery routes, 12/12 complete evidence bundles, and
-zero unnecessary routes or missed non-ignore workflows. The simulated decision
-register estimates 1,544 minutes of manual inspection across the 48 cases
-versus 336 minutes for the SignalWeave workflow, or 1,208 modeled minutes
-avoided. Those minutes are scenario estimates, not measured employee time.
+On the 12-case holdout split, SignalWeave + Jev achieved 12/12 exact outcomes,
+12/12 exact delivery routes, 12/12 complete evidence bundles, and zero
+unnecessary routes or missed non-ignore workflows. Here, “workflow complete”
+means the evaluator found an exact outcome and delivery match plus a complete
+rationale/evidence bundle with required-source recall; the harness did not run a
+frontier agent or execute delivery. The simulated decision register estimates
+1,544 minutes of manual inspection across the 48 cases versus 336 minutes for
+the SignalWeave workflow, or 1,208 modeled minutes avoided. Those minutes are
+scenario estimates, not measured employee time.
 
 The live Jev arm used 48 judgment requests, 729,588 input tokens, and 9,852
 output tokens. Jev requests are the semantic decision cost; source-query cost,
@@ -84,7 +92,9 @@ number.
 
 ## Adversarial gate
 
-The independent report-only reviewer passed with zero findings. It fails if:
+The report-only adversarial check script passed with zero findings. It
+mechanically inspects the generated report; it does not call Jev or run a
+reviewer/frontier agent. It fails if:
 
 - SignalWeave routes a case the card says to suppress;
 - it produces an unnecessary leadership push;
@@ -125,11 +135,12 @@ uv run python -m evaluations.northstar_growth_history_trial \
 
 ## What this proves, and what it does not
 
-This is materially stronger than a six-case demo: the card is tested across a
-time split, the control sees the same primary movement, and the holdout shows
-that the policy survives unseen dates. It demonstrates the specific value of
-SignalWeave in this workflow: reducing noisy pushes while preserving the
-cross-source explanation and the agent's next route.
+This is materially larger than a six-case demo: the card is evaluated across a
+dated register, while the comparator applies only the 10% movement rule to the
+primary revenue movement. The final holdout score is not evidence of performance
+on unseen cases because the first pass reported every split before the card was
+revised. In this simulated workflow, the results show fewer noisy pushes along
+with the checked cross-source explanation and typed route.
 
 It is still not customer evidence. The Northstar rows are local example data,
 and the dated movements and human dispositions are simulated. The next real

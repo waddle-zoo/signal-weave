@@ -1,0 +1,54 @@
+{
+  "protocol": "frontier-publication-v2",
+  "execution_status": "closed",
+  "method_commit": "bee84d4",
+  "completed": false,
+  "scope": "Corrected-method feasibility check on the same known fictional Northstar company. Not an independent business observation, onboarding result or paired comparison.",
+  "attempted_frontier_invocations": 1,
+  "completed_frontier_invocations": 0,
+  "prior_unknown_cost_invocations": 1,
+  "actual_attempts_across_v1_and_v2": 2,
+  "model": "gpt-6-luna",
+  "effort": "xhigh",
+  "actor_seconds": 60.7634015410149,
+  "successful_company_tool_calls": 36,
+  "observed_company_tool_ingress": 39,
+  "rejected_over_cap_calls": 3,
+  "tool_counts": {"calculate": 16, "find_dashboards": 5, "list_dashboard_charts": 3, "profile_saved_chart": 6, "aggregate_chart_rows": 3, "read_chart_rows": 3},
+  "resource_discovery_calls": 0,
+  "native_registry_check": {
+    "enabled_servers": ["trial"],
+    "disabled_peers": 7,
+    "registry_sha256": "0c0e0d58bb84ac01386724d2a4a2aade3218a5d45a9d6638a07e64b8b6543ce5",
+    "scope": "Verified configured inventory; not a general sandbox or pre-dispatch firewall. The recorded discovery counter is zero, but raw CLI events contain a list_mcp_resources call resolved to server trial, which failed resources/list with method-not-found. The counter recognized only the codex namespace; that undercount is retained, not retroactively rescored."
+  },
+  "last_actual_agent_update": "The source’s latest observed Executive date is 2026-09-19, so September is partial; the declared completeness guarantee supports full-month comparisons through August. The like-for-like Sep 1–19 window is down overall, with Online the largest dollar contributor. I’m validating the arithmetic and checking whether diagnostic saved charts support a specific follow-up without treating their revenue as Executive net_sales.",
+  "stop_reason": "The analyst reached the research harness's 36-call cap before publishing. Three subsequent calculator calls were rejected and the accounting-drain guard terminated the CLI before turn.completed. The initial prompt did not disclose the numerical quota or expose remaining-call status; only a scalar calculator was available.",
+  "usage": {"known": false, "reason": "No aggregate turn.completed usage arrived before termination. Missing usage is not zero cost, and no total token/dollar or relative-speed claim is made."},
+  "publication_created": false,
+  "jev_attempts": 0,
+  "writer_invocations": 0,
+  "human_report_completed": false,
+  "delivery_enabled": false,
+  "schedule_created": false,
+  "source_accounting": {"logical_calls_including_coordinator_probe": 21, "chart_query_http_requests_including_coordinator_probe": 6, "scope": "Six actual saved chart results were read; the initial daily-chart probe warmed that chart in the actor cache. No query-saving claim."},
+  "private_artifacts": {
+    "report_sha256": "10f58626a24d745e2f70bce0f6b474892485d6652082337572edbd3fcb1ffdee",
+    "trace_sha256": "fb139ad7de024a89ed01abbbd6f7c50e5cf93b807cef7b58bd13cb245b1647f9"
+  },
+  "disposition": "Retain as another censored actor, not analytical success or a SignalWeave decision failure. The partial update is not a final business report or verified full analysis. Both protocols and all unused allowance remain closed. No further paid correction is authorized by this protocol.",
+  "post_run_software_verification": {
+    "full_tests_passed": 4074,
+    "opt_in_skipped": 12,
+    "focused_tests_passed": 105,
+    "review": "Independent internal code/process/public-projection GO, not external peer review or approval of the incomplete analysis",
+    "scope": "Current post-run controls, not a replay or rescore of either live attempt"
+  },
+  "forward_repairs": [
+    "Opt-in generic batched arithmetic combines independent scalar tool dispatches and quota consumption. No case-specific values or answers are supplied; model-turn, token and latency savings have not been measured.",
+    "Opt-in research quota visibility supplies the initial allowance and remaining calls, separately from source data, reminding the agent to reserve a publication/report call.",
+    "Optional UTC calendar conversion returns explicit included-day counts and exact epoch bounds for caller-chosen dates. Publication provenance retains bounded executed aggregation arguments and explicit omission counts, rather than only the analyst's period label. These support inspection, not automatic semantic validation or measured correctness improvements.",
+    "These controls are offline-tested and disabled in both closed protocols. They do not establish that a future agent will publish, produce a correct report or benefit from SignalWeave."
+  ],
+  "remaining": "Actual analyst publication, native Jev judgment and a useful final human message still did not complete. Despite claiming matched Sep 1-19, its actual filters used Aug 1-20 (end-exclusive Aug 21) against Sep 1-19 (end-exclusive Sep 20): unequal periods. It used dollar wording although currency is undeclared, and coverage depends on the fictional steward, not a provider guarantee. There is no comparative benefit, onboarding or enterprise-readiness proof from either censored attempt."
+}
