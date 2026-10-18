@@ -115,7 +115,7 @@ def seed_workspace(workspace, previous, original_files):
     return workspace_inventory(workspace)
 
 
-def sandbox_preflight(executable, workspace, private_canary, private_read_paths=()):
+def sandbox_preflight(executable, workspace, private_canary, private_read_paths=(), *, readonly_paths=()):
     """Zero-inference OS check: real files work; private files and sockets do not."""
     hits = []
 
@@ -151,7 +151,8 @@ def sandbox_preflight(executable, workspace, private_canary, private_read_paths=
     )
     try:
         args = sandbox_command(executable, workspace, ["/usr/bin/python3", "-c", script,
-                                                       str(private_canary), str(server.server_port), *map(str, private_read_paths)])
+                                                       str(private_canary), str(server.server_port), *map(str, private_read_paths)],
+                               readonly_paths=readonly_paths)
         result = subprocess.run(args, env=child_environment(), capture_output=True, text=True, timeout=30)
         if result.returncode or hits or private_canary.read_text() != "private grader canary":
             raise ValueError("OS sandbox preflight failed: "+result.stderr[:1000])

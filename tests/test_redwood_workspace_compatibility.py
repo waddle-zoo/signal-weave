@@ -98,7 +98,8 @@ async def test_wrong_predecessor_is_rejected_before_creating_a_study(tmp_path, m
     assert not (tmp_path/"new-study").exists()
 
 
-def test_zero_model_sandbox_preflight_uses_filtered_environment(tmp_path, monkeypatch):
+@pytest.mark.parametrize("grant_reads", [False, True])
+def test_zero_model_sandbox_preflight_uses_filtered_environment(tmp_path, monkeypatch, grant_reads):
     workspace = tmp_path/"workspace"
     workspace.mkdir(mode=0o700)
     canary = tmp_path/"private-canary"
@@ -111,10 +112,17 @@ def test_zero_model_sandbox_preflight_uses_filtered_environment(tmp_path, monkey
         "workspace_read_write": True, "private_read_write_denied": True, "command_network_denied": True,
         "private_read_paths_denied": 1})))
     monkeypatch.setattr(study.subprocess, "run", run)
-    result = study.sandbox_preflight("codex", workspace, canary, [tmp_path/"private-source"])
+    granted = workspace/"retained"
+    granted.mkdir()
+    paths = (granted,) if grant_reads else ()
+    command = Mock(wraps=study.sandbox_command)
+    monkeypatch.setattr(study, "sandbox_command", command)
+    result = study.sandbox_preflight("codex", workspace, canary, [tmp_path/"private-source"],
+                                     readonly_paths=paths)
     assert run.call_args.kwargs["env"] == {"PATH": "/system/tools"}
     assert result["analyst_invocations"] == result["provider_requests"] == 0
     assert str(tmp_path/"private-source") in run.call_args.args[0]
+    assert command.call_args.kwargs["readonly_paths"] == paths
 
 
 def test_external_reference_is_the_actual_completed_baseline_not_a_retried_or_new_actor(tmp_path):

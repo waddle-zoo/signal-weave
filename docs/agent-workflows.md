@@ -259,6 +259,16 @@ needed inline rather than claim an attachment was delivered. When a follow-up
 concerns a previously affected group, inspect its current state when possible: a lower
 aggregate does not explain what happened to those records or why.
 
+For example, ask your agent:
+
+> Follow up our previous handoff. What happened to those cases, what still needs
+> attention, and what should the team check next? Keep the update short and link
+> the supporting case list. Don't send anything or change the alert policy.
+
+A quiet check does not cancel that follow-up. For an already evaluated
+observation, reuse its saved evidence; a new monitoring period still needs fresh
+source reads and a new evaluation key.
+
 Use source-provided exports or downloads for supporting rows when available.
 Calculate derived tables from those originals rather than manually rebuilding
 them in the response. Keep the exact query, source and measurement window with

@@ -1,5 +1,9 @@
 # Harbor: first answers and recurring queue handoffs
 
+For the later question of what happened to the previously flagged cases, see the
+[completed successor follow-through](harbor-handoff-followthrough-2026-10-18.md).
+It preserves this study's original outcomes and costs rather than rescoring them.
+
 **Both live analysts produced supported first readouts. SignalWeave saved a
 reviewable card with fewer tool calls in this pair, but added avoidable setup
 prerequisites. Recurring value and Jev behavior were not tested in that original
