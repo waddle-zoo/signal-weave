@@ -51,6 +51,20 @@ retains all samples and discloses overlapping fixture tests: help's observed
 median was 9.15s before and 7.34s after, only three samples per binary. Startup
 is still slow; this is not a causal benchmark, seamless setup or a business win.
 
+On October 18, the actual Apple Silicon artifact downloaded from branch-native
+[run 39148503906](https://github.com/waddle-zoo/signal-weave/actions/runs/39148503906)
+passed the same two integration journeys and ten URL checks in **96.34 seconds**,
+plus the standalone binary smoke check. Embedded revision `63501fd`, production
+fingerprint `f689067880d9a4816ef5bbba80c9688735a70c164f870cee21e47c50e032dfe1`,
+executable SHA-256 `9df3494e536610c181e78f0c695e3b08ec3d46a56fb6f342203583cef23e242b`.
+These checks used isolated homes, local synthetic Superset and a synthetic OIDC
+issuer, with zero provider requests. Both Mac build jobs passed; the Linux job
+failed source verification because example SQL required SQLite's newer
+`unixepoch` function. The manual build did not publish a release. Logs remain in
+ignored `artifacts/native-63501fd-context-checks-v1.log` and
+`artifacts/native-63501fd-arm64-check-v1.log`. This verifies the tested packaging
+and lifecycle, not onboarding quality or the platform's comparative value.
+
 ## Same-conversation agent report: completed process, wrong policy route
 
 The [closed record](../../evaluations/data/agent-report-handoff-v1-summary.json)
