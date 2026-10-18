@@ -201,11 +201,26 @@ acceptance gates.
 
 ## Ordinary-workspace continuation (2026-10-18)
 
-Prospective compatibility slice; no analyst outcome is recorded yet. The locked
-cohort above disabled ordinary file and command tools. Its substitutes cannot
-establish a person's normal caller-workspace experience. The next two fresh
-analysts receive their own actual preceding notes, brief and files at the same
-known final source cutoff—not the final answers from the closed cohort.
+The original two-actor compatibility slice **stopped after its completed plain
+agent**. It used 1,009,816 CLI input tokens (920,064 cached; 89,752 uncached),
+crossing the declared 800,000-total-input between-actor stop. The second actor
+was rejected before admission; no Jev call occurred. Its budget, source inputs
+and completed baseline remain unchanged. This is not a completed comparison.
+
+The plain agent used real files, wrote a supported brief, warehouse/carrier CSV,
+case-status summary and provenance, and updated its notes. Its measured response
+was 248.31 seconds, with 21 admitted company-MCP calls, two metadata-discovery
+calls, 15 workspace items and 32,895 output tokens.
+It also searched for a missing optional SignalWeave skill after reading the
+shared conditional instructions. That is a prompt confound, not product value.
+Internal review found the readout and artifact figures supported, but the
+follow-up CSV's older maintenance rows lack their own regenerating query
+provenance. Its file hash is not a substitute for that missing query.
+
+The locked cohort above disabled ordinary file and command tools. Its substitutes
+cannot establish a person's normal caller-workspace experience. This slice used
+actual preceding notes, brief and files at the same known final source cutoff,
+not final answers from the closed cohort.
 
 Both can read/write real persistent files, calculate with sandboxed commands,
 and use every company source tool. Treatment adds all tools from the current
@@ -228,3 +243,47 @@ or dollar caps. Baseline runs first. This is a separate budgeted compatibility
 slice, not a rerun/rescore of the original journey, an unseen case or a causal
 comparison of one isolated product change. Method:
 `evaluations/redwood_workspace_compatibility.py`.
+
+A separately admitted **one-actor treatment-only compatibility probe timed out**
+at 300.85 response seconds, with no final CLI handoff and **unknown frontier
+usage**. Unknown is not zero: no CLI-cost or efficiency comparison is valid.
+The completed baseline is a hash-pinned external reference, not a new actor or
+rerun. The original stopped study was not completed or rebudgeted. The inherited
+treatment context already cost two Jev calls plus authoring/review; that is not
+free onboarding. Neither study admits another actor or a retry.
+
+The treatment did exercise the latest native core: commit `7212ef0`, production
+fingerprint `d6d551bfd695acc54585f98dea3f0819e5884f9af5d811b08fb43172eb1cbe90`,
+a local source candidate, not a published release. It began with the compact
+evaluation rather than the guide/full history, then made six company-query calls
+and two duplicate receipt reads. There were ten admitted MCP calls total and 20
+workspace tool items. One live **Jev 1.13.0** call succeeded: 10,537 input / 239
+output tokens, 0.635 seconds. Its delivery-disabled `insufficient_data` receipt
+did not prevent supported follow-up analysis.
+
+Before the timeout, the agent wrote a readable brief, warehouse/carrier and
+coverage files, case status, query provenance and **30 open case records**.
+Independent internal review found the partial figures and source boundaries
+supported, without causal or customer-recovery overclaims. Those files are
+useful partial work, **not proof of a completed workflow or compatibility pass**.
+
+The last progress message sought a production-connected alternative to the fixed
+synthetic source. The task asked for current connected data while replaying a
+June cutoff in October; that historical/live ambiguity is a study-framing defect,
+not evidence that production SignalWeave fails. It also does not explain away an
+unfinished user handoff. The next protocol must state the requested business
+clock and intended deliverable clearly; do not weaken the analysis or hide source
+limitations to obtain completion. No further paid actors ran after this timeout.
+
+A separate zero-inference recovery check reconnected the same native home,
+recovered the receipt and replayed its exact idempotency key. All **17 evidence
+records** and the saved policy outcome matched, with no new analyst or Jev call
+and no change to the original report. This proves receipt persistence/replay
+after a censored caller, not completion of that caller's analysis.
+
+Software controls: full verification passed **4,488 tests, 13 skipped**; 115
+focused checks cover the latest admission closure. Both native source preflights
+matched all four saved exports. Private source, credential and future-result
+reads were denied in the actual OS checks; the treatment-only check also denied
+the external baseline's current-answer file. These are controls, not human
+onboarding, recipient delivery, a new company sample or comparative superiority.

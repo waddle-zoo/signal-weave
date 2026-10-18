@@ -37,6 +37,7 @@ from signalweave.models import InsightCard
 from signalweave.store import SQLiteInsightCardStore
 
 PROTOCOL = "redwood-ordinary-workspace-v1"
+PROBE_PROTOCOL = "redwood-ordinary-workspace-treatment-probe-v1"
 LIMITS = {"actors": 2, "jev_requests": 1, "mcp_tools": 40, "workspace_tools": 40,
           "response_seconds": 300, "between_actor_input_stop": 800_000,
           "between_actor_uncached_stop": 180_000}
@@ -167,9 +168,31 @@ class WorkspaceTools(HarborWorkflowActor):
         raise ValueError("Tool is not available")
 
 
-async def prepare(root, parent, binary, codex):
+def external_baseline_reference(reference, parent, source):
+    """Pin an already completed reference without rerunning or rebudgeting it."""
+    reference = Path(reference).absolute()
+    baseline, original = shared.read(reference), shared.read(reference.parent/"study.json")
+    if (baseline["protocol"] != PROTOCOL or baseline["arm"] != "baseline"
+            or not baseline["process_complete"] or not baseline["inputs_unchanged"]
+            or not baseline["usage"]["known"] or not baseline["provider_usage"]["known"]
+            or baseline["provider_attempts"] or baseline["errors"]
+            or baseline.get("frontier_invocations") != 1
+            or baseline["episode"].get("status") != "complete" or baseline["episode"].get("exit_code") != 0
+            or baseline["episode"]["model"] != "gpt-6-luna" or baseline["episode"]["effort"] != "xhigh"
+            or original["protocol"] != PROTOCOL or original["parent"] != str(parent)
+            or original["arms"]["baseline"]["source_sha256"] != _sha(source)
+            or original["method"]["evaluations/codex_trial_transport.py"] != _sha(ROOT/"evaluations/codex_trial_transport.py")
+            or original["method"]["evaluations/codex_workspace.py"] != _sha(ROOT/"evaluations/codex_workspace.py")):
+        raise ValueError("External baseline is not the actual completed workspace probe")
+    return {"path": str(reference), "sha256": _sha(reference),
+        "study_path": str(reference.parent/"study.json"), "study_sha256": _sha(reference.parent/"study.json"),
+        "scope": "Previously completed external reference; its costs remain reported separately. Not a new actor, paired experiment or baseline rerun."}
+
+
+async def prepare(root, parent, binary, codex, *, treatment_only=False, baseline_reference=None):
     root, parent, binary = Path(root).absolute(), Path(parent).absolute(), Path(binary).absolute()
-    study = {"protocol": PROTOCOL, "method": method(), "limits": LIMITS, "parent": str(parent),
+    study = {"protocol": PROBE_PROTOCOL if treatment_only else PROTOCOL, "method": method(),
+             "limits": {**LIMITS, "actors": 1 if treatment_only else 2}, "parent": str(parent),
              "binary_path": str(binary), "binary_identity": verify_binary(binary, ROOT),
              "codex": await pinned_codex(codex), "parent_reports": {}, "arms": {},
              "scope": "Expert-assisted ordinary-workspace continuation of a known case, not a fresh onboarding, holdout, customer delivery or superiority result."}
@@ -186,7 +209,10 @@ async def prepare(root, parent, binary, codex):
     if _sha(source) != old["snapshots"][2]["sha256"]:
         raise ValueError("Original source changed")
     audit = Audit(secrets=(Path(study["key_file"]).read_text().strip(),))
-    for arm in ("baseline", "signalweave"):
+    if treatment_only:
+        study["external_baseline"] = external_baseline_reference(baseline_reference, parent, source)
+        study["scope"] = "One separately budgeted treatment-only compatibility probe after the original total-input admission stop; not completion or rescore of that study, new onboarding or superiority evidence."
+    for arm in (("signalweave",) if treatment_only else ("baseline", "signalweave")):
         report_path = parent/f"recurring-{arm}-1.json"
         previous = shared.read(report_path)
         if (previous["protocol"] != parent_method.PROTOCOL or previous["arm"] != arm
@@ -224,9 +250,11 @@ async def prepare(root, parent, binary, codex):
                 raise ValueError("Native project skill installation failed")
         study["arms"][arm]["sandbox"] = await asyncio.to_thread(
             sandbox_preflight, study["codex"]["path"], work/"workspace", root/"private-canary.txt",
-            (work/"active.sqlite3", Path(study["key_file"]), parent/"recurring-baseline-2.json"))
+            (work/"active.sqlite3", Path(study["key_file"]), parent/"recurring-baseline-2.json",
+             *([Path(study["external_baseline"]["path"])] if treatment_only else [])))
         study["arms"][arm]["initial_inventory"] = workspace_inventory(work/"workspace")
-    study["registry_sha256"] = (await verify_trial_registry(study["codex"]["path"], root/"baseline/workspace", "http://127.0.0.1:1/mcp"))["registry_sha256"]
+    first_arm = next(iter(study["arms"]))
+    study["registry_sha256"] = (await verify_trial_registry(study["codex"]["path"], root/first_arm/"workspace", "http://127.0.0.1:1/mcp"))["registry_sha256"]
     budget = RequestBudget(0)
     study["source_parity"] = []
     async with parent_method.sessions(study, root, "signalweave", audit, budget) as (source_client, native):
@@ -256,8 +284,10 @@ async def prepare(root, parent, binary, codex):
 
 
 def verify(study, root):
-    if study["protocol"] != PROTOCOL or study["method"] != method():
+    if study["protocol"] not in {PROTOCOL, PROBE_PROTOCOL} or study["method"] != method():
         raise ValueError("Frozen method changed")
+    if study["limits"] != {**LIMITS, "actors": 1 if study["protocol"] == PROBE_PROTOCOL else 2}:
+        raise ValueError("Declared budget changed")
     if verify_binary(Path(study["binary_path"]), ROOT) != study["binary_identity"]:
         raise ValueError("Native binary changed")
     for path, digest in {**study["parent_reports"], study["codex"]["path"]: study["codex"]["sha256"],
@@ -267,6 +297,12 @@ def verify(study, root):
     for arm in study["arms"]:
         if _sha(root/arm/"active.sqlite3") != study["arms"][arm]["source_sha256"]:
             raise ValueError("Read-only source changed")
+    if study["protocol"] == PROBE_PROTOCOL:
+        reference = study["external_baseline"]
+        if (set(study["arms"]) != {"signalweave"} or study["limits"]["actors"] != 1
+                or _sha(reference["path"]) != reference["sha256"]
+                or _sha(reference["study_path"]) != reference["study_sha256"]):
+            raise ValueError("External reference or treatment-only scope changed")
     card = SQLiteInsightCardStore(root/"signalweave/home/state/signalweave.db").get_card(study["card_id"])
     if shared.digest(card.model_dump(mode="json")) != study["card_sha256"]:
         raise ValueError("Reviewed card changed")
@@ -276,6 +312,8 @@ async def actor(root, arm):
     root = Path(root).absolute()
     study = shared.read(root/"study.json")
     verify(study, root)
+    if arm not in study["arms"]:
+        raise ValueError("This probe does not admit that arm")
     with shared.single_actor(root):
         reports = []
         for name in ("baseline", "signalweave"):
@@ -284,21 +322,23 @@ async def actor(root, arm):
                 raise ValueError("Unreported actor; no retries or further inference")
             if path.exists():
                 reports.append(shared.read(path))
-        if (len(reports) >= 2 or any(not r["process_complete"] or not r["usage"]["known"]
+        if (len(reports) >= study["limits"]["actors"] or any(not r["process_complete"] or not r["usage"]["known"]
                                   or not r["provider_usage"]["known"] for r in reports)
                 or sum(r["usage"]["usage"]["input_tokens"] for r in reports) >= LIMITS["between_actor_input_stop"]
                 or sum(r["usage"]["usage"]["uncached_input_tokens"] for r in reports) >= LIMITS["between_actor_uncached_stop"]):
             raise ValueError("Continuation admission stopped")
-        if arm == "signalweave" and not (root/"baseline.json").is_file():
+        if arm == "signalweave" and study["protocol"] == PROTOCOL and not (root/"baseline.json").is_file():
             raise ValueError("Baseline runs first in this declared compatibility slice")
         workspace = root/arm/"workspace"
         if workspace_inventory(workspace) != study["arms"][arm]["initial_inventory"]:
             raise ValueError("Starting workspace changed")
-        _private_file(root/f"{arm}.claimed", PROTOCOL)
-        audit = Audit(path=root/f"{arm}.jsonl", episode=f"{PROTOCOL}:{arm}")
+        _private_file(root/f"{arm}.claimed", study["protocol"])
+        audit = Audit(path=root/f"{arm}.jsonl", episode=f"{study['protocol']}:{arm}")
         audit.secrets = (Path(study["key_file"]).read_text().strip(),)
         budget = RequestBudget(1 if arm == "signalweave" else 0)
-        report = {"protocol": PROTOCOL, "arm": arm, "process_complete": False, "errors": [], "frontier_invocations": 0}
+        report = {"protocol": study["protocol"], "arm": arm, "process_complete": False, "errors": [], "frontier_invocations": 0}
+        if "external_baseline" in study:
+            report["external_baseline"] = study["external_baseline"]
         bridge = None
         try:
             async with parent_method.sessions(study, root, arm, audit, budget) as (source, native):
@@ -347,6 +387,8 @@ def main():
     parser.add_argument("--parent", type=Path)
     parser.add_argument("--binary", type=Path)
     parser.add_argument("--codex")
+    parser.add_argument("--treatment-only", action="store_true")
+    parser.add_argument("--baseline-reference", type=Path)
     parser.add_argument("--arm", choices=("baseline", "signalweave"))
     parser.add_argument("--execute", action="store_true")
     args = parser.parse_args()
@@ -359,7 +401,10 @@ def main():
         result = sandbox_preflight(executable, root/"workspace", root/"private-canary.txt")
         shared.write(root/"proof.json", result)
     elif args.command == "prepare":
-        result = asyncio.run(prepare(args.study, args.parent, args.binary, args.codex))
+        if args.treatment_only and not args.baseline_reference:
+            parser.error("A treatment-only probe requires the actual external baseline reference")
+        result = asyncio.run(prepare(args.study, args.parent, args.binary, args.codex,
+            treatment_only=args.treatment_only, baseline_reference=args.baseline_reference))
     elif not args.execute:
         parser.error("Analyst execution requires --execute")
     else:

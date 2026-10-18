@@ -101,3 +101,51 @@ def test_zero_model_sandbox_preflight_uses_filtered_environment(tmp_path, monkey
     assert run.call_args.kwargs["env"] == {"PATH": "/system/tools"}
     assert result["analyst_invocations"] == result["provider_requests"] == 0
     assert str(tmp_path/"private-source") in run.call_args.args[0]
+
+
+def test_external_reference_is_the_actual_completed_baseline_not_a_retried_or_new_actor(tmp_path):
+    source = tmp_path/"source.db"
+    source.write_bytes(b"Current source")
+    root = tmp_path/"completed"
+    root.mkdir()
+    parent = tmp_path/"original-company-study"
+    method = {name: _sha(study.ROOT/name) for name in (
+        "evaluations/codex_trial_transport.py", "evaluations/codex_workspace.py")}
+    original = {"protocol": study.PROTOCOL, "parent": str(parent),
+        "arms": {"baseline": {"source_sha256": _sha(source)}}, "method": method}
+    (root/"study.json").write_text(json.dumps(original))
+    report = {"protocol": study.PROTOCOL, "arm": "baseline", "process_complete": True,
+        "inputs_unchanged": True, "usage": {"known": True}, "provider_usage": {"known": True},
+        "provider_attempts": 0, "errors": [], "frontier_invocations": 1,
+        "episode": {"model": "gpt-6-luna", "effort": "xhigh", "status": "complete", "exit_code": 0}}
+    path = root/"baseline.json"
+    path.write_text(json.dumps(report))
+    before = path.read_bytes()
+    ref = study.external_baseline_reference(path, parent, source)
+    assert ref["sha256"] == _sha(path) and path.read_bytes() == before
+    report["usage"]["known"] = False
+    path.write_text(json.dumps(report))
+    with pytest.raises(ValueError, match="actual completed"):
+        study.external_baseline_reference(path, parent, source)
+    report["usage"]["known"] = True
+    for field, invalid in (("status", None), ("status", "failed"), ("exit_code", None), ("exit_code", 1)):
+        broken = json.loads(json.dumps(report))
+        broken["episode"][field] = invalid
+        path.write_text(json.dumps(broken))
+        with pytest.raises(ValueError, match="actual completed"):
+            study.external_baseline_reference(path, parent, source)
+    for count in (None, 0, 2):
+        broken = {**report, "frontier_invocations": count}
+        path.write_text(json.dumps(broken))
+        with pytest.raises(ValueError, match="actual completed"):
+            study.external_baseline_reference(path, parent, source)
+
+
+async def test_treatment_only_reference_does_not_admit_baseline_or_reset_old_budget(tmp_path, monkeypatch):
+    root = tmp_path/"new-probe"
+    root.mkdir()
+    (root/"study.json").write_text(json.dumps({"arms": {"signalweave": {}}, "protocol": study.PROBE_PROTOCOL}))
+    monkeypatch.setattr(study, "verify", lambda *args: None)
+    with pytest.raises(ValueError, match="does not admit"):
+        await study.actor(root, "baseline")
+    assert not (root/"baseline.claimed").exists()
