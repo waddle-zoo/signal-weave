@@ -4,8 +4,9 @@ This is a map, not a leaderboard. Start with the [proof standard and
 reproduction guide](evaluation.md); read each linked report's protocol and
 limitations before reusing a result.
 
-Next study: [human and agent workflow research plan](workflow-research-plan.md).
-This is a prospective design, not a completed benchmark or an additional result.
+Research roadmap: [human and agent workflow research plan](workflow-research-plan.md).
+Its larger sampling plan remains prospective, not a completed benchmark or an
+additional result. Known-company development journeys are listed below.
 Its first [operational-history source checkpoint](evidence/harbor-operational-history-2026-10-17.md)
 validates historical inputs and native extraction, not agent or human outcomes.
 
@@ -13,6 +14,7 @@ validates historical inputs and native extraction, not agent or human outcomes.
 
 | Question | Start here | What it does—and does not—show |
 | --- | --- | --- |
+| Repeated fulfillment assessments and case follow-up | [Redwood workflow](evidence/redwood-workflow-2026-10-17.md) | Six fresh analyst contexts, three paired source cutoffs and three live Jev checks. Both paths produced useful deterioration and coverage/open-case follow-up assessments. Treatment added a more concrete initial case handoff but used more whole-journey time and frontier tokens. Known-company, expert-assisted note restoration and simulated file access—not real delivery, unassisted onboarding or comparative superiority. |
 | First readout through repeated handoffs | [Harbor onboarding and assisted continuation](evidence/harbor-onboarding-2026-10-17.md) | Original onboarding saved useful readouts but added prerequisites; it remains closed. Separate expert-assisted continuation completed three current native/live-Jev receipts and three briefs per arm, correctly finding 80 qualifying records and intended reviewers. Treatment used fewer tools but more recurring tokens/time and a longer message. No net human advantage, real-human setup or actual delivery established; source/status follow-through and recipient-accessible detail remain gaps. |
 | New company-source authoring | [Closed Harbor attempt](../evaluations/data/harbor-raw-onboarding-v1-summary.json) | Raw support data, existing metric views and fixed SQL exports passed native preflight. One analyst timed out amid recorded host sleep; no final readout or known usage, no baseline, no Jev. Environment-censored, not onboarding success or comparative product evidence. |
 | Persistent context setup | [Current native CLI and HTTP checks](evidence/domain-context-preview-2026-10-14.md#native-context-controls-setup-and-transport-not-analytical-quality) | A new private home persists opt-in through the CLI; guide/tools, history and card bindings survive reconnect/disable/re-enable. Signed hosted lifecycle uses a synthetic issuer. Two integration journeys, not business or real-human onboarding samples. Startup friction and comparative value remain open. |

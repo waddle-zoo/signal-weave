@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import csv
+import json
 import os
 import tempfile
 import time
@@ -83,6 +84,7 @@ REPEAT = (
     "facts. Use the approved card when present and your existing company tools for investigation. Save each "
     "human brief with save_brief, empty recipients for a no-exception routine summary, otherwise the supported "
     "reviewer keys. If your prior brief left a material issue open, inspect its current state when possible. "
+    "save_working_notes REPLACES the entire note; include everything that should remain. "
     "After saving this one requested brief, finish normally."
 )
 NEW_METHOD_FILES = ("evaluations/redwood_company.py", "evaluations/redwood_workflow_journey.py",
@@ -93,8 +95,22 @@ def method():
     return {**shared.method_identity(), **{name: _sha(ROOT/name) for name in NEW_METHOD_FILES}}
 
 
-def verify(study):
-    if study["protocol"] != PROTOCOL or study["method"] != method():
+def verify(study, *, root=None, amendment=None):
+    expected = dict(study["method"])
+    if amendment is not None:
+        if (root is None or amendment["protocol"] != "redwood-notes-restoration-v1"
+                or amendment["parent_study_sha256"] != _sha(root/"study.json")
+                or set(amendment["method_changes"]) != {"evaluations/redwood_workflow_journey.py"}):
+            raise ValueError("Unknown or mismatched continuation amendment")
+        for name, change in amendment["method_changes"].items():
+            if expected[name] != change["before"]:
+                raise ValueError("Amendment does not identify the original method")
+            expected[name] = change["after"]
+        for arm in shared.ARMS:
+            if (amendment["author_report_sha256"][arm] != _sha(root/f"onboarding-{arm}.json")
+                    or amendment["author_trace_sha256"][arm] != _sha(root/f"onboarding-{arm}.jsonl")):
+                raise ValueError("Original author work changed after notes recovery")
+    if study["protocol"] != PROTOCOL or expected != method():
         raise ValueError("Frozen method changed")
     if verify_binary(Path(study["binary_path"]), ROOT) != study["binary_identity"]:
         raise ValueError("Current native candidate changed")
@@ -106,6 +122,44 @@ def verify(study):
             raise ValueError("Frozen transport/source/skill changed")
     if any(_sha(row["path"]) != row["sha256"] for row in study["snapshots"]):
         raise ValueError("Source inputs changed")
+
+
+def saved_note_versions(path):
+    versions = []
+    for line in path.read_text().splitlines():
+        event = json.loads(line)
+        if (event.get("kind") == "tool.result" and event.get("name") == "save_working_notes"
+                and event.get("result", {}).get("saved") is True):
+            versions.append(event["arguments"]["notes"])
+    return versions
+
+
+def amend_notes(root):
+    """Prospective exploratory continuation; never rewrite the author reports."""
+    root = Path(root).absolute()
+    with shared.single_actor(root):
+        if list(root.glob("recurring-*.claimed")) or list(root.glob("recurring-*.json")):
+            raise ValueError("Notes recovery must precede every recurring outcome and provider request")
+        study = shared.read(root/"study.json")
+        changes = {"evaluations/redwood_workflow_journey.py": {
+            "before": study["method"]["evaluations/redwood_workflow_journey.py"],
+            "after": _sha(__file__)}}
+        amendment = {"protocol": "redwood-notes-restoration-v1", "parent_study_sha256": _sha(root/"study.json"),
+            "method_changes": changes, "author_report_sha256": {}, "author_trace_sha256": {}, "prior_saved_notes": {},
+            "scope": "Explicit expert-assisted context restoration, not unchanged/unassisted onboarding or a rescored author result. Same source, card, files, labels and cumulative budget. Recovered text is each agent's own earlier successful save, not invented source truth.",
+            "reason": "The note tool's replacement semantics were underspecified; baseline overwrote its full runbook with an addendum. Preserve original artifacts and costs; restore the prior context for a strong baseline and clarify future saves for both arms."}
+        for arm in shared.ARMS:
+            report = shared.read(root/f"onboarding-{arm}.json")
+            versions = saved_note_versions(root/f"onboarding-{arm}.jsonl")
+            if (not report["process_complete"] or not report["usage"]["known"] or report["provider_attempts"]
+                    or not versions or versions[-1] != report["notes"]):
+                raise ValueError("Require both completed, known-usage, zero-provider authors and their exact saved history")
+            amendment["author_report_sha256"][arm] = _sha(root/f"onboarding-{arm}.json")
+            amendment["author_trace_sha256"][arm] = _sha(root/f"onboarding-{arm}.jsonl")
+            amendment["prior_saved_notes"][arm] = versions[:-1]
+        verify(study, root=root, amendment=amendment)
+        shared.write(root/"notes-restoration-amendment.json", amendment)
+    return {"amended": True, "frontier_invocations": 0, "provider_requests": 0}
 
 
 def admission(root):
@@ -253,18 +307,25 @@ async def prepare(root, binary, codex, key_file):
     return {"prepared": True, "provider_requests": 0}
 
 
-async def actor(root, arm, phase, review_path, index=0):
+async def actor(root, arm, phase, review_path, index=0, amendment_path=None):
     if (phase == "onboarding" and index != 0) or (phase == "recurring" and index not in (1, 2)):
         raise ValueError("Authors use cutoff zero; fresh recurrence uses cutoff one or two")
     root = Path(root).absolute()
     study, report = shared.read(root/"study.json"), {"protocol": PROTOCOL, "arm": arm, "phase": phase,
         "observation_index": index, "process_complete": False, "frontier_invocations": 0, "errors": []}
-    verify(study)
+    amendment = shared.read(amendment_path) if amendment_path else None
+    verify(study, root=root, amendment=amendment)
+    if amendment:
+        if phase != "recurring":
+            raise ValueError("No author retries or replacements under the continuation amendment")
+        report.update(method_amendment=amendment["protocol"], method_amendment_sha256=_sha(amendment_path))
     with shared.single_actor(root):
         used = admission(root)
         review, own, author_card = None, None, None
         if phase == "recurring":
             review, authors, review_hash = freeze_review(root, review_path)
+            if amendment and review.get("notes_restoration_amendment_sha256") != _sha(amendment_path):
+                raise ValueError("Expert review must explicitly include the restored-note context")
             report.update(exercise_review=review, exercise_review_sha256=review_hash)
             own = authors[arm] if index == 1 else shared.read(root/f"recurring-{arm}-1.json")
             author_card = authors[arm].get("card")
@@ -318,6 +379,9 @@ async def actor(root, arm, phase, review_path, index=0):
                                   retained_files=own["artifact_manifest"],
                                   previous_brief=own.get("briefs") or own["episode"]["final_message"],
                                   review_status="Simulated delegated expert approved local shadow use only")
+                    if amendment and (index == 1 or own["notes"] == authors[arm]["notes"]):
+                        prompt["prior_saved_notes"] = amendment["prior_saved_notes"][arm]
+                        prompt["notes_recovery"] = "Earlier successful saves recovered from your own author trace. Keep dated examples historical; latest owner intent governs. This is a disclosed caller-context repair, not new source evidence."
                 report["frontier_invocations"] = 1
                 report["episode"] = await codex_episode(bridge, key="", effort="xhigh", model="gpt-6-luna", budget=budget,
                     audit=audit, max_turns=1, max_tool_calls=60, max_output_tokens=1, timeout_seconds=420,
@@ -346,7 +410,7 @@ async def actor(root, arm, phase, review_path, index=0):
                           provider_usage=shared.provider_usage(audit, budget.used),
                           usage=usage_snapshot(audit.events, report["frontier_invocations"]))
             try:
-                verify(study)
+                verify(study, root=root, amendment=amendment)
                 report["inputs_unchanged"] = True
             except Exception as error:  # noqa: BLE001
                 report["inputs_unchanged"] = False
@@ -364,7 +428,7 @@ async def actor(root, arm, phase, review_path, index=0):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("prepare", "actor"))
+    parser.add_argument("command", choices=("prepare", "actor", "amend-notes"))
     parser.add_argument("--study", type=Path, required=True)
     parser.add_argument("--binary", type=Path)
     parser.add_argument("--codex")
@@ -373,14 +437,17 @@ def main():
     parser.add_argument("--phase", choices=("onboarding", "recurring"))
     parser.add_argument("--observation-index", type=int, default=0)
     parser.add_argument("--review-file", type=Path)
+    parser.add_argument("--amendment", type=Path)
     parser.add_argument("--execute", action="store_true")
     args = parser.parse_args()
     if args.command == "prepare":
         result = asyncio.run(prepare(args.study, args.binary, args.codex, args.key_file))
+    elif args.command == "amend-notes":
+        result = amend_notes(args.study)
     elif not args.execute:
         parser.error("Paid execution requires --execute")
     else:
-        result = asyncio.run(actor(args.study, args.arm, args.phase, args.review_file, args.observation_index))
+        result = asyncio.run(actor(args.study, args.arm, args.phase, args.review_file, args.observation_index, args.amendment))
     print(result)
     if result.get("process_complete") is False:
         raise SystemExit(1)

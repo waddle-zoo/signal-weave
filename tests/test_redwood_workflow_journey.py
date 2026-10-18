@@ -78,3 +78,17 @@ def test_expert_review_of_actual_author_files_is_pinned_for_all_later_checks(tmp
     path.write_text(json.dumps(review))
     with pytest.raises(ValueError, match="review changed"):
         study.freeze_review(tmp_path, path)
+
+
+def test_note_history_recovers_only_actual_successful_saves_without_rewriting_them(tmp_path):
+    trace = tmp_path/"author.jsonl"
+    events = [
+        {"kind": "tool.result", "name": "save_working_notes", "arguments": {"notes": "Full original runbook"}, "result": {"saved": True}},
+        {"kind": "tool.ingress", "name": "save_working_notes", "arguments": {"notes": "Not completed"}},
+        {"kind": "tool.result", "name": "save_working_notes", "arguments": {"notes": "Failed write"}, "result": {"saved": False}},
+        {"kind": "tool.result", "name": "save_working_notes", "arguments": {"notes": "Addendum"}, "result": {"saved": True}},
+    ]
+    trace.write_text("\n".join(json.dumps(event) for event in events))
+    before = trace.read_bytes()
+    assert study.saved_note_versions(trace) == ["Full original runbook", "Addendum"]
+    assert trace.read_bytes() == before

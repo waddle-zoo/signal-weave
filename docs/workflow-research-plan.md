@@ -1,8 +1,12 @@
 # Human and agent workflow study
 
-Status: **independent method review complete; design remains unexecuted and not admitted for paid expansion**.
-This is the next research plan, not a new performance result. Keep earlier
-cohorts, including failures and environment-censored attempts, unchanged.
+Status: **independent method review complete; known-company formative journeys
+underway; the larger study is not admitted for paid expansion**.
+This is the research roadmap, not a performance result. Actual development
+journeys are reported separately for [Harbor](evidence/harbor-onboarding-2026-10-17.md)
+and [Redwood](evidence/redwood-workflow-2026-10-17.md); they do not execute the
+larger sampling plan below. Keep earlier cohorts, including failures and
+environment-censored attempts, unchanged.
 
 Review disposition: adequate as a staged research roadmap, not an execution
 approval or a power assessment. A bounded review of the synthetic available-

@@ -1,7 +1,9 @@
 # Redwood: completed-delivery reviews with accessible evidence
 
-Status: source controls implemented; native preflight and expert method review
-are in progress. No analyst outcome or improvement is claimed yet.
+Status: both original authors and all four fresh recurring analysts completed,
+with known usage, unchanged frozen inputs and no actor retries. Three live Jev
+calls exercised the reviewed treatment card. Both paths delivered useful local
+assessments; **overall comparative advantage was not established**.
 
 The first zero-inference native preflight found a transport compatibility gap:
 the company MCP's bare `dict` return annotation produced JSON text without
@@ -18,6 +20,78 @@ alternative. This case adds raw dated shipments, unequal warehouse volumes,
 planned-operation exceptions, carrier context, coverage uncertainty and the
 follow-up of previously affected records. It does not replace or rescore those
 earlier findings or the [Harbor result](harbor-onboarding-2026-10-17.md).
+The source is a real local SQLite-backed company MCP with four saved query
+resources, not hosted Superset or a large-catalog retrieval benchmark. Prior
+owner references are predefined; negotiating incomplete intent with a real
+person remains untested here.
+
+## What the person received
+
+| Observation | Plain agent with its own notes | SignalWeave plus the same company tools |
+| --- | --- | --- |
+| Initial assessment | Correct scoped maintenance exception; supporting CSV | Same supported assessment; its own draft card and supporting CSV |
+| Unexpected deterioration | Identified +2.54 percentage points, warehouse/carrier contributions and Fulfillment/Carrier Desk review | Same finding, plus 90 currently open follow-up cases and a separate case file |
+| Following week | Preserved the improved observed rate, flagged the missing WH-12 manifest, and found 60 closed/30 open prior cases | Same supported findings and open-case follow-through, with linked breakdown, case and manifest files |
+
+The current late rate rose from 136/1,656 to 178/1,656, then fell to 96/1,656.
+The first rise's +42 net late shipments includes +82 at WH-01–04 offset by
+40 fewer at the previously maintained warehouses. Neither path mistook those
+aggregate contributions for identified counterfactual parcels, claimed an
+incident note proved cause, or treated a lower later rate as case resolution.
+The missing final manifest remained unknown, not zero or confirmed completeness.
+
+From the treatment's actual unsent follow-up:
+
+> Also, of the 90 prior C-1 follow-up cases tied to WH-01–04 late shipments
+> promised June 1–8, **60 are closed and 30 remain open**. Closure does not
+> establish customer recovery; please review the remaining cases with Carrier
+> Desk and Warehouse Operations.
+
+The independent internal Luna reviewer checked both paired recurrences against
+raw snapshots and found supported numerical findings and follow-through in both.
+It judged treatment's row-level case files a more actionable handoff, but not
+proof of a SignalWeave-specific capability or a distinct overall business-outcome
+advantage. Baseline remained actionable. Including Warehouse Operations in
+treatment's review was plausibly useful, not proof of an operations cause; the
+owner's conditional routing did not require one exact recipient set. Treatment's
+final date labels could read as overlapping inclusive ranges; the actual source
+windows are June 1–7 and June 8–14 UTC, with correct figures. Original messages
+remain unchanged. This is internal adversarial review, not external peer review.
+
+This card kept audience rules in English and had no configured delivery methods.
+The agent proposed reviewers and wrote each brief; SignalWeave did not send or
+automatically route a notification. Live Jev selected `ignore`, `investigate`,
+then `insufficient_data`; these labels support the trace, not a separate score
+for the final analysis. Their probabilities are not calibrated correctness or
+causality estimates.
+
+## Measured effort, including authoring
+
+| Actor stage | Plain agent | With SignalWeave |
+| --- | ---: | ---: |
+| Initial author | 117.22 s | 135.15 s |
+| First recurrence | 100.60 s | 184.77 s |
+| Follow-up | 180.99 s | 150.65 s |
+| Total actor-stage wall time | **398.81 s** | **470.56 s** |
+| Admitted tools | 89 | 85 |
+| Frontier aggregate input tokens | 1,165,773 | 1,829,051 |
+| Of which uncached | 221,773 | 238,523 |
+| Frontier output tokens | 50,545 | 57,680 |
+
+Treatment additionally used **31,617 Jev input / 714 output tokens** across three
+requests taking 0.23–0.26 seconds each. These are provider timings, not end-to-end
+response times. Aggregate frontier input includes repeated cached conversation
+context; it is not unique evidence volume, a billing amount or a dollar saving.
+The final treatment follow-up was faster than baseline's, but the whole measured
+journey was about 18% slower. Do not market the selected faster stage as a net win.
+
+Treatment unnecessarily reread the full card despite the installed skill's
+decision-first guidance; its first recurrence also did more case-level work.
+Both paths spent calls on local file readbacks. The trial establishes neither
+which cost difference cards caused nor ordinary filesystem/recipient UX. The
+useful product hypothesis remains repeatable agreed context with less manual
+inspection; this one trajectory shows useful repetition, **not less human toil,
+fewer useless alerts than baseline, or a superior analytical agent**.
 
 ## The person's job
 
@@ -60,6 +134,38 @@ in the restricted trial workspace—not a SignalWeave feature, production access
 control, actual recipient delivery or proof of ordinary workspace compatibility.
 Neither arm gets shell access, hidden fixture code or future source files.
 
+### Explicit continuation repair
+
+Both initial agents returned supported assessments and readable evidence files.
+The baseline saved a full runbook, then overwrote it with an addendum: the trial
+note tool's replacement semantics were underspecified. The treatment also made
+two successful saves. Neither original report, transcript nor card was changed.
+
+Before any recurrence or Jev call, an attributed simulated-expert review approved
+an explicit **expert-assisted notes-restoration amendment**. It restores each
+arm's own earlier successful saves alongside its latest notes, and clarifies
+that later saves replace the whole note. This prevents baseline context loss
+from masquerading as SignalWeave value. It is not unassisted onboarding success
+or a rescore of the original authors. Source inputs, card, labels, files and
+cumulative budgets remain unchanged; the amendment and original reports are
+hash-pinned. Reviewer assistance is not real-owner consent.
+
+## Verified source and software checkpoint
+
+The rebuilt native candidate is from commit `04d1676`, production fingerprint
+`3236303783d35cdf7520250195d4fa23d0ba451c5f0621dd583065f0340923e6`.
+Its version is `0.2.0rc3`; it is a local source build, not a new published binary.
+Before paid analysis, all four saved exports at all three source cutoffs matched
+the companion MCP's values, source dates and query/asset provenance. A real CSV
+write/readback also preserved the source rows. Preparation made no Jev or analyst
+calls.
+
+The final post-trial `make verify` passed **4,463 tests with 13 skipped** in
+311.95 seconds, including the note-amendment checks. An earlier run's source-drift
+guard correctly failed when production files changed during testing; the stable
+reruns passed. These counts establish software controls, not independent business
+observations.
+
 ## Prospective checks and limits
 
 Review the useful final work, not just the internal enum: correct pooled counts
@@ -77,6 +183,10 @@ Before any inference, the draft's four long conversations were revised to six
 fresh analyst sessions under the same aggregate token stops. This avoids giving
 later weeks the hidden benefit of an inherited conversation. The earlier native
 preflight failure spent no analyst or Jev allowance; it remains separately logged.
+Actual six-actor totals were 2,994,824 CLI input, 460,296 uncached and 108,225
+output tokens. The final actor was admitted at 387,820 uncached, below the
+400,000 between-actor stop, and crossed that threshold in flight as the original
+protocol permits. No budgets were reset or extra actors admitted afterward.
 
 Source-bridge authoring and internal expert-review effort are unmeasured and must
 not be counted as free in any net-saving claim. SQLite query timings do not

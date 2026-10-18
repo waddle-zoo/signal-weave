@@ -9,7 +9,7 @@ snapshot, and local principal. Change all four together for another tenant.
 The bridge provides reusable company MCP connectivity with an explicit typed
 source-evidence envelope. An MCP server must expose a reviewed read tool returning
 a SignalWeave `ResourceSnapshot` in `CallToolResult.structuredContent`, or as
-one JSON text block when structured content is absent. A company
+one JSON text block when structured content is omitted or null. A company
 gateway can perform this normalization when the upstream API has a different
 shape. The bridge does not infer metric definitions, convert arbitrary API
 responses, or discover arbitrary tools to execute.
@@ -127,14 +127,17 @@ An example tool's `structuredContent` is:
 `snapshot_pointer` is an RFC 6901 JSON pointer relative to the decoded result:
 the empty string selects the whole object; `/data/snapshot` selects a wrapper.
 Object keys support `~0` and `~1`; arrays use nonnegative decimal indices.
-An explicit `structuredContent` is authoritative, including when invalid; a
-different text payload never overrides it. Without that channel, the bridge
+Any non-null `structuredContent` is authoritative, including when invalid; a
+different text payload never overrides it. With an omitted or null value, the bridge
 accepts exactly one text block containing a complete JSON value. Prose, code
 fences, multiple/mixed blocks, duplicate keys and non-finite/unrepresentable numbers are
 rejected. The same whole-response byte budget, pointer, typed snapshot, identity
 and tenant checks apply. This compatibility choice supports JSON-text servers
 without inferring arbitrary field mappings or asking a model to normalize them.
-The server still supplies the typed measurement meaning and values. MCP permits
+Null and omission both mean no structured snapshot for this bridge; this avoids
+requiring callers to change an SDK's optional-field serialization. Null is never
+interpreted as zero observations or an all-clear. The server still supplies the
+typed measurement meaning and values. MCP permits
 text results and an optional structured channel; see the
 [tool result specification](https://modelcontextprotocol.io/specification/2025-06-18/server/tools#tool-result).
 
