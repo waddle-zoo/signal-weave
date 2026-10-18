@@ -93,6 +93,28 @@ The next substantive onboarding exercise should use existing fixed-query MCP
 registration through the CLI: let the expert agent author the bounded query and
 snapshot normalization, count the human's deployment consent and all setup work,
 then test recurring checks without requiring frontier analysis first every time.
+The [source-authoring protocol](../evaluations/protocols/northstar-direct-source-authoring.json)
+and [runner](../evaluations/northstar_source_authoring.py) operationalize the
+agents' actual Northstar procedures. Both arms may build deterministic source
+queries and reports; baseline need not invoke Luna on recurrence. Treatment must
+also author its source bridge, preserve policy in a reviewed card, and justify
+those additional steps. This is not another fresh-install claim. Source code
+consent, native connection, exact source inspection and card approval are
+separate, counted steps—not things authoring completion proves.
+
+The unit of value is a reusable business check and what its reader receives.
+Correct measurements and a typed receipt show functioning; comparative value
+requires less ongoing work or a materially better maintained handoff. Two quiet
+dates cannot establish issue detection. Do not expand case counts until that
+whole path works without analytical operator rescue.
+
+Before these authors, the shared research environment now supports explicit
+read-only public SDK access and protects automatic source captures from agent
+mutation. A zero-inference OS probe verified SDK imports, ordinary workspace
+writes, denied capture/SDK writes, denied private-file reads and denied shell
+network access. The first two probe attempts lacked the installed interpreter's
+Homebrew loader permissions and did not start Python; this was a research
+environment repair, not a SignalWeave product failure or business result.
 Give baseline equivalent measurements, access and its retained procedure. Keep
 the simulation clock explicit; neither wall-clock `CURRENT_DATE` nor silently
 using the latest row establishes a valid reporting period or freshness.

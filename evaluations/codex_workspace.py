@@ -34,13 +34,25 @@ def validate_workspace(path: str | os.PathLike[str]) -> Path:
     return canonical
 
 
-def workspace_settings(path: str | os.PathLike[str]) -> list[str]:
+def workspace_settings(
+    path: str | os.PathLike[str], *, readonly_paths: Sequence[str | os.PathLike[str]] = (),
+) -> list[str]:
     """Build per-command TOML overrides for the named, network-disabled profile."""
     workspace = validate_workspace(path)
     filesystem = {
         json.dumps(":minimal", ensure_ascii=False): json.dumps("read"),
         json.dumps(str(workspace), ensure_ascii=False): json.dumps("write"),
     }
+    if not isinstance(readonly_paths, Sequence) or isinstance(readonly_paths, (str, bytes)):
+        raise ValueError("readonly_paths must be an explicit sequence of paths")
+    for supplied in readonly_paths:
+        candidate = Path(supplied)
+        if not candidate.is_absolute() or candidate.is_symlink():
+            raise ValueError("Read grants require absolute, non-symlink paths")
+        canonical = candidate.resolve(strict=True)
+        if canonical == workspace or canonical in workspace.parents:
+            raise ValueError("Read grants must not expose a workspace ancestor or replace workspace writes")
+        filesystem[json.dumps(str(canonical), ensure_ascii=False)] = json.dumps("read")
     filesystem_value = "{" + ", ".join(
         f"{key} = {value}" for key, value in filesystem.items()
     ) + "}"
@@ -55,6 +67,7 @@ def sandbox_command(
     executable: str | os.PathLike[str],
     path: str | os.PathLike[str],
     argv: Sequence[str],
+    *, readonly_paths: Sequence[str | os.PathLike[str]] = (),
 ) -> list[str]:
     """Return an argv vector for the pinned generic Codex sandbox command."""
     if isinstance(argv, (str, bytes)) or not argv or any(not isinstance(arg, str) for arg in argv):
@@ -65,6 +78,6 @@ def sandbox_command(
 
     workspace = validate_workspace(path)
     command = [executable_text, "sandbox", "-P", PROFILE, "-C", str(workspace)]
-    for setting in workspace_settings(workspace):
+    for setting in workspace_settings(workspace, readonly_paths=readonly_paths):
         command.extend(["-c", setting])
     return [*command, "--", *argv]

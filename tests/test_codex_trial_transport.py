@@ -385,6 +385,32 @@ async def test_workspace_requires_explicit_protocol_before_auditing_inference(fa
     assert fake_episode.audit.events == []
 
 
+async def test_workspace_read_grants_reach_the_actual_command_and_episode_record(fake_episode, tmp_path):
+    captures = tmp_path/"tool-responses"
+    captures.mkdir()
+    options = workspace_options(tmp_path)
+    result = await fake_episode.run([
+        {"type": "item.completed", "item": {"type": "agent_message", "id": "reply", "text": "Done."}},
+        {"type": "turn.completed", "usage": {"input_tokens": 10, "cached_input_tokens": 2, "output_tokens": 4}},
+    ], **options, workspace_read_paths=(str(captures),))
+    command = list(fake_episode.spawn.call_args.args)
+    settings = [command[i + 1] for i, arg in enumerate(command) if arg == "-c"]
+    permission = next(tomllib.loads(value) for value in settings if value.startswith("permissions.") and ".filesystem =" in value)
+    filesystem = permission["permissions"]["signalweave-study"]["filesystem"]
+    assert filesystem[str(captures)] == "read" and filesystem[str(tmp_path)] == "write"
+    assert result["workspace"]["read_only_paths"] == [str(captures)]
+    assert result["status"] == "complete"
+
+
+async def test_workspace_read_grants_cannot_be_enabled_without_or_above_workspace(fake_episode, tmp_path):
+    with pytest.raises(ValueError, match="explicit private workspace"):
+        await fake_episode.run(workspace_read_paths=(str(tmp_path),))
+    with pytest.raises(ValueError, match="workspace ancestor"):
+        await fake_episode.run(**workspace_options(tmp_path), workspace_read_paths=(str(tmp_path.parent),))
+    fake_episode.spawn.assert_not_called()
+    assert fake_episode.audit.events == []
+
+
 @pytest.mark.parametrize("phase", ["onboarding", "monitoring"])
 @pytest.mark.parametrize("treatment", [False, True])
 async def test_episode_completion_usage_and_isolated_process_cleanup(fake_episode, phase, treatment):

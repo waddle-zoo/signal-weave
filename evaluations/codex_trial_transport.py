@@ -74,7 +74,9 @@ def normalized_codex_usage(usage: object) -> dict | None:
 
 
 def codex_command(cwd: str, url: str, *, model: str, effort: str,
-                  workspace: bool = False) -> list[str]:
+                  workspace: bool = False, workspace_read_paths=()) -> list[str]:
+    if workspace_read_paths and not workspace:
+        raise ValueError("Read grants require an explicit private workspace")
     command = ["codex", "exec", "--ignore-user-config", "--ephemeral", "--json",
                "--skip-git-repo-check", "--cd", cwd,
                "--model", model, "-c", f'model_reasoning_effort="{effort}"',
@@ -91,7 +93,7 @@ def codex_command(cwd: str, url: str, *, model: str, effort: str,
     if workspace:
         # Profiles and legacy --sandbox do not compose. Do not add --sandbox
         # here: it would silently select the older, broader read policy.
-        for setting in workspace_settings(cwd):
+        for setting in workspace_settings(cwd, readonly_paths=workspace_read_paths):
             command.extend(["-c", setting])
         command.extend(["-c", "allow_login_shell=false"])
         for feature in ("shell_tool", "unified_exec"):
@@ -359,6 +361,7 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                         enforce_wall_response_timeout: bool = False,
                         finish_on_final_message: bool = False,
                         workspace_dir: str | None = None,
+                        workspace_read_paths=(),
                         max_workspace_tool_calls: int = 40) -> dict:
     """Run one Codex episode; opt-in completion means invocation completion only.
 
@@ -373,6 +376,11 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
     )
     selected_model = model or MODEL
     workspace = validate_workspace(workspace_dir) if workspace_dir is not None else None
+    if workspace_read_paths:
+        if workspace is None:
+            raise ValueError("Read grants require an explicit private workspace")
+        # Validate caller-reviewed SDK/artifact roots before any model request.
+        workspace_settings(workspace, readonly_paths=workspace_read_paths)
     if workspace is not None and (
         instructions_override is None or prompt_override is None or not finish_on_final_message
         or not allow_trial_resource_discovery
@@ -491,7 +499,7 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
     with workspace_context as cwd:
         async with serve_trial(bridge) as url:
             command = codex_command(cwd, url, model=selected_model, effort=effort,
-                                    workspace=workspace is not None)
+                                    workspace=workspace is not None, workspace_read_paths=workspace_read_paths)
             command[0] = codex_executable
             if allow_trial_resource_discovery:
                 registry_isolation = await verify_trial_registry(codex_executable, cwd, url)
@@ -766,6 +774,8 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
             "tool_items": workspace_items, "tool_item_count": len(workspace_items),
             "tool_budget": max_workspace_tool_calls,
             "scope": "Real persistent caller files and sandboxed commands; not recipient delivery or business-quality proof."}
+        if workspace_read_paths:
+            result["workspace"]["read_only_paths"] = [os.path.realpath(path) for path in workspace_read_paths]
     if finish_on_final_message:
         result["completion_basis"] = (
             "setup_complete" if structured_success and session.phase == "onboarding" else

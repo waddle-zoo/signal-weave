@@ -88,6 +88,33 @@ def test_sandbox_command_uses_exact_profile_overrides_and_preserves_argv(tmp_pat
     assert settings == workspace_settings(workspace)
 
 
+def test_opt_in_sdk_and_capture_paths_are_read_only_without_parent_access(tmp_path):
+    root = private_dir(tmp_path/"workspace")
+    captures = private_dir(root/"tool-responses")
+    sdk = private_dir(tmp_path/"public-sdk")
+    settings = workspace_settings(root, readonly_paths=(sdk, captures))
+    profile = tomllib.loads("\n".join(settings))["permissions"][PROFILE]
+    assert profile["filesystem"] == {":minimal": "read", str(root): "write",
+                                     str(sdk): "read", str(captures): "read"}
+    assert profile["network"] == {"enabled": False}
+    assert str(tmp_path) not in profile["filesystem"]
+    command = sandbox_command("/opt/codex", root, ["python", "-V"], readonly_paths=(sdk, captures))
+    assert all(value in command for value in settings)
+
+
+def test_read_grants_reject_broad_relative_missing_and_symlinked_paths(tmp_path):
+    root = private_dir(tmp_path/"workspace")
+    public = private_dir(tmp_path/"sdk")
+    link = tmp_path/"sdk-link"
+    link.symlink_to(public, target_is_directory=True)
+    for path in (root, tmp_path, Path("/"), Path("relative"), link, tmp_path/"missing"):
+        with pytest.raises((ValueError, FileNotFoundError)):
+            workspace_settings(root, readonly_paths=(path,))
+    for invalid in (str(public), iter([public]), None):
+        with pytest.raises(ValueError, match="explicit sequence"):
+            workspace_settings(root, readonly_paths=invalid)
+
+
 @pytest.mark.parametrize("argv", [[], "python -V", ["python", 3]])
 def test_sandbox_command_requires_an_explicit_string_argv(tmp_path, argv):
     workspace = private_dir(tmp_path / "workspace")
