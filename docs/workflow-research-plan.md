@@ -565,3 +565,36 @@ delivery/artifact capabilities, with routine digests distinguished from
 exception-only alerts. A local inbox/persona simulation can test that loop but
 must remain labeled simulated delivery—not customer adoption or a real-human
 benefit estimate. An enum, receipt or file on disk is not that complete outcome.
+
+### Source-backed supporting files
+
+Trace review located Redwood v2's two evidence mistakes after correct source
+reads, in agent-authored files. The plain agent faced the same manual export
+step. Improve that shared workflow instead of adding Jev judgments or policy
+gates: the [example company MCP](../examples/harbor_help/README.md#source-backed-files)
+now optionally writes original query JSON, CSV and mechanically generated
+provenance through `export_query_files`. Its existing card-source tool stays
+unchanged; this is not a new native SignalWeave tool. Both comparative arms must
+retain the source export capability. Actual stdio checks cover Harbor; a
+separate original-row-to-file check covers Redwood. Full offline verification
+passed 4,508 tests with 13 skipped; the skill validator and scoped internal code
+review passed. Test counts are software controls, not companies or business wins.
+
+One fresh internal Luna agent used the updated skill, seven supplied source
+exports, its actual previous notes/brief and the archived live-Jev receipt. It
+produced a useful retrospective brief and a derivation script whose outputs
+reproduced identically, with original inputs unchanged. The unknown manifest
+expectation and distinct warehouse denominators remained correct. Internal
+review found no recurrence of those two numeric mistakes, but the agent saved
+all 90 cases rather than the available 30-open-case worklist; fresh warehouse
+linkage was also unavailable in the supplied exports. These are different limits.
+This file-only forward-test had no live MCP, discovery, new policy call or
+baseline, so it does not show that the skill caused the correction, improve
+v2's score, or prove a better complete handoff. Original outputs stay unchanged;
+raw inputs and files remain ignored under `artifacts/source-export-forward-v1/`.
+
+Next, use the actual local Northstar Superset for fresh setup and full card
+onboarding, retaining the same real source/query/artifact capabilities in both
+arms through later readouts. Read-only preflight confirms its catalog is
+reachable; that is access evidence, not onboarding or analysis success. Keep
+the human message, useful supporting worklist and correction effort in scope.

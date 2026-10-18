@@ -252,3 +252,58 @@ def test_export_preserves_arbitrary_source_columns_without_policy_or_freshness(d
         export_query(database, "SELECT ticket_id FROM tickets", "metric:wide", "wide", "Too wide")
     with pytest.raises(ValueError, match="unique aliases"):
         export_query(database, "SELECT priority, priority FROM tickets LIMIT 1", "metric:duplicate", "duplicate", "Ambiguous")
+
+
+async def test_opt_in_stdio_exports_write_original_rows_not_agent_reconstructions(database, tmp_path):
+    output = tmp_path / "source-exports"
+    parameters = StdioServerParameters(
+        command=sys.executable,
+        args=["-m", "examples.harbor_help.company_mcp", str(database), "--exports-dir", str(output)],
+        env={**os.environ, "PYTHONPATH": str(REPOSITORY_ROOT)},
+        cwd=str(REPOSITORY_ROOT),
+    )
+    queries = [
+        "SELECT support_tier, COUNT(*) AS observed, NULL AS expected, '' AS owner_note "
+        "FROM tickets GROUP BY support_tier ORDER BY support_tier",
+        "SELECT ticket_id, support_tier, created_at_utc FROM tickets "
+        "WHERE first_response_at_utc IS NULL ORDER BY ticket_id LIMIT 30",
+        "SELECT ticket_id FROM tickets WHERE 1=0",
+    ]
+    with tempfile.TemporaryFile(mode="w+", encoding="utf-8") as error_log:
+        with anyio.fail_after(30):
+            async with stdio_client(parameters, errlog=error_log) as streams:
+                async with ClientSession(*streams) as session:
+                    await session.initialize()
+                    tools = {tool.name: tool for tool in (await session.list_tools()).tools}
+                    assert set(tools) == {"list_assets", "inspect_asset", "query_readonly", "export_query", "export_query_files"}
+                    assert set(tools["export_query_files"].inputSchema["properties"]) == {"sql", "row_limit"}
+                    assert tools["export_query_files"].annotations.readOnlyHint is False
+                    assert tools["export_query_files"].annotations.destructiveHint is False
+                    assert not output.exists()
+                    # Snapshot reads remain the same data-only contract, even when file exports are enabled.
+                    snapshot = _payload(await session.call_tool("export_query", {
+                        "sql": queries[0], "resource": "metric:counts", "source_key": "counts", "title": "Counts",
+                    }))
+                    assert "query_artifacts" not in snapshot["metadata"]
+                    assert not output.exists()
+                    for sql in queries:
+                        response = await session.call_tool("export_query_files", {"sql": sql})
+                        assert not response.isError
+                        exported = _payload(response)
+                        original = json.loads(Path(exported["paths"]["json"]).read_text())
+                        direct = query_readonly(database, sql, company_mcp.MAX_ROW_LIMIT)
+                        assert original["columns"] == direct["columns"]
+                        assert original["rows"] == direct["rows"]
+                        assert original["query"] == sql
+                        assert original["source"] == exported["source"]
+                        assert original["assets_read"] == direct["assets_read"]
+                        assert original["truncated"] is False
+                        assert exported["row_count"] == len(direct["rows"])
+                        provenance = json.loads(Path(exported["paths"]["provenance"]).read_text())
+                        assert provenance["sql"] == sql and provenance["source"] == original["source"]
+                    before = {p.relative_to(output) for p in output.rglob("*")}
+                    truncated = await session.call_tool("export_query_files", {
+                        "sql": "SELECT ticket_id FROM tickets ORDER BY ticket_id", "row_limit": 1,
+                    })
+                    assert truncated.isError
+                    assert {p.relative_to(output) for p in output.rglob("*")} == before

@@ -151,6 +151,13 @@ requires identifiers and no accessible detail path exists, include the necessary
 identifiers inline and state the limitation rather than claiming an attachment.
 SignalWeave does not replace the caller's artifact or delivery tools.
 
+For supporting files, prefer an actual source export or download over retyping
+tool rows. Derive additional tables from those original files with code, retaining
+their query and source references. Before the handoff, check the message and
+derived files against that evidence: observed counts are not proof of expected
+coverage, and segment-specific denominators need not match. A file hash checks
+its bytes, not the truth of an agent-written claim or provenance description.
+
 No message is a valid result for a quiet alert-only run; a requested
 digest still needs a useful answer. Actual schedules, delivery, deduplication
 and acknowledgements belong to separately authorized caller tools; do not claim

@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
+from mcp.types import ToolAnnotations
 
 SOURCE_ID = "harbor_help_raw_sqlite"
 DEFAULT_ROW_LIMIT = 200
@@ -343,7 +344,9 @@ def export_query(database_path, sql: str, resource: str, source_key: str, title:
                 for index, row in enumerate(result["rows"])]}
 
 
-def build_server(database_path: str | os.PathLike[str]) -> FastMCP:
+def build_server(
+    database_path: str | os.PathLike[str], *, exports_dir: Path | None = None,
+) -> FastMCP:
     """Build the discoverable stdio company-source MCP server."""
     database = validate_database_path(database_path)
     server = FastMCP("Harbor Help raw SQLite company source")
@@ -365,8 +368,21 @@ def build_server(database_path: str | os.PathLike[str]) -> FastMCP:
 
     @server.tool(name="export_query")
     def export_query_tool(sql: str, resource: str, source_key: str, title: str) -> dict[str, Any]:
-        """Export bounded source SQL rows, with no policy decision. The operator fixes this tool's arguments in an approved SignalWeave source manifest."""
+        """Wrap bounded SQL rows as source evidence, not files or a policy decision. The operator fixes these arguments in a SignalWeave source manifest."""
         return export_query(database, sql, resource, source_key, title)
+
+    if exports_dir is not None:
+        from .query_artifacts import write_query_artifacts
+
+        artifact_root = Path(exports_dir).expanduser().absolute()
+
+        @server.tool(name="export_query_files", annotations=ToolAnnotations(
+            readOnlyHint=False, destructiveHint=False, openWorldHint=False,
+        ))
+        def export_query_files_tool(sql: str, row_limit: int = MAX_ROW_LIMIT) -> dict[str, Any]:
+            """Save original query rows as JSON, CSV and provenance in the configured local folder. Use the returned files for analysis instead of retyping rows. No message is sent; local paths do not establish recipient access."""
+            result = query_readonly(database, sql, row_limit)
+            return write_query_artifacts(result, artifact_root)
 
     return server
 
@@ -374,9 +390,13 @@ def build_server(database_path: str | os.PathLike[str]) -> FastMCP:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("database", type=Path, help="existing regular SQLite fixture file")
+    parser.add_argument(
+        "--exports-dir", type=Path,
+        help="Enable local query-file exports in this private directory; absent by default",
+    )
     arguments = parser.parse_args(argv)
     try:
-        server = build_server(arguments.database)
+        server = build_server(arguments.database, exports_dir=arguments.exports_dir)
     except (OSError, ValueError) as exc:
         parser.error(str(exc))
     server.run(transport="stdio")

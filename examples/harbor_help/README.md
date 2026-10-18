@@ -112,6 +112,37 @@ that resource; they cannot rewrite its SQL. Both baseline and treatment retain
 all the raw tools. Source-owned metric views are available to both, not hidden
 evaluation answers.
 
+### Source-backed files
+
+To let the analyst work from real exports instead of retyping tool results,
+enable the optional `export_query_files` tool at source startup:
+
+```sh
+uv run python -m examples.harbor_help.company_mcp /tmp/harbor-help.sqlite3 --exports-dir ./source-exports
+```
+
+The tool accepts SQL and a row limit, not an output path. It runs one bounded
+read-only query and writes its original `result.json`, readable `rows.csv` and
+generated `provenance.json` beneath that configured directory. It returns the
+actual paths, row count and file hashes. Use those originals for calculations and
+supporting attachments; do not ask the agent to reconstruct them first.
+Truncated results are rejected: narrow or aggregate the query rather than export
+a partial sample as complete evidence.
+
+JSON preserves types, `null` and empty strings. CSV represents nulls and empty
+strings as empty fields and protects string cells that could be spreadsheet
+formulas; use JSON when those distinctions matter. The folder and files are
+owner-only, with generated names and no overwrite of inconsistent existing
+artifacts. It is a local output directory, not a published attachment service or
+proof that a recipient can open a file. A remote MCP must separately provide an
+authorized download path; server-local paths are not client-local files.
+
+Without `--exports-dir`, no file-export tool or export directory is created.
+The existing `export_query` only wraps source rows for SignalWeave; card sources,
+Jev inputs and source permissions do not change. Comparative agents should both
+retain the file-export tool when testing this capability. This example and its
+exports are not bundled into the SignalWeave native executable.
+
 If a shared context definition depends on a saved query, declare the exact
 query's SHA-256 in `descriptor.contract.lineage` as
 `saved-sql-sha256:<digest>` and refresh it whenever the reviewed SQL changes.

@@ -229,6 +229,15 @@ needed inline rather than claim an attachment was delivered. When a follow-up
 concerns a previously affected group, inspect its current state when possible: a lower
 aggregate does not explain what happened to those records or why.
 
+Use source-provided exports or downloads for supporting rows when available.
+Calculate derived tables from those originals rather than manually rebuilding
+them in the response. Keep the exact query, source and measurement window with
+the evidence. Check the final message against it too: a checksum cannot validate
+an invented explanation, an unknown expectation or a copied denominator.
+The [example company MCP](../examples/harbor_help/README.md#source-backed-files)
+offers an opt-in local export tool; your BI tool may provide its own downloads.
+These are caller/source capabilities, not another SignalWeave approval step.
+
 `insufficient_data` limits the affected policy conclusion, not every useful
 answer. The agent can still report supported facts and investigate through its
 authorized BI tools. If the card maps that outcome to a data-owner route, the
