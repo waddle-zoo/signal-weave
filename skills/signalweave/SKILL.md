@@ -44,7 +44,13 @@ and exception-only alerts are different requests.
 
 Use `onboard_insight_card` to save a draft. Put ordered policy and exceptions in
 `decision_guidance`; `watch_for` and `questions` are optional analytical prompts,
-not mandatory forms. Resolve owner-only choices in conversation rather than
+not mandatory forms. Make the applicable outcomes explicit: what earns attention,
+what stays quiet, and which missing facts change the decision. Derive these from
+the owner's intent; ask only when an unresolved branch could change the action.
+Use source-backed quantities, using existing aggregates or caller calculations
+rather than asking the policy provider to redo arithmetic. Keep the measurement's
+population, period, units and material limitations with it. Resolve owner-only
+choices in conversation rather than
 making every recurring run ask them again. Use relative periods for recurrence
 unless a fixed period was requested. For a point-in-time policy with no period
 comparison, explicitly set `comparison_windows=[]`; do not invent a baseline.
@@ -86,6 +92,19 @@ whether the decision label looks right. Card approval permits evaluation, not
 scheduling or sending. Agree separately on the caller's schedule and delivery
 tools, and test the requested workflow before activating it. Do not claim a
 single successful check proves unattended reliability.
+
+Before proposing unattended recurrence, challenge the saved rule with contrasting
+owner-relevant situations: a qualifying issue, a quiet period, and a material
+data gap; include a boundary or exception when it could change the action. You
+prepare the examples and check the resulting evidence and handoff, not just the
+outcome label. Use actual replay capabilities when exposed; the normal profile
+cannot replay hypothetical snapshots. Never overwrite a live source with a test
+case, invent captured evidence, or claim a policy test ran from a thought
+experiment. When a check cannot be executed, say what remains untested and keep
+that part in shadow review. This does not prevent a useful current analysis.
+Give the owner a short handoff: what will repeat, what was actually checked,
+what still needs attention, and whether anything is scheduled or sent. Do not
+turn the examples into a new questionnaire or imply approval from a passing test.
 
 ## Repeat the check, not the onboarding
 

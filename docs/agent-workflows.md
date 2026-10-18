@@ -164,6 +164,16 @@ These expectations are not fresh measurements or permission to change policy, se
 message, or start a schedule. Card changes still need the normal review and approval.
 This example helps qualify onboarding; it does not prove every future run.
 
+Before enabling unattended delivery, ask your agent to check meaningful contrasts
+against the saved policy: something that should get attention, something that
+should stay quiet, and a material data gap. Add an exception or boundary when it
+matters to your rule. The agent should prepare the technical work and show the
+evidence and proposed messages; you supply business intent, not fixtures or API
+fields. A written example is not an executed evaluation. The normal profile can
+evaluate the connected evidence, but cannot replay hypothetical snapshots. If
+replay tools are unavailable, keep untested behavior in shadow review rather than
+claiming automation is ready. Useful current answers need not wait for that.
+
 ## 5. Repeat and investigate
 
 Compact results keep one copy of identical evidence and plans. A report's
