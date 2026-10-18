@@ -119,7 +119,9 @@ def _rows(payload, max_rows):
     if any(item.get(key) for item in (payload, query)
            for key in ("truncated", "displayLimitReached", "limit_reached")):
         raise SQLQueryError("SQL Lab returned a truncated result")
-    if query.get("limitingFactor") not in (None, "", "NOT_LIMITED", "not_limited"):
+    factor = query.get("limitingFactor")
+    sql_limited = factor in ("QUERY", "QUERY_AND_DROPDOWN")
+    if not sql_limited and factor not in (None, "", "NOT_LIMITED", "not_limited"):
         raise SQLQueryError("SQL Lab reported a limited result")
     rows, metadata = payload.get("data"), payload.get("columns")
     if not isinstance(rows, list) or not isinstance(metadata, list):
@@ -133,8 +135,16 @@ def _rows(payload, max_rows):
     if any(not isinstance(row, dict) or set(row) != set(columns) for row in rows):
         raise SQLQueryError("SQL Lab rows do not match the declared columns")
     count, limit = query.get("rows"), query.get("limit")
+    # Superset 4.1.3 probes limit + 1, then removes the extra row. QUERY means
+    # the SQL-authored limit won; QUERY_AND_DROPDOWN means it tied the capped
+    # request limit. Neither loses rows relative to the reviewed SQL itself.
+    if sql_limited and (not _positive_int(limit) or not _positive_int(count)
+                        or count != len(rows) or len(rows) != limit):
+        raise SQLQueryError("SQL Lab returned inconsistent query-limit metadata")
     if (isinstance(count, int) and count > len(rows)) or (
-        _positive_int(limit) and len(rows) >= limit
+        _positive_int(limit) and (len(rows) > limit or (
+            len(rows) == limit and factor in (None, "")
+        ))
     ):
         raise SQLQueryError("SQL Lab result may be incomplete or limited")
     return rows, columns

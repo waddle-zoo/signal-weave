@@ -258,11 +258,76 @@ async def test_explicit_nonlimited_enum_forms_are_accepted(factor):
     assert (await execute_sql(client, sql=SQL, database_id=2)).rows == [{"value": None}]
 
 
-@pytest.mark.parametrize("factor", ["QUERY", "query", "display_limit", "unlimited", "not-limited", "not_limited "])
+@pytest.mark.parametrize("factor", ["DROPDOWN", "dropdown", "UNKNOWN", "query", "query_and_dropdown",
+                                   "display_limit", "unlimited", "not-limited", "not_limited "])
 async def test_limited_and_unknown_enum_forms_remain_rejected(factor):
     client, _ = client_for(payload(query={"limitingFactor": factor}))
     with pytest.raises(SQLQueryError, match="limited result"):
         await execute_sql(client, sql=SQL, database_id=2)
+
+
+@pytest.mark.parametrize("factor", ["QUERY", "QUERY_AND_DROPDOWN"])
+@pytest.mark.parametrize("sql", ["SELECT value FROM items ORDER BY value LIMIT 2",
+                                "SELECT TOP 2 value FROM items ORDER BY value"])
+async def test_intentional_sql_limits_preserve_complete_result_and_submitted_sql(factor, sql):
+    rows = [{"value": None}, {"value": 0}]
+    client, calls = client_for(payload(data=rows, query={"rows": 2, "limit": 2, "limitingFactor": factor}))
+    result = await execute_sql(client, sql=sql, database_id=2, max_rows=2)
+    assert result.rows == rows and result.columns == ["value"]
+    assert len(calls) == 2
+    assert json.loads(calls[-1].content)["sql"] == sql
+    assert json.loads(calls[-1].content)["queryLimit"] == 3
+
+
+@pytest.mark.parametrize("factor", ["NOT_LIMITED", "not_limited"])
+async def test_explicit_nonlimited_result_can_exactly_fill_query_limit(factor):
+    client, _ = client_for(payload(query={"rows": 1, "limit": 1, "limitingFactor": factor}))
+    assert (await execute_sql(client, sql=SQL, database_id=2, max_rows=1)).rows == [{"value": None}]
+
+
+@pytest.mark.parametrize("factor", ["QUERY", "QUERY_AND_DROPDOWN"])
+@pytest.mark.parametrize("metadata", [{}, {"rows": 1}, {"limit": 1},
+    {"rows": 0, "limit": 1}, {"rows": 2, "limit": 1}, {"rows": 1, "limit": 2},
+    {"rows": True, "limit": 1}, {"rows": 1, "limit": True}, {"rows": "1", "limit": 1}])
+async def test_intentional_limit_requires_consistent_complete_count_metadata(factor, metadata):
+    client, _ = client_for(payload(query={"limitingFactor": factor, **metadata}))
+    with pytest.raises(SQLQueryError, match="query-limit metadata"):
+        await execute_sql(client, sql=SQL, database_id=2)
+
+
+@pytest.mark.parametrize("factor", [None, ""])
+async def test_unclassified_result_at_query_limit_remains_ambiguous(factor):
+    client, _ = client_for(payload(query={"rows": 1, "limit": 1, "limitingFactor": factor}))
+    with pytest.raises(SQLQueryError, match="incomplete or limited"):
+        await execute_sql(client, sql=SQL, database_id=2)
+
+
+@pytest.mark.parametrize("factor", ["NOT_LIMITED", "not_limited"])
+@pytest.mark.parametrize("row_count,limit", [(2, 1), (1, 2)])
+async def test_nonlimited_label_cannot_hide_missing_rows_or_inconsistent_limit(factor, row_count, limit):
+    rows = [{"value": i} for i in range(row_count)]
+    client, _ = client_for(payload(data=rows, query={"rows": 2, "limit": limit, "limitingFactor": factor}))
+    with pytest.raises(SQLQueryError, match="incomplete or limited"):
+        await execute_sql(client, sql=SQL, database_id=2)
+
+
+@pytest.mark.parametrize("factor", ["QUERY", "QUERY_AND_DROPDOWN", "NOT_LIMITED"])
+@pytest.mark.parametrize("scope", ["payload", "query"])
+async def test_accepted_limit_factors_do_not_override_explicit_display_truncation(factor, scope):
+    response = payload(query={"rows": 1, "limit": 1, "limitingFactor": factor})
+    response["query"]["displayLimitReached"] = scope == "query"
+    response["displayLimitReached"] = scope == "payload"
+    client, _ = client_for(response)
+    with pytest.raises(SQLQueryError, match="truncated result"):
+        await execute_sql(client, sql=SQL, database_id=2)
+
+
+@pytest.mark.parametrize("factor", ["QUERY", "QUERY_AND_DROPDOWN", "NOT_LIMITED"])
+async def test_accepted_limit_factors_cannot_bypass_configured_row_bound(factor):
+    client, _ = client_for(payload(data=[{"value": 0}, {"value": 1}],
+                                  query={"rows": 2, "limit": 2, "limitingFactor": factor}))
+    with pytest.raises(SQLQueryError, match="row limit"):
+        await execute_sql(client, sql=SQL, database_id=2, max_rows=1)
 
 
 @pytest.mark.parametrize("options", [
