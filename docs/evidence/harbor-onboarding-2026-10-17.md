@@ -92,3 +92,38 @@ caller-tool rights and the owner's explicit fallback when no prior list exists.
 The baseline's separate resolution-review suggestion is an allowable advisory,
 not an authorized new recurring trigger. This is not external peer review, a
 real-human usability panel or proof of value across businesses.
+
+## Forward repair verification
+
+Commit `0b9ff58` allows explicit `comparison_windows=[]` while retaining omitted
+window defaults and explicit comparison requirements. Current-only plans omit
+period-change calculations; cross-source current checks remain possible. Current
+totals carried inside comparison tables are retained as source-reported inputs,
+not validated decompositions. Empty current values remain unknown, not zero.
+The skill and MCP guide distinguish caller investigation from native card scope.
+
+The rebuilt native candidate at that commit passed actual default-profile
+draft → revision to `[]` → review → fixture-operator approval, followed by source
+inspection, behind a zero-request provider proxy. Separate isolated source/native
+skill installation controls passed for Codex and Claude. These are software and
+transport controls—not new analyst journeys or actual owner approval of the
+Harbor card above. Its original draft and outputs remain unchanged.
+
+The full suite passed 4,418 checks with 13 opt-in skips; the native opt-in run
+passed three software cases, including a source-CLI control. A Python 3.11 subset
+passed 82 checks. An independent internal code reviewer found a current-data
+loss in the first patch, then cleared the corrected projection/primary-slot
+handling. None of these checks requested Jev inference or proves improved agent
+behavior. New business evidence is still required.
+
+Reproduce the forward native control after building the current source:
+
+```sh
+SIGNALWEAVE_TEST_BINARY="$PWD/dist/signalweave" .venv/bin/python -m pytest -q tests/test_native_point_card_journey.py tests/test_native_skill_journey.py
+```
+
+The tested native source fingerprint was
+`ef31d0bafb0b3a1bab1903015302bc1ac4b43810611828709ad51ce3349be1c4`;
+its binary SHA-256 was
+`561d39c9427de8c849c90cac3c6bfa96da46e305ffd436fd06ddc3c9a1c712bc`.
+This is a source candidate, not a new published release.

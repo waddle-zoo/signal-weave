@@ -41,6 +41,12 @@ stop after the baseline completed, so no recurrence or Jev evaluation ran. These
 are product/experience findings, not a replacement score for an earlier cohort
 or evidence of recurring lift. The next work repairs those demonstrated gaps.
 
+The forward point-in-time/caller-scope repair passed focused and full software
+checks plus the actual rebuilt native authoring/revision control. It also keeps
+current facts from comparison-table inputs without deriving a period change.
+These checks do not rescore the original actors or prove that new onboarding
+and recurring human updates are better; that business gate remains open.
+
 ### Next business-evidence gate
 
 The next diverse study builds on **Harbor Help's ticket SLA** business shape
