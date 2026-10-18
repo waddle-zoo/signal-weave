@@ -119,6 +119,36 @@ and unknown authoring costs remain in the predecessor reports, not silently
 amortized away. Actor timings exclude some process setup/cleanup and are not
 complete installation-to-delivery timings.
 
+## Adding another workflow must preserve the first
+
+A separate onboarding regression showed that importing another query replaced
+the active catalog and deactivated the first query reference after reconnect.
+The repair upserts by key, preserving unmentioned queries; it warns when a changed
+definition needs dependent-card review. No new workflow abstraction was added.
+
+An independently reviewed source control used a clean native build of `7025155`
+in a cloned private home. Two actual CLI imports of a second query, followed by
+two normal-profile stdio reconnects, preserved the approved card and all 79
+original business values. The additional `SELECT 42` source also worked in both
+sessions. Four real Superset SQL reads, zero forwarded or rejected provider
+requests, and no frontier agent, card evaluation or delivery were involved.
+This proves source coexistence and preservation of the existing monitor's
+inputs—not two approved monitors or a comparative business benefit. The two
+isolated source/native skill-installation tests also passed for Codex and Claude;
+they did not modify personal client configuration or test human usability.
+
+Control binary: `715fec8d15aad9f899577fd4882881fcc45b063b8ffb3922a125addbdfa510d8`;
+source fingerprint: `f689067880d9a4816ef5bbba80c9688735a70c164f870cee21e47c50e032dfe1`.
+Its raw control and logs remain in ignored `artifacts/query-catalog-native-control-v1`.
+The business study used the earlier binary; this repair does not rescore it.
+
+Final offline verification passed **4,888 tests, 13 opt-in skips**, plus Ruff.
+The initial full run stopped at 85% without a complete error while local storage
+was low; it is retained and not counted as a pass. The file at that point passed
+all five checks separately. After clearing only generated scratch, the full
+retry used pytest's standard `tmp_path_retention_policy=failed` to remove passed
+temporary fixtures while retaining failed ones; assertions and skips were unchanged.
+
 ## Provenance and limits
 
 Native commit `01a974f`, source fingerprint
