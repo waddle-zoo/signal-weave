@@ -19,6 +19,32 @@ Does adding SignalWeave to a capable BI agent make it easier to establish and
 repeat useful analytical workflows, with less human inspection and no loss of
 important findings? Where does it instead add effort, cost, or noise?
 
+### Judge the whole working experience
+
+The primary artifact is the work the person receives, not the internal decision
+label. Follow one workflow from the opening question to its first useful answer,
+the owner's review of what will repeat, and later ordinary, changed and recovery
+states. Keep the actual messages, retained instructions and corrections together.
+
+Ask whether the person can understand what matters, check the evidence, know who
+acts next, and stop manually repeating the same dashboard review. Include setup,
+clarification and repair effort in that answer. Useful silence applies to an
+exception-only alert, not a requested routine digest. A partial answer can be
+useful; test whether its uncertainty changes the proposed action instead of
+grading every missing optional fact as a failed workflow.
+
+Compare that experience with the same capable agent using the same company tools
+and its own durable notes and reusable queries. Do not require SignalWeave to win
+an isolated question, or force the baseline to forget its previous work. The
+credible value hypothesis is amortized, useful repetition with faithful context
+and fewer unnecessary interruptions. If the user gets no better outcome and no
+less work overall, a correct policy label is not a product win.
+
+Technical checks support this journey; they are not separate business successes.
+Prioritize a defect when it obstructs the journey or changes a material finding,
+recipient or action. More source-only checks and software-test totals cannot
+close the current absence of comparative end-to-end value evidence.
+
 The intended intervention remains cards, reusable context, source evidence,
 narrow typed policy decisions and workflow handoffs. The frontier agent owns
 discovery, analysis, SQL, causal hypotheses and the human message. The caller

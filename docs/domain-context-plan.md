@@ -23,6 +23,15 @@ other company histories and real-human usability remain separate gates.
 These are separate gates. Passing storage, authentication or a scripted decision
 check cannot substitute for complete onboarding and useful final agent outcomes.
 
+Current priority is the [whole working experience](workflow-research-plan.md#judge-the-whole-working-experience),
+not further accumulation of source-only validations. The bundled agent skill now
+starts with a useful current answer, saves only what should repeat, and separates
+the concise human message from operator/audit detail. This is an instruction
+simplification, not a new outcome result. The next complete journey must show
+whether recurring use actually reduces the person's work compared with the same
+agent, company tools and retained notes without SignalWeave. Overall value
+remains unproven until that comparison includes onboarding and actual messages.
+
 ### Next business-evidence gate
 
 The next diverse study builds on **Harbor Help's ticket SLA** business shape
