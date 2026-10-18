@@ -227,6 +227,99 @@ async def test_generated_response_paths_never_overwrite_existing_files_or_symlin
     assert collision.is_symlink() if symlink else collision.read_text() == "existing response"
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize("use_native", [False, True])
+async def test_fresh_actor_continues_existing_receipts_without_changing_them(tmp_path, use_native):
+    source = Facade(["query"], {"value": None})
+    native = Facade(["inspect"], {"value": 0}) if use_native else None
+    root = workspace(tmp_path / "w")
+    actor = WorkspaceSourceActor(source, Audit(), root, source_tools={"query"}, native=native)
+    name = "inspect" if use_native else "company_query"
+    for number in (1, 2):
+        await actor.call(name, {"row_limit": number})
+    original = {path.name: path.read_bytes() for path in actor.directory.iterdir()}
+    hashes = {name: hashlib.sha256(value).hexdigest() for name, value in original.items()}
+    backend = native if use_native else source
+    prior_calls = deepcopy(backend.calls)
+
+    continued = WorkspaceSourceActor(source, Audit(), root, source_tools={"query"}, native=native)
+    assert backend.calls == prior_calls
+    result = await continued.call(name, {"row_limit": 3})
+
+    assert Path(result["_caller_artifact"]["path"]).name == "response-000003.json"
+    assert backend.calls == [*prior_calls, ("inspect" if use_native else "query", {"row_limit": 3})]
+    assert sorted(path.name for path in actor.directory.iterdir()) == [
+        "response-000001.json", "response-000002.json", "response-000003.json",
+    ]
+    for filename, value in original.items():
+        assert (actor.directory / filename).read_bytes() == value
+        assert hashlib.sha256((actor.directory / filename).read_bytes()).hexdigest() == hashes[filename]
+    if use_native:
+        assert source.calls == []
+
+
+@pytest.mark.asyncio
+async def test_existing_sequence_uses_maximum_and_ignores_unrelated_names_and_directories(tmp_path):
+    root = workspace(tmp_path / "w")
+    directory = workspace(root / "tool-responses")
+    for name in ("response-000010.json", "response-000002.json", "response-000009.json",
+                 "response-999999.json.bak", "response-1234567.json", "response-1.json",
+                 "response-abcdef.json", "prefix-response-999999.json"):
+        (directory / name).write_text("unchanged", encoding="utf-8")
+    nested = workspace(directory / "unrelated")
+    (nested / "response-999999.json").symlink_to(tmp_path / "missing")
+    (directory / "notes.json").symlink_to(tmp_path / "missing")
+    source = Facade(["query"], {"value": 1})
+
+    actor = WorkspaceSourceActor(source, Audit(), root, source_tools={"query"})
+    assert source.calls == []
+    result = await actor.call("company_query", {})
+
+    assert Path(result["_caller_artifact"]["path"]).name == "response-000011.json"
+    assert source.calls == [("query", {})]
+    assert (directory / "response-000010.json").read_text() == "unchanged"
+    assert (directory / "notes.json").is_symlink()
+
+
+@pytest.mark.parametrize("entry_kind", ["symlink", "dangling_symlink", "directory"])
+def test_existing_matching_receipts_must_be_regular_files(tmp_path, entry_kind):
+    root = workspace(tmp_path / "w")
+    directory = workspace(root / "tool-responses")
+    target = tmp_path / "outside"
+    if entry_kind != "dangling_symlink":
+        target.write_text("not a receipt", encoding="utf-8")
+    entry = directory / "response-000001.json"
+    if entry_kind == "directory":
+        entry.mkdir()
+    else:
+        entry.symlink_to(target)
+    source = Facade(["query"])
+
+    with pytest.raises(ValueError, match="regular file"):
+        WorkspaceSourceActor(source, Audit(), root, source_tools={"query"})
+
+    assert source.calls == []
+    if target.exists():
+        assert target.read_text() == "not a receipt"
+
+
+@pytest.mark.asyncio
+async def test_existing_sequence_exhaustion_fails_before_dispatch(tmp_path):
+    root = workspace(tmp_path / "w")
+    directory = workspace(root / "tool-responses")
+    last = directory / "response-999999.json"
+    last.write_text("keep", encoding="utf-8")
+    source = Facade(["query"])
+    actor = WorkspaceSourceActor(source, Audit(), root, source_tools={"query"})
+
+    with pytest.raises(ValueError, match="sequence exhausted"):
+        await actor.call("company_query", {})
+
+    assert source.calls == []
+    assert last.read_text() == "keep"
+    assert list(directory.iterdir()) == [last]
+
+
 def test_workspace_and_response_roots_must_be_private_real_directories(tmp_path):
     root = workspace(tmp_path / "w")
     linked = tmp_path / "linked"

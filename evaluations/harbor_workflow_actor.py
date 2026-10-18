@@ -378,6 +378,9 @@ class WorkspaceSourceActor:
     """Expose actual MCP tools and retain their responses in a private workspace."""
 
     def __init__(self, source, audit, workspace, *, source_tools: set[str], native=None):
+        import re
+        import stat
+
         from evaluations.codex_workspace import validate_workspace
         from evaluations.installed_trial_transport import _private_dir
 
@@ -396,6 +399,13 @@ class WorkspaceSourceActor:
         self.mcp_instructions = getattr(native, "instructions", None) if native is not None else None
         self.phase, self.setup_complete, self.submission = "onboarding", False, None
         self._sequence = 0
+        for path in self.directory.iterdir():
+            match = re.fullmatch(r"response-([0-9]{6})\.json", path.name)
+            if match is None:
+                continue
+            if not stat.S_ISREG(path.lstat().st_mode):
+                raise ValueError("existing tool response must be a regular file, not a symlink or directory")
+            self._sequence = max(self._sequence, int(match[1]))
 
     async def _available(self):
         specs, routes = [], {}
@@ -430,6 +440,8 @@ class WorkspaceSourceActor:
             raise ValueError("tool not available")
         validate_workspace(self.workspace)
         validate_workspace(self.directory)
+        if self._sequence >= 999999:
+            raise ValueError("tool response sequence exhausted")
         self._sequence += 1
         path = self.directory / f"response-{self._sequence:06d}.json"
         if path.exists() or path.is_symlink():
