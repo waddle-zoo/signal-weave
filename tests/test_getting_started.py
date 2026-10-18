@@ -81,6 +81,15 @@ def test_monitor_guide_explains_existing_publication_source_without_granting_aut
     assert "not a trust relabel" in text
 
 
+def test_monitor_guide_does_not_evaluate_an_unrefreshed_analyst_publication():
+    guide = agent_getting_started("monitor")
+    assert "saved BI or configured query sources" in guide["steps"][0]["purpose"]
+    assert "refresh it through the authorized caller workflow first" in guide["steps"][0]["purpose"]
+    assert "first rerun the retained queries/calculations" in guide["repeat"]
+    assert "does not refresh its underlying analysis" in guide["repeat"]
+    assert "old measurements is not a new business observation" in guide["repeat"]
+
+
 @pytest.fixture
 def server(tmp_path):
     class NoInference:

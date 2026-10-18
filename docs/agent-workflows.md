@@ -178,11 +178,24 @@ replays its saved receipt rather than refreshing evidence. Read the typed
 decision together with the evidence, including source coverage, dates and
 comparability. Missing or omitted evidence is not an all-clear.
 
-For a known approved card, that evaluation is the starting call—not another
+For a known approved card backed by saved BI or configured query sources, that
+evaluation is the starting call—not another
 onboarding. It includes the active policy, follow-up guidance and current source
 evidence. Use the guide or full card history only when orientation, a change or
 an audit actually needs it. Keep your ordinary workspace notes, files and other
 authorized company tools available for follow-up.
+
+Some checks need calculations outside the saved dashboard. With an already
+connected [analyst publication](../examples/analysis_publication/README.md), the
+calling agent must refresh that evidence **before** evaluating the card: rerun
+its retained queries/calculations for the requested period, retain the inputs,
+and atomically replace the configured file with compact findings and lineage.
+SignalWeave reads that file; it does not perform the refresh. The agent should
+explain this once: “I'll reuse the saved analysis, refresh its evidence, then
+apply your approved policy.” The owner reviews business choices, not file formats.
+The one-time connection still requires operator setup. Without that connection
+and an actual working refresh procedure, the analysis may be useful but the
+recurring check is not ready. Suitable saved BI sources do not need this extra path.
 
 Make the question's clock clear. A current monitor needs current source evidence;
 a historical investigation needs the requested **as-of date** and measurement

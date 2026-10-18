@@ -86,3 +86,19 @@ async def test_native_authoring_schema_and_dispatch_enforce_evidence_slots(tmp_p
         with pytest.raises(Exception, match="evidence_requirements"):
             await server.call_tool(name, arguments)
     assert server._test_runtime.card_store.list_cards() == []
+
+
+async def test_publication_refresh_is_caller_owned_not_automatic_analysis():
+    from signalweave.skill_install import skill_text
+    from signalweave.sources import SourceRegistry
+
+    server = create_mcp(Runtime(card_store=StubStore(), sources=SourceRegistry(),
+                                engine=InsightEngine(TestJudger())), profile="agent")
+    tool = next(item for item in await server.list_tools() if item.name == "evaluate_insight_card")
+    assert "delegated analyst publication" in server.instructions
+    assert "before evaluation" in server.instructions
+    assert "does not execute the analyst's queries" in tool.description
+    skill = skill_text()
+    assert "saved BI or configured query sources" in skill
+    assert "refresh that evidence" in skill
+    assert "republishing old measurements is not a new business observation" in skill

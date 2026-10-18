@@ -1224,6 +1224,8 @@ def create_mcp(
             "are the working handoff. The guide and full card history are optional orientation/audit "
             "reads, not prerequisites for repetition. The default agent profile stores a human-reviewed card, "
             "fetches only its approved source scope, and calls Jev for the card's typed policy judgment. "
+            "If a card reads a delegated analyst publication, refresh it through your authorized caller "
+            "workflow before evaluation: SignalWeave reads the file, not the analysis that produces it. "
             "Use search_catalog and inspect_resource to discover and verify sources. "
             "First give a useful source-backed answer from inspected evidence and authorized company tools. "
             "Card creation, approval and policy evaluation are not prerequisites for this initial answer. "
@@ -2960,6 +2962,9 @@ def create_mcp(
         This is the starting call for a known approved card. No preparatory
         guide, card-history or source fetch is needed; the handoff includes
         active policy and follow-up guidance alongside current evidence.
+        For a delegated analyst publication, first refresh it through the
+        authorized caller workflow. This tool reads the published file; it
+        does not execute the analyst's queries or calculations that produce it.
 
         The result uses the configured decision provider and is durable. A local
         judgment-payload limit after source retrieval returns a ``deferred``

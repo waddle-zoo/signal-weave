@@ -1,6 +1,8 @@
 # Northstar: useful first answer before recurring automation
 
-Status: useful first readouts completed; saved recurring draft needs source repair.
+Status: useful first answers and owner-clarified readouts completed. A replacement
+historical card was reviewed and approved in simulation; a separate live-Jev
+check exercised its policy. Comparative recurring benefit remains unproved.
 This is a synthetic business on real local Superset, not customer validation.
 Separate internal reviewer agents checked the method and actual handoffs;
 this is not external peer review or a panel of human participants.
@@ -30,7 +32,8 @@ needs owner choices about scope, comparison, significance and freshness. Its
 saved `Last week` parameter differs from the unfiltered inspection. A later
 native probe established that it was silently ignored (repair below). The next test must resolve the
 owner choices and exercise that exact saved workflow, not count approval readiness
-as success or blame historical fixture dates on the product.
+as success or blame historical fixture dates on the product. The continuation
+below resolves those choices without rescoring this first-use pair.
 
 ## Executed first-use pair
 
@@ -55,6 +58,72 @@ The actual binary was the unpublished `aac8efd` candidate, production fingerprin
 `95b0bc319748c0f0c8ecb4029ecff8a97a5fd8d8bd121bf4baa9bd0a3fb3d7d1`,
 SHA-256 `09f7a1fe41ffa8e3b68eee8d140e79f0572f2c03e40c50a791bb29ef73e4dcb6`.
 It was current when the closed pair ran. Later guidance fixes do not rescore it.
+
+## Owner clarification through an actual policy check
+
+The fictional owner clarified “online” as Online + Mobile + Marketplace, with a
+seven-day window ending September 19, 2026 versus the same weekdays 52 weeks
+earlier. Investigate an observed decline of at least 10% when all seven dates
+are represented; missing dates go to Data Trust. Analytics/Data Trust investigate
+first, with leadership receiving supported findings afterward. This was business
+clarification, not supplied arithmetic, approval, sending or scheduling.
+
+Both agents retained their own actual work and company tools. Both correctly
+found digital net sales **253,078.35 → 271,329.51 (+7.21%)** and company net sales
+**445,838.19 → 480,764.44 (+7.83%)**. All seven dates were represented in each
+window; neither claimed that proves complete ingestion or seasonal equivalence.
+Independent reviewer agents checked actual SQL replies, calculations and messages.
+
+| Clarification phase | Luna + company MCP | + SignalWeave |
+| --- | ---: | ---: |
+| Response time | 410.06 s | 258.76 s |
+| Research MCP calls | 6 | 10 |
+| CLI input tokens, including cached prefixes | 2,734,768 | 1,203,752 |
+| Cached input tokens | 2,612,864 | 1,109,760 |
+| Uncached input tokens | 121,904 | 93,992 |
+| Output tokens | 47,609 | 34,097 |
+| Jev requests | 0 | 0 |
+
+The baseline retained fact/mart reconciliation and reusable calculations.
+Treatment queried the Executive mart, published four compact measured findings,
+and saved/reviewed one deliberate replacement card. The invalid original remained
+unchanged. Publication contained measurements and caveats, not outcome labels.
+
+**Assistance matters:** an operator connected the existing
+[publication reader](../../examples/analysis_publication/README.md) before the
+analyst ran. It reads an agent-owned file, not SQL. The agent performed the
+calculation and publication; this does not demonstrate unassisted onboarding or
+future-period refresh. Missing catalog metric contracts remained disclosed;
+the simulated owner confirmed the actual scope and policy, not another metadata
+questionnaire. Approval was simulated-expert review, not a real participant.
+
+The baseline then completed its historical repeat in 153.58 seconds, with three
+MCP calls, 388,300 input tokens (345,984 cached), and 14,453 output tokens. It
+again produced a supported quiet readout. Cumulative continuation input reached
+**4,326,820**, crossing the frozen 4-million between-actor admission stop.
+Treatment repetition was **not admitted**, not failed. There was no budget
+reset, retry or completed paired recurrence comparison.
+
+A separately admitted **operator-native wiring check**, not a replacement
+treatment actor, evaluated the actual approved card once. One live Jev request
+used **6,331 input / 198 output tokens** and returned `ignore`, with a durable,
+delivery-disabled receipt and unchanged reviewed inputs. No frontier analyst
+was invoked for this check. It verifies publication → saved policy → receipt,
+not the cost of producing the analysis or a better final agent outcome.
+
+The meaningful remaining gap is continuity: the owner should review business
+choices while the agent retains and refreshes the working analysis. This fixed
+historical publication does not prove that next-period workflow. Conditional
+refresh guidance was subsequently added to the bundled skill and MCP/docs;
+that wording change is not credited to these measured runs.
+
+Method: `evaluations/northstar_owner_continuation.py`; actual reports, SQL,
+publication, bound owner review and receipt remain in ignored
+`artifacts/northstar-owner-continuation-v2`. The separate probe script/log is
+also retained under ignored `artifacts/`. This phase used the clean `197ef92`
+native SHA-256 `8ae6d23968c8be6482da3a2feb6e22d49fa603dc229e734e50d14b13912da3aa`.
+This is one known synthetic company at one unchanged historical state, not
+months of operation, general enterprise readiness or an overall efficiency win.
 
 ## What matters to the user
 
@@ -133,18 +202,12 @@ data fingerprints. The source environment's installed code and dependencies are
 fingerprinted too, not just its entrypoint. Source replies are retained as original JSON/content with
 hashes in each analyst's workspace for code-derived supporting evidence.
 
-Preparation completed without paid inference: fresh wizard and registration,
-native skill installation, actual company SQL probe and sandbox checks passed.
-An earlier zero-inference preparation failed because the study supplied the
-wrong canary text to an existing sandbox-check helper. Its log is preserved;
-it is a method defect, not a product failure or an analytical trial.
-The second preparation passed without inference, but independent review blocked
-analyst admission because shared SQL history remained visible. The final method
-closes that access before admitting either analyst; no analytical run was retried.
-The third preparation passed, but admission caught an inventory-order defect:
-the sandbox probe's own file was created after the starting inventory. No model
-invocation occurred. The corrected method inventories after that probe; the
-failed admission log remains preserved.
+Preparation exercised the fresh wizard, registration, native skill installation,
+company SQL and sandbox checks without inference. Three earlier preparation/
+admission defects are retained: wrong canary text, shared SQL history visibility,
+and inventory captured before the probe file. They were corrected before analysts
+ran, not rescored as analytical trials. The continuation likewise retains its
+earlier zero-inference preparation separately.
 
 ## Original attempt: incomplete, not a product comparison
 

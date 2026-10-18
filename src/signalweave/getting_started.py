@@ -93,7 +93,7 @@ def agent_getting_started(task: str = "start", *, decision_provider: str = "jev-
     if task == "monitor":
         response.pop("next", None)
         response["steps"] = [
-            {"tool": "evaluate_insight_card", "purpose": "Start here with the authorized approved card ID and a new run key. Fetch the approved sources, active card guidance and policy decision in one delivery-disabled call; no preparatory card/source fetch is required."},
+            {"tool": "evaluate_insight_card", "purpose": "Start here with the authorized approved card ID and a new run key for saved BI or configured query sources. For a delegated analyst publication, refresh it through the authorized caller workflow first. Fetch the approved sources, active card guidance and policy decision in one delivery-disabled call; no duplicate card/source fetch is required."},
             {"tool": "get_insight_card", "purpose": "Read the card separately when reviewing or changing its policy, not to duplicate the active guidance already returned by evaluation. Use the default compact view unless an audit needs full history."},
             {"tool": "get_decision_receipt", "purpose": "Read only needed omitted evidence pages or recover a completed run; this does not refetch sources or run inference."},
         ]
@@ -105,9 +105,14 @@ def agent_getting_started(task: str = "start", *, decision_provider: str = "jev-
         response["repeat"] = (
             "Use the approved policy and current source facts already in the packet; do not "
             "fetch the card, guide, or receipt again when they are already available. Reuse "
-            "the approved card and a stable per-run idempotency key. Evaluate before "
-            "repeating source reads or analysis; the evidence bundle already contains the "
-            "fresh approved source facts. Use your company tools for deeper investigation "
+            "the approved card and a stable per-run idempotency key. For saved BI or configured "
+            "query sources, evaluate before repeating source reads or analysis. For a delegated "
+            "analyst publication, first rerun the retained queries/calculations through your "
+            "authorized caller workflow and update the configured file. SignalWeave reads the "
+            "publication; it does not refresh its underlying analysis. Reuse the actual working "
+            "procedure in caller notes rather than making the owner manage files. Republishing "
+            "old measurements is not a new business observation. The evidence bundle contains "
+            "what the approved sources returned. Use your company tools for deeper investigation "
             "when needed, not to restate the same facts before every evaluation. Jev applies "
             "the card policy; you own investigation, narrative, cadence and delivery."
             " Check source_contracts for this run's coverage/comparability before interpreting "

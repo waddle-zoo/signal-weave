@@ -89,11 +89,24 @@ single successful check proves unattended reliability.
 
 ## Repeat the check, not the onboarding
 
-For an approved card, use the monitor guide only if needed. Call
+For an approved card backed by saved BI or configured query sources, use the
+monitor guide only if needed. Call
 `evaluate_insight_card` once with a new stable idempotency key for each distinct
 run. Reusing a key replays history, not fresh evidence. Evaluation fetches its
 approved sources and returns active guidance: do not pre-read everything, resend
 the same facts, fetch the full card or publish an LLM report merely to start it.
+
+If the card instead reads a delegated analyst publication, refresh that evidence
+through the caller's authorized workflow before evaluation. SignalWeave reads
+the published file; it does not run the analysis that produces it. Reuse the
+actual retained queries/calculations and requested period, retain source results,
+then atomically replace the configured publication with compact findings and
+lineage. Keep that working procedure and destination in caller notes; do not
+make the owner manage files or reconstruct the analysis. Preserve input capture
+times; republishing old measurements is not a new business observation. If the
+connection or writer access is missing, give the supported answer and identify
+that operator setup step rather than claiming recurrence is ready. This path is
+optional: do not introduce a publication for a suitable saved source.
 
 Use the returned evidence first. `analyses[].comparison` can hold totals and
 windows; `source_contracts` holds source dates and quality. Watch/question
