@@ -1,9 +1,11 @@
 # Redwood: completed-delivery reviews with accessible evidence
 
-Status: both original authors and all four fresh recurring analysts completed,
+Original six-actor journey: both authors and all four fresh recurring analysts completed,
 with known usage, unchanged frozen inputs and no actor retries. Three live Jev
 calls exercised the reviewed treatment card. Both paths delivered useful local
 assessments; **overall comparative advantage was not established**.
+The later ordinary-workspace extension completed its baseline but the separate
+treatment timed out; see the [extension results](#ordinary-workspace-continuation-2026-10-18).
 
 The first zero-inference native preflight found a transport compatibility gap:
 the company MCP's bare `dict` return annotation produced JSON text without
@@ -243,6 +245,13 @@ or dollar caps. Baseline runs first. This is a separate budgeted compatibility
 slice, not a rerun/rescore of the original journey, an unseen case or a causal
 comparison of one isolated product change. Method:
 `evaluations/redwood_workspace_compatibility.py`.
+The executed v1 method is preserved at
+[commit 757f77a](https://github.com/waddle-zoo/signal-weave/blob/757f77a43ea436041a13d6dd6ff270caf0f088b5/evaluations/redwood_workspace_compatibility.py).
+The current v2 method clarifies the as-of question and baseline instructions,
+with prospective resource bounds; it has not been executed and does not revise
+any v1 result. Its final offline verification passed **4,489 tests, 13 skipped**;
+116 focused checks and a separate internal scope review cover the framing repair.
+Those checks do not establish that an acting agent now finishes the workflow.
 
 A separately admitted **one-actor treatment-only compatibility probe timed out**
 at 300.85 response seconds, with no final CLI handoff and **unknown frontier

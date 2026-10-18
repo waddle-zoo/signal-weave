@@ -10,6 +10,20 @@ from evaluations.bootstrap_agent_trial import Audit
 from evaluations.harbor_workflow_preflight import _sha
 
 
+def test_future_as_of_task_preserves_the_business_job_without_phantom_baseline_software():
+    baseline_instructions, baseline = study.actor_task()
+    treatment_instructions, treatment = study.actor_task("approved-card")
+    assert "SignalWeave" not in baseline_instructions and "SKILL.md" not in baseline_instructions
+    assert "approved_card_id" not in baseline
+    assert {key: value for key, value in treatment.items() if key != "approved_card_id"} == baseline
+    assert "retrospective" in baseline_instructions and "source_cutoff" in baseline_instructions
+    assert baseline["source_cutoff"] in baseline["request"]
+    assert "warehouse/carrier" in baseline["request"] and "coverage" in baseline["request"]
+    assert "remaining blockers" in baseline_instructions
+    assert ".agents/skills/signalweave/SKILL.md" in treatment_instructions
+    assert study.PROTOCOL.endswith("v2") and study.PROBE_PROTOCOL.endswith("v2")
+
+
 def test_seed_copies_only_the_arms_actual_prior_work_and_validates_exports(tmp_path):
     original = tmp_path/"prior"
     original.mkdir()

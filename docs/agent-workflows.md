@@ -184,6 +184,13 @@ evidence. Use the guide or full card history only when orientation, a change or
 an audit actually needs it. Keep your ordinary workspace notes, files and other
 authorized company tools available for follow-up.
 
+Make the question's clock clear. A current monitor needs current source evidence;
+a historical investigation needs the requested **as-of date** and measurement
+window. For example: “Repeat our delivery review using the data visible as of
+June 22, and follow up the prior cases as of that date.” Do not turn that into a
+search for today's production data, or present a historical receipt as a fresh
+monitoring result. Keep material source limitations visible in either case.
+
 Use the evidence already returned by evaluation. Fetch `get_decision_receipt`
 only to recover a saved run, page omitted evidence or inspect the full audit.
 Its `receipt` contains metadata; `result` contains the stored evidence once.

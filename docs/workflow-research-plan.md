@@ -534,6 +534,30 @@ usage, timeouts and capped episodes cannot qualify through that path. The
 returned `completion_basis` is **invocation completion**, not proof the message
 answers the owner or that a usable card exists. Assess those artifacts separately.
 Older protocols retain their structured-submission behavior and results. This
-opt-in repair has offline return-path tests; it has not yet been used in a new
-actual analyst cohort. Ordinary unrestricted agent-workspace compatibility is
-still a separate gate from this isolated transport.
+opt-in repair has now been used in the known-company Harbor and Redwood journeys;
+their actual outcomes are in the linked reports, not inferred from return-path
+tests. Redwood's ordinary-file continuation completed the baseline but stopped
+at its resource guard; the separate live-Jev treatment produced supported files
+but timed out without final usage. These are not a completed paired comparison
+or unrestricted-workspace/customer-onboarding evidence.
+
+Before the next paid cohort, correct the task framing rather than add product
+gates: state the requested business/as-of clock separately from host and retrieval
+time; name the full analytical job and the final human handoff; mention installed
+software only in the arm that has it. Do not make the baseline search for an
+absent skill or make a historical replay search for unrequested live connections.
+Current monitoring still requires current evidence; do not suppress genuine
+staleness or source gaps. The revised Redwood v2 method is **unexecuted**: it
+allows 420 response seconds and a 2.5-million aggregate-input between-actor stop,
+with the same actor/tool/Jev counts and 180,000-uncached stop. These prospective
+resource changes do not revise v1's stopped/censored results or prove an
+improvement. Freeze and independently admit any new cohort before execution;
+do not promote a tuned repeat of the same known case to unseen transfer evidence.
+
+Prioritize the human handoff next, not a larger count of chart classifications:
+observe a recipient getting the requested brief, opening its evidence, knowing
+the next action and giving feedback. Both arms need the same caller-owned
+delivery/artifact capabilities, with routine digests distinguished from
+exception-only alerts. A local inbox/persona simulation can test that loop but
+must remain labeled simulated delivery—not customer adoption or a real-human
+benefit estimate. An enum, receipt or file on disk is not that complete outcome.
