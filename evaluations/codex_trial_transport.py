@@ -24,6 +24,8 @@ from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 from starlette.applications import Starlette
 from starlette.routing import Route
 
+from evaluations.codex_workspace import validate_workspace, workspace_settings
+
 DISABLED_FEATURES = (
     "shell_tool", "unified_exec", "apps", "plugins", "hooks", "multi_agent",
     "browser_use", "computer_use", "image_generation", "view_image",
@@ -71,9 +73,10 @@ def normalized_codex_usage(usage: object) -> dict | None:
     return normalized
 
 
-def codex_command(cwd: str, url: str, *, model: str, effort: str) -> list[str]:
+def codex_command(cwd: str, url: str, *, model: str, effort: str,
+                  workspace: bool = False) -> list[str]:
     command = ["codex", "exec", "--ignore-user-config", "--ephemeral", "--json",
-               "--skip-git-repo-check", "--sandbox", "read-only", "--cd", cwd,
+               "--skip-git-repo-check", "--cd", cwd,
                "--model", model, "-c", f'model_reasoning_effort="{effort}"',
                "-c", 'web_search="disabled"', "-c", "project_doc_max_bytes=0",
                "-c", "features.skip_host_skill_discovery=true",
@@ -85,8 +88,19 @@ def codex_command(cwd: str, url: str, *, model: str, effort: str) -> list[str]:
                "-c", 'mcp_servers.trial.default_tools_approval_mode="approve"',
                "-c", "mcp_servers.trial.tool_timeout_sec=120",
                "-c", 'approval_policy="never"']
+    if workspace:
+        # Profiles and legacy --sandbox do not compose. Do not add --sandbox
+        # here: it would silently select the older, broader read policy.
+        for setting in workspace_settings(cwd):
+            command.extend(["-c", setting])
+        command.extend(["-c", "allow_login_shell=false"])
+        for feature in ("shell_tool", "unified_exec"):
+            command.extend(["--enable", feature])
+    else:
+        command.extend(["--sandbox", "read-only"])
     for feature in DISABLED_FEATURES:
-        command.extend(["--disable", feature])
+        if not workspace or feature not in {"shell_tool", "unified_exec"}:
+            command.extend(["--disable", feature])
     return command + ["-"]
 
 
@@ -168,7 +182,7 @@ class TrialMCP:
         self.exhaustion_event = asyncio.Event()
         self.rejection_limit_event = asyncio.Event()
         self.lock = asyncio.Lock()
-        self.server = Server("signalweave-trial")
+        self.server = Server("signalweave-trial", instructions=getattr(session, "mcp_instructions", None))
 
         @self.server.list_tools()
         async def list_tools():
@@ -343,7 +357,9 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                         report_remaining_budget: bool = False,
                         strict_single_turn_usage: bool = False,
                         enforce_wall_response_timeout: bool = False,
-                        finish_on_final_message: bool = False) -> dict:
+                        finish_on_final_message: bool = False,
+                        workspace_dir: str | None = None,
+                        max_workspace_tool_calls: int = 40) -> dict:
     """Run one Codex episode; opt-in completion means invocation completion only.
 
     ``finish_on_final_message`` does not establish approval, an external effect,
@@ -356,6 +372,13 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
         canonical,
     )
     selected_model = model or MODEL
+    workspace = validate_workspace(workspace_dir) if workspace_dir is not None else None
+    if workspace is not None and (
+        instructions_override is None or prompt_override is None or not finish_on_final_message
+        or not allow_trial_resource_discovery
+        or type(max_workspace_tool_calls) is not int or max_workspace_tool_calls < 1
+    ):
+        raise ValueError("Workspace trials require explicit instructions, final-message completion, registry isolation and a positive workspace-tool budget")
     if not selected_model or not effort:
         raise ValueError("Codex model and reasoning effort must be nonempty")
     shared_card = getattr(session, "shared_card", None)
@@ -453,6 +476,7 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
     usage_reports = []
     error = None
     foreign_tools = []
+    workspace_items = {}
     resource_discovery_ids = set()
     resource_discovery_attempt_ids = set()
     registry_isolation = None
@@ -463,9 +487,11 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
     turn_completion_has_final_message = []
     post_completion_item_activity = False
     exit_code = None
-    with tempfile.TemporaryDirectory(prefix="signalweave-agent-") as cwd:
+    workspace_context = nullcontext(str(workspace)) if workspace is not None else tempfile.TemporaryDirectory(prefix="signalweave-agent-")
+    with workspace_context as cwd:
         async with serve_trial(bridge) as url:
-            command = codex_command(cwd, url, model=selected_model, effort=effort)
+            command = codex_command(cwd, url, model=selected_model, effort=effort,
+                                    workspace=workspace is not None)
             command[0] = codex_executable
             if allow_trial_resource_discovery:
                 registry_isolation = await verify_trial_registry(codex_executable, cwd, url)
@@ -521,7 +547,14 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                             and bool(item["text"].strip())
                         )
                 if item.get("type") in {"command_execution", "web_search", "file_change"}:
-                    foreign_tools.append(item["type"])
+                    identifier = item.get("id")
+                    if (workspace is not None and item["type"] != "web_search"
+                            and isinstance(identifier, str) and identifier):
+                        workspace_items[identifier] = item["type"]
+                        if len(workspace_items) > max_workspace_tool_calls:
+                            foreign_tools.append("workspace_tool_budget_exhausted")
+                    else:
+                        foreign_tools.append(item["type"])
                 if item.get("type") == "agent_message" and isinstance(item.get("text"), str):
                     final_message = item["text"]
                 if item.get("type") == "mcp_tool_call" and (
@@ -728,6 +761,11 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
             "wall_time_overrun_seconds": max(0., elapsed - timeout_seconds),
             "transport": "codex_cli", "model": selected_model, "effort": effort,
             "exit_code": exit_code, "foreign_tools": foreign_tools}
+    if workspace is not None:
+        result["workspace"] = {"path": str(workspace), "permissions_profile": "signalweave-study",
+            "tool_items": workspace_items, "tool_item_count": len(workspace_items),
+            "tool_budget": max_workspace_tool_calls,
+            "scope": "Real persistent caller files and sandboxed commands; not recipient delivery or business-quality proof."}
     if finish_on_final_message:
         result["completion_basis"] = (
             "setup_complete" if structured_success and session.phase == "onboarding" else

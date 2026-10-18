@@ -57,6 +57,11 @@ async def test_agent_guide_delivers_first_readout_advice_only_on_start(
     assert guide_tool.inputSchema.get("required", []) == []
     assert store.list_cards() == []
 
+    # First-use orientation must not become mandatory repeated onboarding.
+    assert "start directly with evaluate_insight_card" in server.instructions
+    assert "optional orientation/audit" in server.instructions
+    assert "starting call for a known approved card" in tools["evaluate_insight_card"].description
+
     _, start = await server.call_tool("get_signalweave_guide", {"task": "start"})
     _, monitor = await server.call_tool("get_signalweave_guide", {"task": "monitor"})
 

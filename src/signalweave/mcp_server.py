@@ -1218,7 +1218,11 @@ def create_mcp(
     mcp = FastMCP(
         "signal-weave",
         instructions=(
-            "Start with get_signalweave_guide. The default agent profile stores a human-reviewed card, "
+            "For first use or onboarding, start with get_signalweave_guide. "
+            "When you already have an approved card ID for a recurring run, start directly with "
+            "evaluate_insight_card in compact mode; its active card guidance and current evidence "
+            "are the working handoff. The guide and full card history are optional orientation/audit "
+            "reads, not prerequisites for repetition. The default agent profile stores a human-reviewed card, "
             "fetches only its approved source scope, and calls Jev for the card's typed policy judgment. "
             "Use search_catalog and inspect_resource to discover and verify sources, onboard_insight_card "
             "to save the owner's intent and exact source references, then review and obtain explicit approval. "
@@ -2947,6 +2951,10 @@ def create_mcp(
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Run an approved card in delivery-disabled shadow mode.
+
+        This is the starting call for a known approved card. No preparatory
+        guide, card-history or source fetch is needed; the handoff includes
+        active policy and follow-up guidance alongside current evidence.
 
         The result uses the configured decision provider and is durable. A local
         judgment-payload limit after source retrieval returns a ``deferred``

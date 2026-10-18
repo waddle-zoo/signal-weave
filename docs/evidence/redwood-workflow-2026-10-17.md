@@ -198,3 +198,33 @@ Method: `evaluations/redwood_workflow_journey.py`; source:
 in ignored `artifacts/`, not Git. Real-human setup, actual message delivery,
 customer-hosted connectors and general enterprise performance remain separate
 acceptance gates.
+
+## Ordinary-workspace continuation (2026-10-18)
+
+Prospective compatibility slice; no analyst outcome is recorded yet. The locked
+cohort above disabled ordinary file and command tools. Its substitutes cannot
+establish a person's normal caller-workspace experience. The next two fresh
+analysts receive their own actual preceding notes, brief and files at the same
+known final source cutoff—not the final answers from the closed cohort.
+
+Both can read/write real persistent files, calculate with sandboxed commands,
+and use every company source tool. Treatment adds all tools from the current
+native/default profile and its installed skill. Its actual previously reviewed
+card is restored by the operator into a fresh home; this is not new onboarding
+or a new owner approval. Source/native MCP calls still pass through one isolated
+research endpoint; personal agent configuration and actual delivery are not tested.
+
+The existing recurring entry point now distinguishes first-use orientation from
+running a known approved card. No new analysis or scheduling abstraction is added.
+The zero-model OS check permits local files and denies a private neighboring
+canary and command networking. The explicit profile does not mix the older
+`--sandbox` flag with permission profiles; see the
+[official permission guidance](https://learn.chatgpt.com/docs/permissions).
+
+Maximum two analyst invocations, one live Jev request, 40 company-MCP calls and
+40 workspace tool items per actor, and 300 response seconds each; no retries.
+Between-actor stops are 800,000 CLI input or 180,000 uncached tokens, not in-flight
+or dollar caps. Baseline runs first. This is a separate budgeted compatibility
+slice, not a rerun/rescore of the original journey, an unseen case or a causal
+comparison of one isolated product change. Method:
+`evaluations/redwood_workspace_compatibility.py`.

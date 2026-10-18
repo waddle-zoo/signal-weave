@@ -101,6 +101,13 @@ async def test_bridge_dispatches_only_tools_in_arm_specs(treatment):
     assert bridge.calls == len(audit.events) == 3
 
 
+async def test_new_workspace_bridge_can_forward_actual_mcp_instructions_without_changing_legacy():
+    legacy = session_stub()
+    assert transport.TrialMCP(legacy, trial.Audit(), await legacy.specs(), 3).server.instructions is None
+    legacy.mcp_instructions = "Actual initialized native server instructions"
+    assert transport.TrialMCP(legacy, trial.Audit(), await legacy.specs(), 3).server.instructions == legacy.mcp_instructions
+
+
 @pytest.mark.parametrize("phase,finish", [("onboarding", "finish_setup"), ("monitoring", "submit_analysis")])
 async def test_submission_guard_serializes_concurrent_calls(phase, finish):
     session, audit = session_stub(phase=phase), trial.Audit()
@@ -319,6 +326,63 @@ async def test_selected_model_and_effort_reach_codex_process_and_audit(fake_epis
     assert (request["model"], request["effort"]) == ("gpt-6-luna", "xhigh")
     assert (response["model"], response["effort"]) == ("gpt-6-luna", "xhigh")
     assert (result["model"], result["effort"]) == ("gpt-6-luna", "xhigh")
+
+
+def workspace_options(tmp_path):
+    tmp_path.chmod(0o700)
+    return dict(workspace_dir=str(tmp_path), instructions_override="Use this private workspace.",
+        prompt_override={"request": "Read company tools and save a local brief."},
+        finish_on_final_message=True, allow_trial_resource_discovery=True,
+        accounting_drain=True, strict_single_turn_usage=True)
+
+
+async def test_opt_in_workspace_keeps_files_and_admits_sandboxed_commands(fake_episode, tmp_path):
+    note = tmp_path / "working-notes.md"
+    note.write_text("The agent's actual prior work")
+    result = await fake_episode.run([
+        {"type": "item.started", "item": {"type": "command_execution", "id": "cmd-1"}},
+        {"type": "item.completed", "item": {"type": "command_execution", "id": "cmd-1"}},
+        {"type": "item.completed", "item": {"type": "file_change", "id": "file-1"}},
+        {"type": "item.completed", "item": {"type": "agent_message", "id": "reply", "text": "Local brief saved."}},
+        {"type": "turn.completed", "usage": {"input_tokens": 10, "cached_input_tokens": 2, "output_tokens": 4}},
+    ], **workspace_options(tmp_path))
+    assert result["status"] == "complete" and result["foreign_tools"] == []
+    assert result["workspace"]["tool_item_count"] == 2  # started/completed is one item
+    command = list(fake_episode.spawn.call_args.args)
+    assert "--sandbox" not in command  # legacy flag would override restricted profile
+    assert command[command.index("--cd") + 1] == str(tmp_path.resolve())
+    settings = [command[i + 1] for i, arg in enumerate(command) if arg == "-c"]
+    assert any(tomllib.loads(setting).get("default_permissions") == "signalweave-study" for setting in settings)
+    assert "allow_login_shell=false" in settings
+    assert "shell_tool" not in {command[i + 1] for i, arg in enumerate(command) if arg == "--disable"}
+    assert note.read_text() == "The agent's actual prior work"
+    assert fake_episode.closed
+
+
+@pytest.mark.parametrize("item,cap,expected", [
+    ({"type": "web_search", "id": "web-1"}, 2, "web_search"),
+    ({"type": "command_execution"}, 2, "command_execution"),
+    ({"type": "file_change", "id": "second"}, 1, "workspace_tool_budget_exhausted"),
+])
+async def test_workspace_does_not_admit_web_ambiguous_items_or_unbounded_work(
+    fake_episode, tmp_path, item, cap, expected,
+):
+    result = await fake_episode.run([
+        {"type": "item.completed", "item": {"type": "command_execution", "id": "first"}},
+        {"type": "item.completed", "item": item},
+        {"type": "item.completed", "item": {"type": "agent_message", "id": "reply", "text": "Finished."}},
+        {"type": "turn.completed", "usage": {"input_tokens": 10, "cached_input_tokens": 0, "output_tokens": 2}},
+    ], **workspace_options(tmp_path), max_workspace_tool_calls=cap)
+    assert result["status"] != "complete"
+    assert expected in result["foreign_tools"]
+
+
+async def test_workspace_requires_explicit_protocol_before_auditing_inference(fake_episode, tmp_path):
+    tmp_path.chmod(0o700)
+    with pytest.raises(ValueError, match="Workspace trials require"):
+        await fake_episode.run(workspace_dir=str(tmp_path))
+    fake_episode.spawn.assert_not_called()
+    assert fake_episode.audit.events == []
 
 
 @pytest.mark.parametrize("phase", ["onboarding", "monitoring"])

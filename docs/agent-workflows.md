@@ -178,6 +178,12 @@ replays its saved receipt rather than refreshing evidence. Read the typed
 decision together with the evidence, including source coverage, dates and
 comparability. Missing or omitted evidence is not an all-clear.
 
+For a known approved card, that evaluation is the starting call—not another
+onboarding. It includes the active policy, follow-up guidance and current source
+evidence. Use the guide or full card history only when orientation, a change or
+an audit actually needs it. Keep your ordinary workspace notes, files and other
+authorized company tools available for follow-up.
+
 Use the evidence already returned by evaluation. Fetch `get_decision_receipt`
 only to recover a saved run, page omitted evidence or inspect the full audit.
 Its `receipt` contains metadata; `result` contains the stored evidence once.
