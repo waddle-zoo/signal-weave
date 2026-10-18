@@ -466,6 +466,20 @@ class WorkspaceSourceActor:
             "path": str(path),
             "sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
             "redacted": redacted,
+            "format": "mcp_response_envelope_json",
+            "already_saved": True,
+            "read_without_rewriting": True,
+            "structured_path": ["structured"],
+            "content_path": ["content"],
+            "data_path": ["structured"] if structured is not None else ["content"],
+            "read_instructions": (
+                "Read this existing JSON envelope, not an unwrapped tool result. "
+                "Paths are JSON key arrays from the file root. Use structured unless it is null; "
+                "empty values are retained. Otherwise use content, the original MCP blocks "
+                "(text blocks have a text field). Respect the redacted flag. "
+                "Read without rewriting or replacing this capture; save derived work separately. "
+                "No need to requery to save: this response is already saved."
+            ),
         }
         self.audit.emit("actor.workspace_response_saved", name=saved["name"],
                         arguments=saved["arguments"], artifact=dict(locator))

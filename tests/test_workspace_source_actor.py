@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import csv
 import hashlib
+import io
 import json
 import stat
 from copy import deepcopy
@@ -89,6 +91,7 @@ async def test_both_arms_forward_same_arguments_and_preserve_structured_and_raw_
     raw = [types.TextContent(type="text", text='{"original": "wire content"}')]
     arguments = {"sql": "SELECT original FROM actual_table -- ../../outside", "row_limit": 1000}
     forwarded = []
+    locators = []
     for arm in ("baseline", "treatment"):
         source = Facade(["query_readonly"], original, content=raw)
         native = Facade(["get_signalweave_guide"]) if arm == "treatment" else None
@@ -118,7 +121,9 @@ async def test_both_arms_forward_same_arguments_and_preserve_structured_and_raw_
         if native:
             assert native.calls == []
         forwarded.append(result)
+        locators.append({key: value for key, value in locator.items() if key != "path"})
     assert forwarded[0] == forwarded[1]
+    assert locators[0] == locators[1]
     assert "_caller_artifact" not in original
 
 
@@ -136,6 +141,85 @@ async def test_non_dict_and_plain_csv_do_not_invent_structured_results(tmp_path,
     saved = json.loads(Path(result["_caller_artifact"]["path"]).read_bytes())
     assert saved["structured"] == structured
     assert saved["content"][0]["text"] == "a,b\n,0\n"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("use_native", [False, True])
+@pytest.mark.parametrize("content_only", [False, True])
+async def test_locator_reads_saved_envelope_for_calculation_without_requery_or_rewrite(
+    tmp_path, use_native, content_only,
+):
+    structured = None if content_only else {
+        "result": {"rows": [{"value": None}, {"value": 0}, {"value": ""},
+                            {"value": 2.5}, {"value": 7.5}]},
+    }
+    content = [types.TextContent(type="text", text="value\n0\n2.5\n7.5\n")]
+    source = Facade(["query"], structured, content=content)
+    native = Facade(["inspect"], structured, content=content) if use_native else None
+    audit = Audit()
+    actor = WorkspaceSourceActor(source, audit, workspace(tmp_path / "w"),
+                                 source_tools={"query"}, native=native)
+    name = "inspect" if use_native else "company_query"
+    arguments = {"sql": "SELECT value FROM records", "row_limit": 20}
+    result = await actor.call(name, arguments)
+    locator = result["_caller_artifact"]
+    path = Path(locator["path"])
+    original_bytes = path.read_bytes()
+    expected = {
+        "name": name, "arguments": arguments,
+        "structured": structured,
+        "content": [block.model_dump(mode="json") for block in content], "redacted": False,
+    }
+    assert original_bytes == json.dumps(
+        expected, ensure_ascii=False, allow_nan=False, sort_keys=True, separators=(",", ":"),
+    ).encode("utf-8")
+    assert locator["format"] == "mcp_response_envelope_json"
+    assert locator["already_saved"] is True and locator["read_without_rewriting"] is True
+    saved = json.loads(original_bytes)
+
+    def read_path(keys):
+        value = saved
+        for key in keys:
+            value = value[key]
+        return value
+
+    assert read_path(locator["structured_path"]) == structured
+    assert read_path(locator["content_path"]) == expected["content"]
+    data = read_path(locator["data_path"])
+    if content_only:
+        assert data == expected["content"]
+        values = [float(row["value"]) for row in csv.DictReader(io.StringIO(data[0]["text"]))]
+    else:
+        assert data == structured
+        values = [row["value"] for row in data["result"]["rows"]]
+        assert values[:3] == [None, 0, ""]
+        values = [value for value in values if isinstance(value, (int, float))]
+    assert sum(values) == 10
+    assert path.read_bytes() == original_bytes
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == locator["sha256"]
+    backend = native if use_native else source
+    assert backend.calls == [("inspect" if use_native else "query", arguments)]
+    assert source.calls == ([] if use_native else [("query", arguments)])
+    assert audit.events[-1]["artifact"] == locator
+    assert actor._sequence == 1
+    assert list(actor.directory.iterdir()) == [path]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("structured", [None, {}, [], "", 0, False])
+async def test_locator_falls_back_only_for_null_not_empty_structured_values(tmp_path, structured):
+    source = Facade(["query"], structured, content=[])
+    actor = WorkspaceSourceActor(source, Audit(), workspace(tmp_path / "w"), source_tools={"query"})
+    result = await actor.call("company_query", {})
+    locator = result["_caller_artifact"]
+    original_bytes = Path(locator["path"]).read_bytes()
+    saved = json.loads(original_bytes)
+    assert locator["data_path"] == (["content"] if structured is None else ["structured"])
+    assert saved[locator["data_path"][0]] == ([] if structured is None else structured)
+    assert type(saved["structured"]) is type(structured)
+    assert saved["content"] == []
+    assert source.calls == [("query", {})]
+    assert hashlib.sha256(original_bytes).hexdigest() == locator["sha256"]
 
 
 @pytest.mark.asyncio
