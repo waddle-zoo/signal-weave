@@ -126,6 +126,84 @@ sleep prevention have been requested from the user, not approved by this file.
 Freeze the actual runner, scope, final assessment and host choice before use.
 The larger prospective study and ordinary-workspace/human tracks remain open.
 
+### Staged complete-journey caller
+
+[`harbor_workflow_journey.py`](../harbor_workflow_journey.py) implements that
+bounded path, separately from the closed authoring cohort. `prepare` creates
+identical historical inputs, separate active source copies for both arms, a
+private native setup and the candidate's actual installed skill. It makes no
+analyst or policy requests. Preparation is scripted operator work, not proof of
+a person's installation experience.
+
+```sh
+.venv/bin/python -m evaluations.harbor_workflow_journey prepare \
+  --binary dist/signalweave --codex "$(command -v codex)" \
+  --key-file "$TYPESAFE_API_KEY_FILE" --output artifacts/harbor-complete-journey-new
+```
+
+Paid actors require a separately reviewed execution scope, approved budget and
+host choice; preparation alone does not authorize `--execute`. Each author arm
+finishes with its actual ordinary reply and reusable notes. Treatment drafts
+and reviews its own fixed-source card; neither author may approve or evaluate.
+There is no mandatory publication or special answer-submission endpoint.
+
+Before recurrence, an expert must inspect **both actual** first replies and
+retained artifacts, including the treatment's saved policy and source scope.
+Supply a private review JSON with `approved_for_shadow_recurrence=true`,
+`reviewer`, `reviewer_type` (`human` or `simulated_expert`), `reason`, and
+`artifacts` mapping each arm to its saved `review_artifact_digest`. Include
+`assessments` with the actual semantic findings for each arm and a separate
+`source_selection_reason` recording the confirmed definitions/populations and
+why those sources fit; that specific confirmation becomes the native approval
+reason, not a generic approval phrase. These digests
+only identify what was reviewed; the file does not prove semantic correctness
+or that a real person participated. Record the actual expert assessment too.
+An inadequate card/brief is an onboarding finding, not permission to substitute
+an expert-authored gold card or silently repair the closed actor's result.
+
+```sh
+# Only after the required execution approval, once per arm/phase:
+.venv/bin/python -m evaluations.harbor_workflow_journey actor \
+  --study artifacts/harbor-complete-journey-new --arm signalweave \
+  --phase onboarding --execute
+# Repeat for baseline, review both actual outputs, then:
+.venv/bin/python -m evaluations.harbor_workflow_journey actor \
+  --study artifacts/harbor-complete-journey-new --arm signalweave \
+  --phase recurring --review-file /path/to/actual-expert-review.json --execute
+# Run baseline recurrence with the same review and its own retained notes.
+```
+
+One later context per arm handles three dependent observations. The caller
+advances its active source only after `save_brief` persists the actual requested
+brief. Alert-recipient keys may be empty for a routine no-trigger update; this
+is not an alert-only savings experiment. The sink is local, delivery-disabled
+and has no invented acknowledgement. The agent finishes in ordinary language.
+The baseline retains the same company SQL tools, prepared query definitions,
+owner access and its own portable queries/notes. Native reads, actor work,
+coordinator setup/review and provider requests must remain separately accounted.
+
+`process_complete` records a finished invocation plus retained workflow work,
+not correct analysis, right recipients, good communication or comparative lift.
+`policy_path_exercised` separately requires distinct, non-replayed, non-deferred
+Jev receipts for the reviewed card at all requested cutoffs and known provider
+usage. A finished report without that exposure is not a successful Jev treatment.
+Inspect every actual brief and its source support before making those claims.
+No automatic retries are offered. A failed, unknown-usage or over-limit actor
+prevents further actors; the token thresholds apply between invocations and
+cannot cap an in-flight turn. Original failed/censored cohorts remain untouched.
+The transport's legacy `max_turns`/`max_output_tokens` arguments are not CLI
+caps; the enforced limits are the response deadline, tool allowance and provider
+request allowance, with token stops between actor invocations.
+
+Use `summary --study <directory>` to inspect the actual replies, shadow briefs
+and recorded effort. Its `recorded_total_usage` totals frontier CLI tokens only;
+Jev usage is shown separately per stage. These are not invoices, human effort
+or the cost of manually preparing the source bridge. The prepared study also
+records scripted setup time and which human/operator effort remains unmeasured.
+Current v2 preparation passed with zero provider attempts and scoped internal
+review; actor execution remains unapproved. The initial v1 preparation and
+pre-fix software checks stay separate, not rescored as final-method evidence.
+
 ### Shared-source execution prerequisite
 
 The companion [workflow MCP](../harbor_workflow_mcp.py) now exposes
