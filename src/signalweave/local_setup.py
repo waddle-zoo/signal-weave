@@ -44,6 +44,7 @@ _STORE_PATHS = {
 }
 _PATH_NAMES = {
     *_STORE_PATHS, "TRINO_CATALOG_FILE", "SIGNALWEAVE_MCP_SOURCES_FILE",
+    "SUPERSET_QUERY_SOURCES_FILE", "PRESET_QUERY_SOURCES_FILE",
     *(f"{n}_FILE" for n in _SECRET_NAMES),
 }
 _ENV_NAMES = {
@@ -64,6 +65,7 @@ _ENV_NAMES = {
     "PRESET_RETAIN_RAW_RESULTS", "PRESET_RETENTION_HOURS", "SIGNALWEAVE_AUTH_MODE",
     "SIGNALWEAVE_ALLOW_INSECURE_HTTP", "SIGNALWEAVE_ALLOW_INSECURE_OIDC",
     "SIGNALWEAVE_MCP_PROFILE",
+    "SIGNALWEAVE_QUERY_AS_OF_DATE",
     "SIGNALWEAVE_OIDC_ISSUER_URL", "SIGNALWEAVE_OIDC_AUDIENCE",
     "SIGNALWEAVE_OIDC_TENANT_CLAIM", "SIGNALWEAVE_OIDC_REQUIRED_SCOPES",
     "SIGNALWEAVE_OIDC_JWKS_URL", "SIGNALWEAVE_OIDC_ALGORITHMS",
@@ -1121,6 +1123,18 @@ def doctor(home: str | Path | None = None) -> tuple[bool, list[str]]:
             errors.append(str(error))
         except (OSError, ValueError):
             errors.append("Trino configuration invalid; check catalog descriptors, TRINO_USER, and TRINO_MAX_ROWS")
+    for source in ("SUPERSET", "PRESET"):
+        selected = os.getenv(source + "_QUERY_SOURCES_FILE")
+        if selected:
+            from .query_source import load_query_catalog
+
+            try:
+                load_query_catalog(selected)
+                if not os.getenv(source + "_URL"):
+                    raise ValueError("missing connection")
+                messages.append(f"{source} reviewed queries: catalog valid; execution and analytical meaning not tested.")
+            except (OSError, ValueError):
+                errors.append(f"{source} reviewed queries invalid; check the catalog and existing connection")
     if os.getenv("SIGNALWEAVE_MCP_SOURCES_FILE"):
         from .mcp_source import build_mcp_sources
 

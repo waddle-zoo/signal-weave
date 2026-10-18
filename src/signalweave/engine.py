@@ -36,7 +36,7 @@ from .models import (
     WorkflowHandoff,
 )
 from .retrieval import build_candidate_pool, resource_ref
-from .sources import SourceRegistry, _without_agent_query_definitions
+from .sources import SourceRegistry, _without_agent_query_definitions, source_read_clock
 from .typesafe_adapter import (
     DEFAULT_MAX_JEV_PAYLOAD_BYTES,
     InsightJudger,
@@ -306,6 +306,7 @@ class InsightEngine:
         return {"card": card, "resources": resources, "plan": plan,
                 "materials": self._evaluation_materials(card, plan, resources, None, None)}
 
+    @source_read_clock()
     async def evaluate(
         self,
         card: InsightCard,

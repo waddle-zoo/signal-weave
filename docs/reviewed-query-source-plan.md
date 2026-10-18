@@ -1,6 +1,18 @@
 # From an analyst's answer to a repeatable check
 
-Status: implementation plan, **not a shipped capability or successful trial**.
+Status: source implementation and local transport check complete; native packaging
+and the full agent/human journey are being evaluated. **Not a published release,
+successful onboarding trial or demonstrated comparative benefit.**
+
+The implementation uses the existing connection and a private reviewed artifact;
+see [query-source usage](query-sources.md). Offline tests cover schema/SQL shape,
+clock continuity, source identity, dynamic result columns, bounded transport,
+token refresh, Preset consent/limits and the human CLI. A real local Superset
+4.1.3 query returned the retained analyst's 12-row observation without a reader
+process or new credentials. Its exact-equality assertion against the community
+MCP capture failed on decimal representation/rounding, not business totals;
+a separate no-request review confirmed that distinction. Original evidence is
+retained. None of these checks completes the business acceptance gates below.
 
 ## The user experience to deliver
 

@@ -493,6 +493,16 @@ def build_runtime(
         default_authorized_tenants = []
     else:
         default_authorized_tenants = None
+    for source, setting in (("superset", "SUPERSET_QUERY_SOURCES_FILE"), ("preset", "PRESET_QUERY_SOURCES_FILE")):
+        query_file = os.getenv(setting)
+        if query_file:
+            from .query_source import SupersetQueryAdapter, load_query_catalog
+
+            candidates = [adapter for adapter in configured_adapters if isinstance(adapter, SupersetAdapter)
+                          and adapter.provider_name == source]
+            if len(candidates) != 1:
+                raise RuntimeError(f"{setting} requires exactly one configured {source} connection")
+            configured_adapters.append(SupersetQueryAdapter(candidates[0], load_query_catalog(query_file)))
     registry = SourceRegistry(
         configured_adapters,
         authorized_tenants=default_authorized_tenants,

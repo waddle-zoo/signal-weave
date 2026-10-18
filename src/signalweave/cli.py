@@ -277,8 +277,33 @@ def main() -> None:
         selected_home = Path(os.environ.get("SIGNALWEAVE_HOME") or Path.home() / ".signalweave").expanduser()
         existing_home = selected_home / "config.toml"
         sys.argv.append("status" if existing_home.is_file() else "setup")
+    queries = commands.add_parser("queries", help="Reuse reviewed SQL through an existing BI connection")
+    queries_sub = queries.add_subparsers(dest="queries_command", required=True)
+    queries_sub.add_parser("schema", help="Print the reviewed query artifact JSON schema")
+    query_import = queries_sub.add_parser("import", help="Review and import fixed query sources; never executes SQL")
+    query_import.add_argument("--source", choices=["superset", "preset"], required=True)
+    query_import.add_argument("--file", required=True, help="Agent-authored reviewed query catalog JSON")
+    query_import.add_argument("--home")
+    query_import.add_argument("--yes", action="store_true", help="Confirm this exact reviewed source artifact non-interactively")
+    query_import.add_argument("--allow-live-queries", action="store_true", help="Explicitly enable live queries/refresh on the configured Preset connection")
+    query_list = queries_sub.add_parser("list", help="List imported queries without executing them")
+    query_list.add_argument("--home")
     args = parser.parse_args()
     try:
+        if args.command == "queries":
+            from .local_queries import import_queries, list_queries
+            from .query_source import QueryCatalog
+
+            if args.queries_command == "schema":
+                print(json.dumps(QueryCatalog.model_json_schema(), indent=2))
+            elif args.queries_command == "list":
+                print(json.dumps(list_queries(args.home), indent=2))
+            else:
+                catalog = import_queries(args.home, args.source, args.file, yes=args.yes,
+                                         allow_live_queries=args.allow_live_queries)
+                print(f"Imported {len(catalog.queries)} reviewed queries. Reconnect your agent to load them.")
+                print("Ask your agent to inspect the new query sources, review a card, and show a delivery-disabled report.")
+            return
         if args.command == "uninstall":
             from .uninstall import uninstall
 

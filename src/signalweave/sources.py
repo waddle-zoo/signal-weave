@@ -7,7 +7,10 @@ import json
 import re
 from collections import Counter
 from collections.abc import Iterable
+from contextlib import asynccontextmanager
+from contextvars import ContextVar
 from copy import deepcopy
+from datetime import datetime, timezone
 from typing import Any, Protocol
 
 from .models import (
@@ -21,6 +24,20 @@ from .models import (
 
 class SourceParameterError(ValueError):
     """The requested query scope is unsupported, not a permission failure."""
+
+
+source_read_instant: ContextVar[datetime | None] = ContextVar("source_read_instant", default=None)
+
+
+@asynccontextmanager
+async def source_read_clock():
+    """One instant across a collection/evaluation, never a server-start date."""
+    existing = source_read_instant.get()
+    token = source_read_instant.set(existing or datetime.now(timezone.utc))
+    try:
+        yield
+    finally:
+        source_read_instant.reset(token)
 
 
 def _without_agent_query_definitions(
@@ -700,6 +717,7 @@ class SourceRegistry:
             }
         )
 
+    @source_read_clock()
     async def resolve(
         self,
         sources: Iterable[SourceRef],

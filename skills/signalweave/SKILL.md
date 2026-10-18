@@ -36,6 +36,17 @@ Never invent their threshold, business definition or notification policy.
 
 ## Save what should repeat
 
+If saved charts cannot execute the agreed aggregation, retain the working SQL
+as a reviewed query source when the installed CLI exposes
+`signalweave queries`. Read its JSON schema, write the artifact yourself and
+explain its source, date semantics and scope for operator/authorized-expert
+consent. Use the existing connection; do not make the user build a Python reader
+or enter credentials again. Put calculations and useful coverage checks in SQL,
+not in Jev. Import is not execution proof: reconnect, inspect the actual new
+query source, compare it with your working analysis, then review the card.
+If the installed version lacks this path, explain the limitation instead of
+inventing a tool or silently changing the requested aggregation.
+
 When the user wants recurrence, check `list_insight_cards` for an existing fit.
 Preserve the agreed question, why it matters, exact sources, comparison period,
 meaningful-change rules, exceptions, quiet behavior and intended recipients.

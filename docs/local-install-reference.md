@@ -137,6 +137,9 @@ native release.
   credential update, live local Superset/Jev card, replay, and uninstall checks.
   See the [scoped release evidence](evidence/cards-native-release-2026-10-14.md).
 - **Current source after `rc3` (not a published native release):** adds the
+  reviewed-query source path (`queries schema/import/list`) through the existing
+  Superset/Preset connection without a custom reader or SDK; these commands are
+  absent from the published `rc3` binary. It also adds the
   domain-context preview (including persistent `context enable/disable/status`
   controls), bounded saved-query definitions, and owner-reviewed
   shadow evaluation without requiring custom BI metric contracts. Missing

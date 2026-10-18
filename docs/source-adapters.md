@@ -196,6 +196,18 @@ of authorized optional context sources at evaluation time. Use
 
 ## SQL adapter boundary
 
+The native [reviewed query source](query-sources.md) reuses an existing Superset
+or Preset connection. `superset_sql` (or the Preset adapter name plus `_sql`)
+resolves `query:<key>:<full-definition-sha256>` from an operator-imported catalog.
+It accepts no caller parameters or SQL. Connection credentials and tenant scope
+are reused; Preset requires its existing explicit live-query permission.
+Results retain arbitrary named columns as evidence with query provenance; no
+metric aliases, arithmetic or policy are inferred. Receipt time is not source
+freshness. Transport and final snapshot budgets reject incomplete/oversized
+results. See `test_query_source.py`, `test_superset_sql.py` and
+`test_local_queries.py` for offline contracts; those are not enterprise outcome
+or hosted-Preset acceptance results.
+
 An enterprise SQL adapter should resolve `query:orders_quality` through a reviewed
 query catalog. It should not accept raw SQL from `SourceRef.parameters` unless the
 deployment has an explicit, separately reviewed policy for that capability. The
