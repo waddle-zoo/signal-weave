@@ -64,15 +64,23 @@ trajectory is not an admission to repeat a known unreliable path unchanged.
 Do not substitute a larger count of the same repeats for evidence of a useful
 product. In the delegated-publication path, the caller still refreshes SQL and
 calculations; the baseline also retains a working procedure. A policy-only
-repair cannot establish savings for that whole path. After the bounded policy
-controls, the next useful comparison is an analyst handover: a fresh analyst
-inherits each arm's actual notes and working procedure, then handles one new
-checkpoint. Treatment additionally inherits its existing card and receipts.
-Observe reconstruction, owner questions, correct context and final message,
-including setup and repair effort. This is a proposed next journey, not an
-executed result or proof of employee permission transfer. Suitable saved-source
-decision-first workflows are a separate path; a publication must be refreshed
-before its policy is judged.
+repair cannot establish savings for that whole path. The bounded policy
+contrasts now support clearer card guidance, not end-to-end superiority.
+Transport inspection also corrected the proposed "fresh analyst handover"
+distinction: earlier episodes already used ephemeral sessions with memories
+disabled. A new session alone tests no new continuity mechanism.
+
+The [forward continuation](../evaluations/northstar_forward_continuation.py)
+instead tests updated native/skill guidance against the same capable baseline,
+using their actual retained notes and procedures. September 18 was selected
+before querying its result because both notes already contain September 19's
+exact assessment. This remains a known historical warehouse, not a holdout or
+new production observation. Treatment retains its actual card and receipts;
+no operator-authored replacement policy or contrast answers are supplied.
+Observe reconstruction, unresolved owner questions, refresh, policy fidelity and
+the final message, including repair and publication effort. This is not proof
+of employee permission transfer. Suitable saved-source decision-first workflows
+are separate; a publication must be refreshed before its policy is judged.
 
 The intended intervention remains cards, reusable context, source evidence,
 narrow typed policy decisions and workflow handoffs. The frontier agent owns
