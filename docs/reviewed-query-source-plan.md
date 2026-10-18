@@ -1,8 +1,10 @@
 # From an analyst's answer to a repeatable check
 
-Status: source implementation and local transport check complete; native packaging
-and the full agent/human journey are being evaluated. **Not a published release,
-successful onboarding trial or demonstrated comparative benefit.**
+Status: source implementation and native packaging were tested, but the first
+full onboarding attempt failed at native inspection. Interface repairs and
+expert migration are being evaluated. **Not a published release, successful
+onboarding trial or demonstrated comparative benefit.** See the
+[actual journey and retained failure](evidence/query-source-onboarding-2026-10-18.md).
 
 The implementation uses the existing connection and a private reviewed artifact;
 see [query-source usage](query-sources.md). Offline tests cover schema/SQL shape,

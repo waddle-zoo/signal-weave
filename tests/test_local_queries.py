@@ -30,7 +30,7 @@ def home(tmp_path):
 @pytest.fixture
 def artifact(tmp_path):
     path = tmp_path/"agent-query.json"
-    path.write_text(json.dumps({"version": 1, "queries": [{"key": "watch", "title": "Read a fact",
+    path.write_text(json.dumps({"version": 2, "queries": [{"key": "watch", "title": "Read a fact",
         "definition": "Expert's agreed measurement", "sql": "SELECT 12.34 AS arbitrary_name",
         "database_id": 1, "dialect": "postgres", "read_only": True}]}))
     return path
@@ -66,7 +66,7 @@ def test_declined_consent_and_invalid_artifacts_do_not_mutate_home(home, artifac
         import_queries(home, "superset", artifact)
     assert (home/"config.toml").read_bytes() == before
     assert not list(home.glob("queries-*.json"))
-    artifact.write_text('{"version":1,"queries": [{"sql":"DELETE FROM sensitive"}]}')
+    artifact.write_text('{"version":2,"queries": [{"sql":"DELETE FROM sensitive"}]}')
     with pytest.raises(SetupError, match="Invalid query catalog"):
         import_queries(home, "superset", artifact, yes=True)
     assert (home/"config.toml").read_bytes() == before
@@ -82,11 +82,24 @@ def test_lock_unconfigured_source_and_tenant_mismatch_fail_without_changes(home,
     assert (home/"config.toml").read_bytes() == before
     (home/".setup.lock").unlink()
     data = json.loads(artifact.read_text())
-    data["queries"][0]["contract"] = {"tenant_id": "another-tenant"}
+    data["queries"][0]["meaning"] = {"tenant_id": "another-tenant"}
     artifact.write_text(json.dumps(data))
-    with pytest.raises(SetupError, match="source tenant"):
+    with pytest.raises(SetupError, match="Invalid query catalog fields"):
         import_queries(home, "superset", artifact, yes=True)
     assert (home/"config.toml").read_bytes() == before
+
+
+def test_legacy_artifact_is_rejected_with_field_paths_not_its_sql(home, artifact):
+    value = json.loads(artifact.read_text())
+    value["version"] = 1
+    value["queries"][0]["contract"] = {"source_status": "unknown"}
+    value["queries"][0]["max_bytes"] = 50000
+    artifact.write_text(json.dumps(value))
+    with pytest.raises(SetupError) as caught:
+        import_queries(home, "superset", artifact, yes=True)
+    assert "Invalid query catalog fields" in str(caught.value)
+    assert "version" in str(caught.value) and "contract" in str(caught.value) and "max_bytes" in str(caught.value)
+    assert "SELECT" not in str(caught.value) and not list(home.glob("queries-*.json"))
 
 
 def test_connection_scope_change_during_consent_is_not_silently_accepted(home, artifact, monkeypatch):

@@ -6,6 +6,8 @@ import json
 import os
 from pathlib import Path
 
+from pydantic import ValidationError
+
 from .local_setup import (
     SetupError,
     _config_text,
@@ -31,11 +33,16 @@ def import_queries(home, source, file, *, yes=False, allow_live_queries=False):
         raise SetupError("Choose an ordinary reviewed query JSON file")
     try:
         catalog = load_query_catalog(path)
+    except ValidationError as error:
+        fields = list(dict.fromkeys(".".join(map(str, item["loc"]))
+                                   for item in error.errors(include_input=False, include_context=False)))[:8]
+        raise SetupError("Invalid query catalog fields " + json.dumps(fields) +
+                         "; use `signalweave queries schema` for the current format") from None
     except (OSError, ValueError):
         raise SetupError("Invalid query catalog: use `signalweave queries schema` for the exact format") from None
     tenant = config.get(prefix + "_TENANT_ID") or config.get("SIGNALWEAVE_TENANT_ID")
-    if not tenant or any(q.contract.tenant_id not in {"default", tenant} for q in catalog.queries):
-        raise SetupError("Query definitions must match the configured source tenant")
+    if not tenant:
+        raise SetupError("Query sources require the connection's configured tenant; finish `signalweave setup` first")
     reviewed_url = config[prefix + "_URL"]
     reviewed_config = dict(config)
     print(f"Reviewed queries for {source}: {reviewed_url}")

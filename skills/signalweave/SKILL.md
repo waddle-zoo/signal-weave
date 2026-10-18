@@ -42,7 +42,9 @@ as a reviewed query source when the installed CLI exposes
 explain its source, date semantics and scope for operator/authorized-expert
 consent. Use the existing connection; do not make the user build a Python reader
 or enter credentials again. Put calculations and useful coverage checks in SQL,
-not in Jev. Import is not execution proof: reconnect, inspect the actual new
+not in Jev. Preserve unrounded quantities needed by decision thresholds; round
+only the human presentation. Describe data/definition caveats as meaning and
+facts, not connection-health or authorization assertions. Import is not execution proof: reconnect, inspect the actual new
 query source, compare it with your working analysis, then review the card.
 If the installed version lacks this path, explain the limitation instead of
 inventing a tool or silently changing the requested aggregation.

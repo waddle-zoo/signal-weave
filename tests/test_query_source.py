@@ -25,6 +25,11 @@ def definition(**updates):
         "sql": "SELECT 1 AS total", "dialect": "postgres", "database_id": 1, **updates})
 
 
+def test_nested_json_literals_are_not_mistaken_for_template_closing_tags():
+    query = definition(sql="SELECT '{\"account\":{\"active\":true}}'::jsonb AS document")
+    assert query.render()[0] == query.sql
+
+
 @pytest.mark.parametrize("sql", ["SELECT 1", "WITH x AS (SELECT 1 n) SELECT n FROM x",
     "SELECT 1 UNION ALL SELECT 2", "SELECT SUM(amount) FROM items WHERE d=DATE '{{cutoff_date}}'"])
 def test_read_shapes_and_explicit_date_clock(sql, monkeypatch):

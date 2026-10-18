@@ -21,7 +21,7 @@ by your agent; it is not a ready-made company monitor:
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "queries": [{
     "key": "daily-activity",
     "title": "Daily activity",
@@ -61,6 +61,11 @@ does not authorize SQL.
   Its full definition hash identifies the query. Reimporting changed SQL,
   meaning or clock creates a different source; old cards do not silently execute
   replacement SQL. Review the changed card/source before continuing.
+- Optional `meaning` labels describe domain, population, grain and lineage;
+  `definition` keeps the free-form explanation and caveats. The artifact cannot
+  assert tenant, authorization, retrieval health, freshness SLA or static data
+  quality. Those are not business-meaning fields. Successful retrieval does not
+  certify production suitability or analytical correctness.
 - `business_date` uses the declared IANA timezone/lag, with one clock instant
   across an evaluation. For historical recomputation use `"clock":{"kind":"explicit"}`
   and set `SIGNALWEAVE_QUERY_AS_OF_DATE=YYYY-MM-DD` in the trusted process environment
@@ -72,8 +77,12 @@ does not authorize SQL.
   numeric values and provider query/result references, not guessed metric mappings.
   Decimal measurements may appear as JSON strings to preserve their precision.
   Jev applies the saved policy; the agent investigates and explains.
-- Defaults: 100 rows, 100,000 bytes and 90 seconds; artifact ceilings are 1,000
-  rows, 1 MB and 300 seconds. Stricter Preset and MCP client limits still apply.
+- Defaults: 100 rows, 100,000 **normalized evidence** bytes and 90 seconds;
+  `max_evidence_bytes` includes the complete snapshot and its provenance, with a
+  1 MB ceiling. SQL Lab's echoed SQL/technical metadata is separately bounded by
+  a fixed 1 MB decoded-response limit, not this evidence setting. Stricter Preset
+  transport/snapshot and MCP client limits still apply. Artifact row/deadline
+  ceilings are 1,000 rows and 300 seconds.
   Incomplete, truncated or oversized results are errors, not complete evidence.
   A local deadline does not cancel a backend job. Ambiguous query submissions
   are not blindly retried. A receipt does not certify freshness or ingestion.
@@ -81,6 +90,7 @@ does not authorize SQL.
 For servers, mount the artifact and set `SUPERSET_QUERY_SOURCES_FILE` or
 `PRESET_QUERY_SOURCES_FILE` alongside the existing connection. Each setting
 requires exactly one matching configured connection and its explicit tenant.
+Execution uses that connection's credentials, not the calling agent's BI identity.
 
 Treat artifacts as executable deployment configuration. The parser rejects
 multiple statements, writes (including CTE writes), locks and unbound parameters.
@@ -88,3 +98,7 @@ It is **not a SQL sandbox**: functions and data access still depend on actual
 source/warehouse permissions. Use scoped read credentials and keep secrets out
 of SQL. The operator or authorized data expert owns query review; evaluation
 callers cannot edit the approved SQL.
+
+Experimental version-1 artifacts with `contract` or `max_bytes` are not silently
+converted. Have the source expert migrate/review their meaning and evidence
+budget against `queries schema`, reimport, inspect and review the changed card.

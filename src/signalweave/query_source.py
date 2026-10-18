@@ -122,7 +122,7 @@ class QueryDefinition(BaseModel):
     @model_validator(mode="after")
     def query_shape(self):
         remainder = self.sql.replace(DATE_TOKEN, "")
-        if any(marker in remainder for marker in ("{{", "}}", "{%", "%}", "{#", "#}")):
+        if any(marker in remainder for marker in ("{{", "{%", "{#")):
             raise ValueError("Only the quoted cutoff_date placeholder is supported; no other Jinja")
         validate_read_query(self.sql, self.dialect)
         has_date = DATE_TOKEN in self.sql
