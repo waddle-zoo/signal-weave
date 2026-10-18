@@ -207,6 +207,15 @@ bounded source-reference overview and the full reference list in its appendix.
 These locators help inspect current assets; the receipt preserves the run's
 evidence. They do not prove that an interpretation or causal explanation is true.
 
+Keep the message distinct from the supporting detail. Your agent can use its
+ordinary file or delivery tools to provide a record list or chart the recipient
+can actually open; a private receipt or transient export label is not that link.
+Summarize the finding, scale and next action in the message. If no accessible
+detail path exists and the handoff requires record identifiers, include what is
+needed inline rather than claim an attachment was delivered. When a follow-up
+concerns a previously affected group, inspect its current state when possible: a lower
+aggregate does not explain what happened to those records or why.
+
 `insufficient_data` limits the affected policy conclusion, not every useful
 answer. The agent can still report supported facts and investigate through its
 authorized BI tools. If the card maps that outcome to a data-owner route, the

@@ -138,7 +138,20 @@ configured outcome or sending a misleading message.
 An investigation should explain what is established, what is still a hypothesis
 and what evidence would distinguish the alternatives. Do not invent a cause,
 customer harm or assignee. Report useful partial findings instead of a blanket
-refusal. No message is a valid result for a quiet alert-only run; a requested
+refusal. When following an earlier issue, inspect the affected group's current
+status through authorized tools when possible; a lower aggregate alone does not
+explain what happened to those records or why.
+
+Separate the human summary from supporting detail when the recipient can open
+that detail through the caller's files or delivery tools. Lead with the finding,
+scale, intended reviewer and next step; link the full record list rather than
+dumping it into the alert. Verify recipient access: a receipt ID, private trace
+or transient export label is not automatically a usable link. If the handoff
+requires identifiers and no accessible detail path exists, include the necessary
+identifiers inline and state the limitation rather than claiming an attachment.
+SignalWeave does not replace the caller's artifact or delivery tools.
+
+No message is a valid result for a quiet alert-only run; a requested
 digest still needs a useful answer. Actual schedules, delivery, deduplication
 and acknowledgements belong to separately authorized caller tools; do not claim
 a draft was sent or that SignalWeave runs a scheduler.
