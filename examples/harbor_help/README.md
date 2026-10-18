@@ -17,7 +17,9 @@ or symlink and writes a new database with owner-only permissions. The seed can
 be changed to produce a different deterministic fixture. Each database has 26
 consecutive Monday-to-Monday UTC weeks beginning 2026-01-05, three support
 tiers, three regions, and at most 10,000 tickets.
-Views use SQLite's `unixepoch` function (SQLite 3.38 or newer).
+Views use `CAST(strftime('%s', timestamp) AS INTEGER)` for whole-second UTC
+clock arithmetic; SQLite 3.38's `unixepoch` function is not required. Missing
+timestamps remain null, and a clock miss still means strictly beyond its limit.
 
 ## Raw source tables
 

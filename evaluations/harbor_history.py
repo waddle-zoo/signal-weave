@@ -41,13 +41,13 @@ CREATE TABLE tickets (ticket_id TEXT PRIMARY KEY, week_start_utc TEXT NOT NULL, 
 CREATE VIEW weekly_ticket_clocks AS
 SELECT t.week_start_utc, t.support_tier, t.region, COUNT(*) AS observed_ticket_count,
  SUM(CASE WHEN t.priority=1 AND t.resolved_at_utc IS NOT NULL THEN 1 ELSE 0 END) AS eligible_resolved_tickets,
- SUM(CASE WHEN t.priority=1 AND unixepoch(t.resolved_at_utc)-unixepoch(t.created_at_utc)>s.resolution_sla_hours*3600 THEN 1 ELSE 0 END) AS resolution_sla_misses,
+ SUM(CASE WHEN t.priority=1 AND CAST(strftime('%s',t.resolved_at_utc) AS INTEGER)-CAST(strftime('%s',t.created_at_utc) AS INTEGER)>s.resolution_sla_hours*3600 THEN 1 ELSE 0 END) AS resolution_sla_misses,
  SUM(CASE WHEN t.first_response_at_utc IS NOT NULL THEN 1 ELSE 0 END) AS first_response_clock_tickets,
- SUM(CASE WHEN unixepoch(t.first_response_at_utc)-unixepoch(t.created_at_utc)>s.first_response_sla_hours*3600 THEN 1 ELSE 0 END) AS first_response_sla_misses,
+ SUM(CASE WHEN CAST(strftime('%s',t.first_response_at_utc) AS INTEGER)-CAST(strftime('%s',t.created_at_utc) AS INTEGER)>s.first_response_sla_hours*3600 THEN 1 ELSE 0 END) AS first_response_sla_misses,
  SUM(CASE WHEN t.priority=1 AND t.resolved_at_utc IS NULL THEN 1 ELSE 0 END) AS open_priority_tickets,
- SUM(CASE WHEN t.priority=1 AND t.resolved_at_utc IS NULL AND unixepoch(x.as_of_utc)-unixepoch(t.created_at_utc)>s.resolution_sla_hours*3600 THEN 1 ELSE 0 END) AS overdue_open_priority_tickets,
+ SUM(CASE WHEN t.priority=1 AND t.resolved_at_utc IS NULL AND CAST(strftime('%s',x.as_of_utc) AS INTEGER)-CAST(strftime('%s',t.created_at_utc) AS INTEGER)>s.resolution_sla_hours*3600 THEN 1 ELSE 0 END) AS overdue_open_priority_tickets,
  SUM(CASE WHEN t.resolved_at_utc IS NULL AND t.first_response_at_utc IS NULL THEN 1 ELSE 0 END) AS unanswered_tickets,
- SUM(CASE WHEN t.resolved_at_utc IS NULL AND t.first_response_at_utc IS NULL AND unixepoch(x.as_of_utc)-unixepoch(t.created_at_utc)>s.first_response_sla_hours*3600 THEN 1 ELSE 0 END) AS overdue_unanswered_tickets
+ SUM(CASE WHEN t.resolved_at_utc IS NULL AND t.first_response_at_utc IS NULL AND CAST(strftime('%s',x.as_of_utc) AS INTEGER)-CAST(strftime('%s',t.created_at_utc) AS INTEGER)>s.first_response_sla_hours*3600 THEN 1 ELSE 0 END) AS overdue_unanswered_tickets
 FROM tickets t JOIN support_tier_sla s USING(support_tier) CROSS JOIN source_snapshot x
 GROUP BY t.week_start_utc,t.support_tier,t.region;
 

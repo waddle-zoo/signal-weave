@@ -111,7 +111,7 @@ def test_quiet_control_discriminates_priority_and_clock_not_just_workload_volume
     sql = """SELECT COUNT(*) AS known_open_priority_past_first_response_clock
              FROM tickets t JOIN support_tier_sla c USING(support_tier) CROSS JOIN source_snapshot s
              WHERE t.priority=1 AND t.status='open' AND t.first_response_at_utc IS NULL
-             AND unixepoch(s.as_of_utc)-unixepoch(t.created_at_utc)>c.first_response_sla_hours*3600"""
+             AND CAST(strftime('%s',s.as_of_utc) AS INTEGER)-CAST(strftime('%s',t.created_at_utc) AS INTEGER)>c.first_response_sla_hours*3600"""
     for index, cutoff in enumerate(weekly_cutoffs(history)[:3]):
         reference = summarize_history(history, cutoff)
         qualifying = [ticket for ticket in reference["tickets"]
