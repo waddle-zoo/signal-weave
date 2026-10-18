@@ -30,6 +30,7 @@ GROUP BY s.as_of_utc"""
 def build_workflow_manifest(snapshot, python):
     """Extend the existing fixed read catalog; no executable caller parameters."""
     manifest = build_manifest(snapshot, python)
+    manifest["connections"][0]["transport"]["command"][2] = "evaluations.harbor_workflow_mcp"
     digest = hashlib.sha256(QUEUE_SQL.encode()).hexdigest()
     title = "Known priority queue: unanswered response and open resolution clocks"
     scope = ("All known tickets created since the fixture calendar starts, at the exact source cutoff. "

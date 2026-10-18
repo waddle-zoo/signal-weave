@@ -126,6 +126,71 @@ sleep prevention have been requested from the user, not approved by this file.
 Freeze the actual runner, scope, final assessment and host choice before use.
 The larger prospective study and ordinary-workspace/human tracks remain open.
 
+### Shared-source execution prerequisite
+
+The companion [workflow MCP](../harbor_workflow_mcp.py) now exposes
+`list_saved_queries` as well as its four raw-source tools. It returns the same
+four prepared SQL definitions, hashes and scopes as the native catalog, without
+deployment transports, credentials or private future history. This closes the
+discovery asymmetry described above; it does not prove an analyst will use the
+right query or save a correct card.
+
+The [persistent-session source preflight](../harbor_workflow_preflight.py) runs
+one temporary private native setup, then reuses one default-profile native MCP
+session and one companion session while the caller advances the active data
+copy through three historical states. Immutable input snapshots remain retained.
+Both surfaces read current data from the same path; the native configuration
+and connection are not recreated for each observation.
+These are two **outer** client sessions. The native adapter opens a child source
+session for each inspection (twelve here); this is not two total end-to-end MCP
+sessions, pooled upstream connections or a performance result.
+
+The first actual capture completed: twelve native and twelve companion exports
+matched exact direct SQL rows, with thirty evidence blocks across both surfaces.
+The priority unanswered-clock count changed 0 → 80 → 0. All four SQL definitions
+matched on both catalogs at each clock. The report records source aliases,
+contracts, provenance, input hashes and unchanged listed method hashes. Its
+provider budget was zero, with zero attempts or rejected-request events.
+
+Reproduce with a matching locally built native candidate, into a **new** output:
+
+```sh
+.venv/bin/python -m evaluations.harbor_workflow_preflight --binary dist/signalweave --output artifacts/harbor-workflow-new-source-capture
+```
+
+The local `artifacts/harbor-workflow-persistent-source-v1/report.json` SHA-256 is
+`d2c8311e15d990584387aa9d2032927bde52a050c1d8cc29a17f5b3b8e5d090a`.
+The executable's production fingerprint matched this checkout; it is the same
+dirty-tree `0.2.0rc3` source candidate recorded in the earlier source checkpoint,
+not an exact clean-HEAD build or a new published release. This is actual local
+SQLite/company-MCP transport, not a vendor-hosted connector, real-person setup,
+card approval, policy evaluation or an agent's useful final message.
+
+Independent review recomputed the v1 capture from its retained snapshots and
+confirmed those recorded facts. It also found two checker gaps: accepting
+unrelated nonempty provenance and losing a validated companion result when the
+following native read fails. The v1 report remains unchanged; its exact method
+is retained locally as `method.py`, hash
+`0614b249425dc601c5b3cdfc00f027abc1cb1c397c3c39eda5a1164768bf0134`.
+
+The repaired validator compares row and metadata provenance to the direct SQL
+read set. Per-resource progress retains companion evidence before native work;
+an injected native failure verifies this negative path. A **separate v2 capture**
+passed the same source observations on byte-identical input snapshots with zero
+provider attempts. It is a technical repeat, not additional business cases.
+Independent review cleared that exact report and the scoped repairs, not actor
+admission. Its local report SHA-256 is
+`54a831f362ba1df9c20cd19d02f24eff834af7ba594d0f30d68db684057004cd`.
+
+Final source-checkpoint verification passed lint and **4,370 tests**, with
+**12 opt-in skips**, in 308.49s on Python 3.12.10. Eighteen guard/MCP checks also
+passed on Python 3.11.6 in 21.98s. These are software checks, not agent episodes.
+The final full log SHA-256 is
+`2a746bac72909565eafd607e67c4bf251debbc30391984e1244b6c9da132f0e4`;
+the Python 3.11 log is
+`a4e335f4096dea2bc6366ca577a96897c7a2ac91bed6bbd2212eb1fa7d4cffe9`.
+The earlier full-suite run predates the guard repair and remains diagnostic.
+
 ## Validation checkpoint
 
 The controlled-history checks passed 29 tests in 107.24s, including independent
