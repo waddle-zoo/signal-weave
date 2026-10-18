@@ -167,6 +167,15 @@ when its typed numeric-claim list is empty, despite usable analyst-calculated
 source evidence. That wording propagated into the human message. Removing it
 alone would not fix the incorrect policy decision.
 
+After both forward actors closed, compact MCP presentation was corrected
+separately: generated-report checks are explicitly scoped, exact boilerplate
+and duplicate display metadata are omitted, and material checks remain inline
+or explicitly paged. Full report detail remains available through its receipt.
+A new-native replay confirmed unchanged facts, outcome, probabilities and
+stored report with zero provider/analyst calls. This is presentation/integrity
+verification, not an improved human readout or repair of the earlier policy
+failure. No caller-snapshot preview API was added.
+
 The optional-work bug was then repaired: only required pending/unavailable
 slots generate mandatory completion instructions and source dependencies.
 Optional gaps remain visible in the full plan; owner guidance, real source
@@ -277,6 +286,14 @@ workflow or provider judgment was run by that packaging check.
 After adding the contrast harness, full offline verification passed 4,625 tests
 with 13 skipped. Independent internal review checked the frozen cases, complete
 responses and report; this is not external peer review or human usability proof.
+
+The later presentation build used `6ea60ab`, production fingerprint
+`f4733d866d1b745b290604183ea17356641e5fc64eb999051f3a8e250bb4540c`, binary
+`cd8cf2fa0690e886549b4ecbc8a7e7257415d7528b85020289b3171e17f3a7de`.
+Its guarded replay preserved the full receipt hash before/after and recovered
+the original report; packets/assertions are retained, not an MCP transcript.
+Full offline verification passed 4,637 tests with 13 skipped, plus both isolated
+source/native skill-install journeys. None are additional business cases.
 
 An earlier first-use baseline was terminated after 60 admitted MCP calls plus
 three rejected attempts. It saved no brief and returned no terminal usage:

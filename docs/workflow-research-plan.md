@@ -82,6 +82,28 @@ the final message, including repair and publication effort. This is not proof
 of employee permission transfer. Suitable saved-source decision-first workflows
 are separate; a publication must be refreshed before its policy is judged.
 
+This forward pair is now closed: both answers were useful and correct, without
+an overall treatment advantage. Both also overwrote automatic response captures;
+parent audits preserve numerical support, not clean file-byte provenance.
+Fix that shared research-interface ambiguity before scaling the study rather
+than attributing it to SignalWeave. The separate compact-report correction
+changes presentation only and does not upgrade those business results.
+
+The next substantive onboarding exercise should use existing fixed-query MCP
+registration through the CLI: let the expert agent author the bounded query and
+snapshot normalization, count the human's deployment consent and all setup work,
+then test recurring checks without requiring frontier analysis first every time.
+Give baseline equivalent measurements, access and its retained procedure. Keep
+the simulation clock explicit; neither wall-clock `CURRENT_DATE` nor silently
+using the latest row establishes a valid reporting period or freshness.
+
+Caller-analysis previews are a separate candidate, not a shipped shortcut:
+`simulate_insight_card` currently resolves configured sources and accepts context,
+not supplied resource snapshots. Context stays unverified and cannot stand in
+for required source evidence. Do not invent evaluation labels or claim a preview
+certifies data or delivery. No new preview API or workflow engine is admitted by
+this plan; prove the existing registration path before expanding abstractions.
+
 The intended intervention remains cards, reusable context, source evidence,
 narrow typed policy decisions and workflow handoffs. The frontier agent owns
 discovery, analysis, SQL, causal hypotheses and the human message. The caller
