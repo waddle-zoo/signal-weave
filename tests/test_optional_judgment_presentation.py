@@ -283,6 +283,10 @@ def test_typed_result_and_report_fields_and_receipt_pages_are_unchanged():
     for parent, field in (("report", "evidence"), ("workflow", "evidence_plan")):
         assert restored_inline[parent].pop(f"{field}_ref") == {"result_path": [field]}
         restored_inline[parent][field] = copy.deepcopy(restored_inline[field])
+    report_ref = restored_inline["report"]["full_report_ref"]
+    assert report_ref == {"result_path": ["report"]}
+    report_page = _receipt_result_page(original, report_ref["result_path"], 0, 100)
+    restored_inline["report"] = {entry["key"]: entry["value"] for entry in report_page["items"]}
     assert restored_inline == expected_inline
     assert compact["optional_policy_diagnostics"]["values"] == {
         "watch_results": watch_values,

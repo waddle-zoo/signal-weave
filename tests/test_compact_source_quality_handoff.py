@@ -288,6 +288,14 @@ async def test_legacy_receipt_without_source_quality_does_not_invent_today_catal
         if reference is not None:
             assert reference == {"result_path": [field]}
             restored[parent][field] = deepcopy(restored[field])
+    report_ref = restored["report"]["full_report_ref"]
+    assert report_ref == {"result_path": ["report"]}
+    for field in ("blockers", "warnings", "source_boundaries", "coverage", "numeric_conditions"):
+        assert restored["report"][field] == legacy_result["report"][field]
+    report_page = await tool(server, "get_decision_receipt")(
+        receipt_id=receipt.receipt_id, result_path=report_ref["result_path"], limit=100,
+    )
+    restored["report"] = {entry["key"]: entry["value"] for entry in report_page["result_page"]["items"]}
     assert restored == compact_legacy_result
     assert replay["report_markdown_available"] is had_markdown
     assert "source_contracts" not in replay["result"]

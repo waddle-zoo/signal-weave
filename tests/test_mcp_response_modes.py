@@ -131,10 +131,21 @@ async def test_compact_evaluation_preserves_evidence_but_avoids_duplicate_handof
         field: expected[field] for field in ("watch_results", "question_results")
     }
     reconstructed = copy.deepcopy(compact["result"])
-    for parent_key, field in (("report", "evidence"), ("workflow", "evidence_plan")):
-        parent = reconstructed[parent_key]
-        assert parent.pop(f"{field}_ref") == {"result_path": [field]}
-        parent[field] = reconstructed[field]
+    report = reconstructed["report"]
+    assert report["full_report_ref"] == {"result_path": ["report"]}
+    assert report["evidence_ref"] == {"result_path": ["evidence"]}
+    for field in ("numeric_claims", "blockers", "warnings", "coverage", "source_boundaries",
+                  "provenance", "unresolved_questions", "numeric_conditions", "status"):
+        assert report[field] == expected["report"][field]
+    recovered = await tool(agent_server, "get_decision_receipt")(
+        idempotency_key="compact-handoff", result_path=report["full_report_ref"]["result_path"],
+        limit=100,
+    )
+    assert {entry["key"]: entry["value"] for entry in recovered["result_page"]["items"]} == expected["report"]
+    reconstructed["report"] = expected["report"]
+    parent = reconstructed["workflow"]
+    assert parent.pop("evidence_plan_ref") == {"result_path": ["evidence_plan"]}
+    parent["evidence_plan"] = reconstructed["evidence_plan"]
     assert {**reconstructed, **compact["optional_policy_diagnostics"]["values"]} == expected
     assert compact["result"]["evidence"]
     assert compact["result"]["report"]
@@ -191,6 +202,97 @@ def test_compact_requires_json_typed_equality_not_python_numeric_equality(nested
     result = _compact_evaluation_response(response)["result"]
     assert "evidence_ref" not in result["report"]
     assert json.dumps(result["report"]["evidence"]) == json.dumps(nested)
+
+
+def _publication_report_packet():
+    from signalweave.models import Evidence, InsightCard, InsightResult, ResourceSnapshot
+    from signalweave.reporting import build_investigation_report
+
+    policy = InsightCard(id="activity", title="Activity check", what_to_watch="Completed activity",
+                         why_watch="Apply the owner's rule", comparison_windows=[],
+                         sources=[{"key": "activity", "adapter": "mcp", "resource": "query:activity", "label": "Activity"}])
+    evidence = Evidence(source_key="activity", statement="Caller-calculated activity from the source query.",
+                        values={"current": 12, "prior": 10, "unit": "count"}, provenance=["query:activity"])
+    source = ResourceSnapshot(source_key="activity", adapter="mcp", resource="query:activity",
+                              title="Activity", evidence=[evidence])
+    result = InsightResult(card_id=policy.id, outcome="ignore", summary="Quiet", rationale="Owner policy", evaluator="fixture",
+                           evidence=[evidence], source_keys=["activity"],
+                           evidence_plan={"objective": "Activity", "slots": [], "status": "complete"})
+    report = build_investigation_report(policy, result, [source])
+    return {"receipt": {"receipt_id": "receipt-activity"}, "card": policy.model_dump(mode="json"),
+            "result": {**result.model_dump(mode="json"), "report": report.model_dump(mode="json")}}
+
+
+def test_compact_report_does_not_confuse_no_engine_comparisons_with_no_source_measurements():
+    from signalweave.mcp_server import _compact_evaluation_response
+
+    packet = _publication_report_packet()
+    original = copy.deepcopy(packet)
+    report = packet["result"]["report"]
+    assert report["numeric_claims"] == []
+    assert "No validated quantitative analysis was available for this report." in report["limitations"]
+    compact = _compact_evaluation_response(packet)["result"]
+    assert compact["evidence"] == original["result"]["evidence"]
+    assert compact["report"]["limitations"] == []
+    assert compact["report"]["numeric_claims"] == []
+    assert compact["report"]["status"] == report["status"]
+    assert "separate analysis" in compact["report"]["checks_scope"]
+    assert compact["report"]["full_report_ref"] == {"result_path": ["report"]}
+    assert "title" not in compact["report"] and "purpose" not in compact["report"]
+    assert packet == original
+
+
+def test_compact_report_preserves_failed_comparisons_unique_evidence_and_unfamiliar_checks():
+    from signalweave.mcp_server import _compact_evaluation_response
+
+    packet = _publication_report_packet()
+    report = packet["result"]["report"]
+    packet["result"]["analyses"] = [{"status": "failed", "issues": ["Missing denominator"]}]
+    report.update(status="blocked", blockers=[{"code": "required_analysis_failed", "message": "Missing denominator"}],
+                  warnings=["Required window is incomplete"], unresolved_questions=["Reconcile the denominator"],
+                  numeric_conditions=[{"key": "bound-check", "status": "unknown"}],
+                  numeric_claims=[{"value": 12, "provisional": True}],
+                  future_check={"status": "unresolved"}, title="Unique report title",
+                  evidence=[{"source_key": "activity", "statement": "Report-specific evidence"}])
+    dynamic = "No validated quantitative analysis was available for this report. Required input is missing."
+    report["limitations"].append(dynamic)
+    original = copy.deepcopy(packet)
+    actual = _compact_evaluation_response(packet)["result"]
+    for field in ("status", "blockers", "warnings", "unresolved_questions", "numeric_conditions",
+                  "numeric_claims", "future_check", "title", "evidence"):
+        assert actual["report"][field] == original["result"]["report"][field]
+    assert actual["report"]["limitations"] == [dynamic]
+    assert actual["analyses"] == packet["result"]["analyses"]
+    assert "evidence_ref" not in actual["report"]
+    assert packet == original
+
+
+def test_large_generated_checks_are_explicitly_paged_to_the_untouched_report():
+    from signalweave.mcp_server import _compact_evaluation_response, _receipt_result_page
+
+    packet = _publication_report_packet()
+    packet["result"]["report"]["warnings"] = [f"Material source warning {i}: " + "x" * 500 for i in range(200)]
+    original = copy.deepcopy(packet)
+    compact = _compact_evaluation_response(packet)
+    assert "report" not in compact["result"]
+    assert compact["evidence_access"]["complete"] is False
+    assert any(section["path"] == ["report"] for section in compact["evidence_access"]["available_sections"])
+    page = _receipt_result_page(packet["result"], ["report", "warnings"], 0, 25)
+    assert page["items"] == original["result"]["report"]["warnings"][:25]
+    assert page["has_more"]
+    assert packet == original
+
+
+def test_unknown_or_already_scoped_report_metadata_is_not_replaced():
+    from signalweave.mcp_server import _compact_evaluation_response
+
+    for extra in ({"status": {"legacy": True}}, {"checks_scope": "Legacy unique scope"},
+                  {"full_report_ref": {"result_path": ["other"]}}):
+        packet = _publication_report_packet()
+        packet["result"]["report"].update(extra)
+        result = _compact_evaluation_response(packet)["result"]["report"]
+        for field, value in extra.items():
+            assert result[field] == value
 
 
 async def test_compact_card_read_keeps_latest_review_and_full_read_keeps_legacy_shape(tmp_path):

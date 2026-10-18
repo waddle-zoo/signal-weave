@@ -863,6 +863,38 @@ def _compact_evaluation_response(response: dict[str, Any]) -> dict[str, Any]:
             parent.pop(field)
             parent[f"{field}_ref"] = {"result_path": [field]}
             result[parent_key] = parent
+    report = result.get("report")
+    if (isinstance(report, dict) and isinstance(report.get("status"), str)
+            and report["status"] in {"complete", "partial", "blocked"}
+            and isinstance(report.get("numeric_claims"), list)
+            and isinstance(report.get("blockers"), list)
+            and not {"full_report_ref", "checks_scope"}.intersection(report)):
+        # This generated artifact validates engine comparison claims, not the
+        # frontier agent's separate analysis. Keep every check/unique field;
+        # omit only exact code-owned boilerplate and identical display metadata.
+        report = dict(report)
+        boilerplate = {
+            "This artifact reports bounded analytical coverage; it is not independently certified truth.",
+            "Accounting contributions explain measured differences and do not establish causality or mechanism.",
+            "No validated quantitative analysis was available for this report.",
+        }
+        if isinstance(report.get("limitations"), list):
+            report["limitations"] = [
+                item for item in report["limitations"]
+                if not isinstance(item, str) or item not in boilerplate
+            ]
+        card = response.get("card") if isinstance(response.get("card"), dict) else {}
+        duplicates = {key: result[key] for key in ("card_id", "outcome", "evaluator", "evaluated_at") if key in result}
+        duplicates.update({key: card[field] for key, field in (("title", "title"), ("purpose", "why_watch")) if field in card})
+        for key, value in duplicates.items():
+            if key in report and json.dumps(report[key], sort_keys=True) == json.dumps(value, sort_keys=True):
+                report.pop(key)
+        report["checks_scope"] = (
+            "These checks describe the generated report and engine comparisons; "
+            "they do not assess the caller's separate analysis. Measurements remain in evidence, observations and analyses."
+        )
+        report["full_report_ref"] = {"result_path": ["report"]}
+        result["report"] = report
     compact: dict[str, Any] = {
         "receipt": response.get("receipt"),
         "replayed": bool(response.get("replayed", False)),

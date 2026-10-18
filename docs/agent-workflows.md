@@ -182,6 +182,13 @@ Compact results keep one copy of identical evidence and plans. A report's
 `get_decision_receipt` only for omitted detail. Full responses and saved receipts
 retain the original report and workflow structure.
 
+Compact `report` checks describe the generated engine-comparison report, not the
+quality of your agent's separate analysis. They retain material blockers,
+warnings and source checks without generic report boilerplate. Use measurements
+from evidence, observations and analyses; an empty generated numeric-claim list
+does not erase them. `report.full_report_ref` identifies the unchanged full
+report in the receipt for audit or explicit report requests.
+
 For a later run, ask the agent to evaluate the approved card for the current
 period. Each distinct run needs a new stable idempotency key; reusing a key
 replays its saved receipt rather than refreshing evidence. Read the typed
