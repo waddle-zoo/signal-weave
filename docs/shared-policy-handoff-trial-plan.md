@@ -5,6 +5,29 @@ proposed. This follows the [completed native-query journey](evidence/query-sourc
 both SignalWeave and retained agent-authored scripts produced correct recurring
 answers. A simple threshold does not establish a SignalWeave advantage.
 
+## Immediate evidence changed the next step
+
+A read-only audit of Northstar's retained warehouse found natural cases for the
+owner's existing, unexercised requests: a qualifying decline on February 19,
+2025; insufficient prior-window history on January 4, 2025; and the retained
+quiet September 4, 2026 check. Those unchanged-policy branches and an
+authorized successor's investigation handoff have now been tested; see the
+[completed follow-through](evidence/northstar-exception-followthrough-2026-10-18.md).
+The history gap is not an ingestion incident. These are outcome-informed
+development cases, not a holdout or independent samples; the 49 overlapping
+decline windows found by the audit are not 49 agent trials.
+
+The completed follow-through kept both actual retained workflows, used live Jev
+for the native policy judgments, and included a signed synthetic OIDC subject
+reusing the same card through native HTTP. That verified a distinct request
+identity, not real company SSO or per-user Superset permissions. Each agent
+used its own fresh workflow output and the same raw BI tools to explain the loss
+and company impact, while distinguishing contributions from unresolved causes.
+Both produced useful handoffs; no treatment efficiency or accuracy advantage was
+established. This does not complete the separate maintenance/revision study.
+The maintainer/revision study below remains prospective, not required to turn
+this narrower branch test into a success.
+
 ## The human job
 
 A business owner changes who should investigate a finding or adds a meaningful

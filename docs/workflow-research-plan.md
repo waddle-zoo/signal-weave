@@ -24,6 +24,18 @@ Does adding SignalWeave to a capable BI agent make it easier to establish and
 repeat useful analytical workflows, with less human inspection and no loss of
 important findings? Where does it instead add effort, cost, or noise?
 
+The latest [native-query follow-through](evidence/northstar-exception-followthrough-2026-10-18.md)
+demonstrates useful recurring policy checks and a successor investigation, but
+the capable retained baseline also succeeds. Treatment's deeper category slice
+costs more frontier work; that is not an established platform advantage. Keep
+the next product decision at this level: does maintaining and reusing the
+workflow save its owner work, improve the delivered explanation, or prevent a
+materially useless interruption? Fix demonstrated journey blockers, such as
+adding another query deactivating an existing source. Do not add abstractions
+or tune instructions to one actor's command mistakes merely to improve a score.
+The broader study remains unproven; a working connector is supporting evidence,
+not its substitute.
+
 ### Judge the whole working experience
 
 The primary artifact is the work the person receives, not the internal decision

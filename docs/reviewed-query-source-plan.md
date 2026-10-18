@@ -2,9 +2,12 @@
 
 Status: after the first native-inspection failure, the repaired source-built
 executable completed expert migration, card setup, a useful readout and an
-unchanged fresh-cutoff run with a separately counted writer. **Two known quiet
-dates, not a published release or demonstrated comparative benefit.** See the
-[actual journey and retained failures](evidence/query-source-onboarding-2026-10-18.md).
+unchanged fresh-cutoff run with a separately counted writer. The subsequent
+[exception follow-through](evidence/northstar-exception-followthrough-2026-10-18.md)
+tested attention and missing-history branches and an authenticated successor's
+useful investigation handoff. **Not a published release or demonstrated
+comparative benefit.** See the
+[actual onboarding journey and retained failures](evidence/query-source-onboarding-2026-10-18.md).
 
 The implementation uses the existing connection and a private reviewed artifact;
 see [query-source usage](query-sources.md). Offline tests cover schema/SQL shape,
@@ -70,11 +73,11 @@ Start with the actual Superset connection, then verify the Preset authentication
 path separately. This is a connector capability, not a Superset-only product
 direction. Do not claim Hex, Looker or arbitrary company MCP support from it.
 
-One known connector follow-up is intentional SQL top-N output: the transport's
-truncation guard can reject valid `LIMIT`/`TOP` results. Resolve that distinction
-without accepting genuinely truncated results before claiming broad query
-compatibility. The current journey uses an unlimited aggregate, so it does not
-validate that behavior.
+The transport distinguishes SQL-authored limits from provider truncation. A real
+Superset 4.1.3 source control accepted an intentional top-two query and rejected
+an unbounded four-channel result under the same two-row cap. Fixture tests cover
+`LIMIT`/`TOP` strings and inconsistent metadata; the live source was PostgreSQL,
+not a SQL Server compatibility test. This control makes no business-value claim.
 
 Superset documents [SQL execution](https://superset.apache.org/developer-docs/api/execute-a-sql-query/)
 and [result retrieval](https://superset.apache.org/developer-docs/api/sql-lab/).
