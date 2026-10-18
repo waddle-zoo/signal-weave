@@ -125,6 +125,14 @@ native SHA-256 `8ae6d23968c8be6482da3a2feb6e22d49fa603dc229e734e50d14b13912da3aa
 This is one known synthetic company at one unchanged historical state, not
 months of operation, general enterprise readiness or an overall efficiency win.
 
+Forward verification of the guidance change passed 4,598 offline tests with 13
+skipped, plus two isolated source/native skill journeys covering Codex and Claude.
+The clean rebuilt `fba509b` native returned the updated monitor guide and tool
+description with zero provider calls; SHA-256
+`08b54747c50363b37b7567a7a427aa1a740c249bf8ebd9d51be317996e57e684`.
+That is packaging/guidance verification, not another business trial. The
+pre-final-guidance verification was intentionally interrupted and is not credited.
+
 ## What matters to the user
 
 The owner sees an unexpected online-sales decline and wants its contribution to

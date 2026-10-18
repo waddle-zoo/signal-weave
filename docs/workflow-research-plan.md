@@ -4,7 +4,8 @@ Status: **independent method review complete; known-company formative journeys
 underway; the larger study is not admitted for paid expansion**.
 This is the research roadmap, not a performance result. Actual development
 journeys are reported separately for [Harbor](evidence/harbor-onboarding-2026-10-17.md)
-and [Redwood](evidence/redwood-workflow-2026-10-17.md); they do not execute the
+and [Redwood](evidence/redwood-workflow-2026-10-17.md), followed by
+[Northstar's first answer and owner clarification](evidence/northstar-workspace-first-use-2026-10-18.md); they do not execute the
 larger sampling plan below. Keep earlier cohorts, including failures and
 environment-censored attempts, unchanged.
 
@@ -48,6 +49,13 @@ Technical checks support this journey; they are not separate business successes.
 Prioritize a defect when it obstructs the journey or changes a material finding,
 recipient or action. More source-only checks and software-test totals cannot
 close the current absence of comparative end-to-end value evidence.
+
+The immediate next acceptance step is continuity, not another same-file policy
+probe: reuse the actual retained analysis at a later measurement cutoff, refresh
+any caller-produced evidence, and inspect the final agent message. Compare with
+the baseline's own retained procedure. Observe whether the owner only reviews
+business choices or must rescue technical preparation. Northstar's assisted
+fixed-publication check does not establish this benefit.
 
 The intended intervention remains cards, reusable context, source evidence,
 narrow typed policy decisions and workflow handoffs. The frontier agent owns
