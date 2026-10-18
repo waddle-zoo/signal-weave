@@ -210,3 +210,17 @@ The original pair and the faulty probe remain unchanged. Rejecting a bad scope
 closes silent substitution; it does not demonstrate that this daily card now
 works. Correct source selection/aggregation and a complete shadow handoff remain
 the next business acceptance test.
+
+The clean `197ef92` native was then exercised against a private copy of the
+actual saved card/configuration. Both exact-parameter inspection and review of
+the invalid card returned the specific unsupported-parameter error. The saved
+card's before/after JSON objects were equal; no filter or policy was
+rewritten. An unparameterized saved-chart control still returned 8,937 rows
+with its original partial semantics, and a dashboard subset returned only the
+requested chart. Zero Jev/analyst calls, no approval or delivery. Raw results:
+`artifacts/northstar-source-contract-native-v2`; native SHA-256
+`8ae6d23968c8be6482da3a2feb6e22d49fa603dc229e734e50d14b13912da3aa`.
+This verifies the scope-contract repair, not a working daily investigation.
+Final offline verification passed 4,583 tests with 13 skipped, including the
+Superset/Preset parameter and onboarding regressions. That is a software check,
+not 4,583 business trials or evidence of recurring analytical success.
