@@ -2,8 +2,9 @@
 
 Status: both agents delivered supported analysis. SignalWeave completed one
 correct rolling-policy handoff, then selected an unnecessary investigation on
-the next checkpoint. The frontier agent caught it. This is not an enterprise
-readiness, general accuracy or overall efficiency win.
+the next checkpoint. The frontier agent caught it. A separate current-version
+pair then produced correct quiet answers in both arms, without an overall
+SignalWeave advantage. This is not an enterprise-readiness or general-accuracy win.
 
 One synthetic company, one sales workflow, real local Superset/PostgreSQL,
 current native MCP, Luna and live Jev. Internal independent reviewer agents
@@ -69,6 +70,7 @@ frontier agent, not by a reliable native exception decision.
 | Fixed-snapshot repeat | 153.58 s | Not admitted under that study's budget |
 | Rolling September 5, including procedure adaptation | 280.30 s | 393.00 s |
 | Rolling September 12 | 185.77 s | 234.10 s |
+| Separate forward September 18 pair | 184.37 s | 229.42 s |
 
 CLI counts below are **input including cache / uncached input / output**.
 They are not dollar costs or complete warehouse-work counters.
@@ -80,6 +82,7 @@ They are not dollar costs or complete warehouse-work counters.
 | Fixed-snapshot repeat | 388,300 / 42,316 / 14,453 | Not admitted |
 | Rolling September 5 | 1,463,572 / 81,300 / 35,891 | 3,311,438 / 137,806 / 47,470 |
 | Rolling September 12 | 1,172,960 / 72,416 / 20,333 | 1,422,355 / 96,787 / 22,318 |
+| Separate forward September 18 pair | 622,849 / 96,513 / 18,128 | 1,025,633 / 82,785 / 24,166 |
 
 The rolling checks used three company MCP calls per baseline checkpoint.
 Treatment used eight then six research MCP calls, including one company SQL
@@ -96,6 +99,43 @@ The separately budgeted rolling study stopped after four actual actors:
 7,370,325 input, 388,309 uncached input and two Jev requests. September 19 was
 withheld for diagnosis of the native policy mismatch, not silently rerun or
 counted as a successful third checkpoint.
+
+### Current-version forward pair
+
+The [separate forward method](../../evaluations/northstar_forward_continuation.py)
+selected September 18 before querying it. Both retained notes already contained
+September 19's exact answer. Earlier actors also used fresh ephemeral sessions;
+this is not a new handover mechanism, unseen company, or contemporaneous history.
+Both kept their own actual queries, notes and prior failures. Only treatment's
+bundled skill was manually upgraded; no replacement policy or analysis was supplied.
+
+Both refreshed the correct windows and delivered supported local reports:
+digital +20,013.32 (+7.92%), company +43,731.00 (+9.88%), with the Store bridge
+and seven represented dates per window. Marketplace declined without becoming
+an unrequested aggregate trigger. No consultation, sending or scheduling occurred.
+Treatment's unchanged approved v2 card returned fresh `ignore` support 0.98.
+That is not adoption of the contrast candidate or repair of September 12.
+
+Baseline used three distinct SQL queries; treatment executed the same SQL three
+times, then inspected and evaluated its publication. Treatment took 45.05 seconds
+longer and used more total input/output, but less uncached frontier input. Its
+additional Jev request used 6,718 input / 198 output tokens. No dollar-saving or
+causal latency claim follows. Both preserved reusable procedures; neither showed
+that the owner could dispense with the frontier analysis.
+
+Both also **overwrote their three new automatic response captures**, violating
+the preservation instruction. Baseline's assertion that originals were untouched
+was false; treatment's save-failure explanation was not supported by the trace.
+Parent audits retain originals, and calculation-used copies match audited rows,
+so numerical support survives. File-byte provenance does not. The research
+`protocol_ok` flag checks narrower execution conditions, not full compliance.
+This shared agent/artifact-handling failure is not a SignalWeave runtime failure.
+
+Both actors finished once under the frozen limits: 1,648,482 total CLI input,
+179,298 uncached, 42,294 output, and one Jev call. No operator analytical rescue,
+prompt revision, extra attempt or budget extension occurred. Records remain in
+ignored `artifacts/northstar-forward-continuation-v1`; independent internal
+method and PM/DE reviews found useful analysis, not a comparative product win.
 
 ## What worked—and where the product added work
 
