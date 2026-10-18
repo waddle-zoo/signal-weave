@@ -242,3 +242,26 @@ reports and private provider access. A fresh onboarding rerun creates a new
 cohort, not byte-identical reproduction of these model outputs. The full offline
 suite passed 4,424 checks with 13 opt-in skips, including six new continuation
 accounting controls. Those are software checks, not additional business trials.
+
+### Forward readout guidance, not a revised result
+
+After closing the continuation, commit `65a07c1` adds conditional guidance to
+the bundled skill: summarize with supporting detail only when the recipient can
+actually open it; otherwise include required identifiers without claiming a
+nonexistent attachment. An issue follow-up should inspect the previously
+affected group's status when possible, not infer recovery from an aggregate.
+An independent internal product reviewer checked this guidance's scope.
+
+The completed analyst runs used the retained `0b9ff58` native candidate, now
+also preserved locally as `artifacts/harbor-recurrence-native-0b9ff58`. The newer
+guidance has not run in a new analyst cohort. Packaging or software checks on a
+newer candidate cannot establish that it improves the final messages above.
+
+The clean `65a07c1` candidate passed three isolated native controls (75.73s),
+including actual bundled-skill installation for Codex/Claude and the current-
+state card journey, without inference. The final full offline suite also passed
+4,424 checks with 13 opt-in skips (317.77s). Its source fingerprint is
+`eedd8011a4d34d43a02c71208576e4fa27bb77f637c60e2432c7cbbbbaa2cbe5`;
+binary SHA-256 is
+`1a939be6257ae2ca13ca188452c4b38da8e77c0e45d48dcf0e935b1b1e1bd267`.
+It remains a local source candidate, not a new published release.
