@@ -32,13 +32,14 @@ whether recurring use actually reduces the person's work compared with the same
 agent, company tools and retained notes without SignalWeave. Overall value
 remains unproven until that comparison includes onboarding and actual messages.
 
-The [staged Harbor journey caller](../evaluations/data/harbor-workflow-controls.md#staged-complete-journey-caller)
-now implements fresh authoring, review of the actual saved artifacts, and later
-briefs over changing source states for both arms. Its current native preparation
-passed with zero inference and scoped internal review. No analyst onboarding or
-recurring business outcome has run in this cohort yet; paid execution awaits
-the requested budget/host confirmation. This is not a replacement score for an
-earlier failed or censored cohort.
+The [staged Harbor journey](evidence/harbor-onboarding-2026-10-17.md) has now run
+both live onboarding analysts. Each produced supported facts and reusable notes;
+treatment also saved a draft but introduced technical prerequisites. It hit a
+real point-in-time-card API limitation and blurred native source scope with the
+caller's authorized follow-up tools. Aggregate input crossed the between-actor
+stop after the baseline completed, so no recurrence or Jev evaluation ran. These
+are product/experience findings, not a replacement score for an earlier cohort
+or evidence of recurring lift. The next work repairs those demonstrated gaps.
 
 ### Next business-evidence gate
 
