@@ -372,3 +372,94 @@ class HarborWorkflowActor:
             if name in native_names:
                 return await self._call_native(name, arguments)
         raise ValueError("tool not available")
+
+
+class WorkspaceSourceActor:
+    """Expose actual MCP tools and retain their responses in a private workspace."""
+
+    def __init__(self, source, audit, workspace, *, source_tools: set[str], native=None):
+        from evaluations.codex_workspace import validate_workspace
+        from evaluations.installed_trial_transport import _private_dir
+
+        if not isinstance(source_tools, (set, frozenset)) or any(
+            not isinstance(name, str) or not name.strip() for name in source_tools
+        ):
+            raise ValueError("source_tools must be a set of nonblank tool names")
+        self.source, self.audit, self.native = source, audit, native
+        self.source_tools = frozenset(source_tools)
+        self.workspace = validate_workspace(workspace)
+        self.directory = self.workspace / "tool-responses"
+        if not self.directory.exists():
+            _private_dir(self.directory)
+        validate_workspace(self.directory)
+        self.treatment = native is not None
+        self.mcp_instructions = getattr(native, "instructions", None) if native is not None else None
+        self.phase, self.setup_complete, self.submission = "onboarding", False, None
+        self._sequence = 0
+
+    async def _available(self):
+        specs, routes = [], {}
+        for server, prefix in ((self.source, "company_"), (self.native, "")):
+            if server is None:
+                continue
+            for tool in await server.list_tools():
+                spec = _tool_spec(tool)
+                actual_name = spec["name"]
+                if prefix and actual_name not in self.source_tools:
+                    continue
+                name = prefix + actual_name
+                if name in routes:
+                    raise ValueError("Source and native tool names must be distinct")
+                spec["name"] = name
+                specs.append(spec)
+                routes[name] = (server, actual_name)
+        return specs, routes
+
+    async def specs(self) -> list[dict]:
+        return (await self._available())[0]
+
+    async def call(self, name: str, arguments: dict):
+        import hashlib
+
+        from evaluations.bootstrap_agent_trial import json_value
+        from evaluations.codex_workspace import validate_workspace
+        from evaluations.installed_trial_transport import _private_file
+
+        _, routes = await self._available()
+        if name not in routes:
+            raise ValueError("tool not available")
+        validate_workspace(self.workspace)
+        validate_workspace(self.directory)
+        self._sequence += 1
+        path = self.directory / f"response-{self._sequence:06d}.json"
+        if path.exists() or path.is_symlink():
+            raise FileExistsError("tool response artifact already exists")
+
+        server, actual_name = routes[name]
+        recorded_arguments = deepcopy(arguments)
+        content, structured = await server.call_tool(actual_name, arguments)
+        original = {
+            "name": name,
+            "arguments": recorded_arguments,
+            "content": json_value(content),
+            "structured": json_value(structured),
+        }
+        saved = self.audit.redact(deepcopy(original))
+        redacted = saved != original
+        saved["redacted"] = redacted
+        text = json.dumps(saved, ensure_ascii=False, allow_nan=False,
+                          sort_keys=True, separators=(",", ":"))
+        _private_file(path, text)
+        locator = {
+            "path": str(path),
+            "sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+            "redacted": redacted,
+        }
+        self.audit.emit("actor.workspace_response_saved", name=saved["name"],
+                        arguments=saved["arguments"], artifact=dict(locator))
+        if isinstance(structured, dict):
+            if "_caller_artifact" in structured:
+                raise ValueError("MCP result uses reserved _caller_artifact key; original response saved")
+            return {**structured, "_caller_artifact": locator}
+        return {"source_result": structured if structured is not None else json_value(content),
+                "_caller_artifact": locator}

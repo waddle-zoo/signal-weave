@@ -93,6 +93,17 @@ async def test_default_profile_does_not_require_a_hidden_preapproval_simulation(
     server = create_mcp(original._test_runtime, profile="agent")
     specs = {item.name: item for item in await server.list_tools()}
     assert "simulate_insight_card" not in specs
+    assert "preview_investigation_report" not in specs
+    assert "preview_investigation_report" not in server.instructions
+    assert "First give a useful source-backed answer" in server.instructions
+    assert "Card creation, approval and policy evaluation are not prerequisites" in server.instructions
+    assert "If the owner wants recurrence" in server.instructions
+    assert "After explicit owner approval, run one delivery-disabled evaluate_insight_card" in server.instructions
+    assert "first recurring demonstration" in server.instructions
+    guide = await dispatch(server, "get_signalweave_guide", {"task": "start"})
+    assert all(step["tool"] in specs for step in guide["steps"])
+    assert "preview_investigation_report" not in json.dumps(guide)
+    assert "initial source-backed answer before recurring card setup or approval" in guide["first_readout"]
     approval_text = " ".join(specs["approve_insight_card"].description.split())
     assert "does not expose draft simulation" in approval_text
     assert "After approval" in approval_text

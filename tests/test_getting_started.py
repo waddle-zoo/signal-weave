@@ -51,6 +51,28 @@ def test_first_use_guide_still_exposes_discovery_and_owner_approval():
             "review_insight_card", "approve_insight_card"} <= steps
 
 
+def test_onboarding_verifies_the_actual_repeating_source_without_a_new_tool_or_gate():
+    guide = agent_getting_started("start")
+    limits = " ".join(guide["limits"])
+    assert "exact proposed source parameters with inspect_resource" in limits
+    assert "unfiltered inspection does not verify a filtered recurring source" in limits
+    assert "actual analytical SQL and procedure in caller notes" in limits
+    assert "Structural review alone does not demonstrate" in limits
+
+
+@pytest.mark.parametrize("provider", ["jev-latest", "openai-decisions", "chatgpt-plan-responses"])
+def test_first_readout_distinguishes_initial_answer_from_approved_recurring_demonstration(provider):
+    guide = agent_getting_started("start", decision_provider=provider)
+    readout = guide["first_readout"]
+    assert "initial source-backed answer before recurring card setup or approval" in readout
+    assert "When the owner requests recurrence and explicitly approves the reviewed card" in readout
+    assert "first delivery-disabled evaluation as the recurring demonstration" in readout
+    assert "If the person wants recurrence" in guide["next"]
+    assert "Feedback is not new approval, scheduling or delivery permission" in readout
+    assert "useful example is not proof of unattended reliability" in readout
+    assert guide["inference_performed"] is False
+
+
 def test_monitor_guide_explains_existing_publication_source_without_granting_authority():
     text = agent_getting_started("monitor")["analyst_publications"]
     assert "already an owner-approved source" in text

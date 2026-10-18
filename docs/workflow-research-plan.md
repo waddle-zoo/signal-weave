@@ -618,3 +618,22 @@ and separate checkpoints, without changing the binary or personal setup. Raw
 methods/results remain in `artifacts/source-export-native-smoke-v1/` through
 `v3/`. The previous `7212ef0` binary is also retained unchanged for its historical
 trial. No business actor or policy judgment was retried in these setup checks.
+
+### Whole first-use workflow, not setup checks
+
+The [Northstar ordinary-workspace study](evidence/northstar-workspace-first-use-2026-10-18.md)
+now completes two real-source first-use readouts after a preserved censored
+attempt. Both agents retain capable company SQL/BI tools and real files. The
+SignalWeave arm saves and reviews a draft after answering; it does not approve
+itself. The human-facing analyses are useful, but each has a consequential
+communication/comparison qualification and treatment uses more time/tokens during first use.
+No recurring benefit is inferred from fewer calls or a readiness label.
+
+Prioritize the coherent next user step: answer the few material owner questions,
+review the exact saved source parameters, then run a delivery-disabled check and
+inspect what the next analyst actually tells the intended reader. Preserve the
+baseline's actual notes and full company tools. Use a correctly declared historical
+cutoff or current-dated simulation; do not misclassify stale fixture dates as a
+product failure. Only after that should changing business states test repeated
+investigation, quiet days and follow-through. Do not add a scheduler or another
+framework to make this sequence look complete.

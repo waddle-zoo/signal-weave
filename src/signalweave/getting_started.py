@@ -69,15 +69,18 @@ def agent_getting_started(task: str = "start", *, decision_provider: str = "jev-
             "For a deferred judgment, read observation_facts first when included; otherwise page its raw observation path. Then page only relevant attributes, definitions, or source contracts. A complete row overview does not establish source coverage or comparability; missing values and dates stay unknown.",
             "SignalWeave does not schedule runs or send messages.",
             "Missing alert criteria can pause recurring automation while the agent still reports supported facts from inspected evidence. Do not withhold a useful current report merely because the notification policy needs owner confirmation.",
+            "Before asking for card approval, inspect its exact proposed source parameters with inspect_resource. An unfiltered inspection does not verify a filtered recurring source. Check that the effective data and aggregation support the intended check; preserve the actual analytical SQL and procedure in caller notes when the agent must repeat them. Structural review alone does not demonstrate a working recurring analysis.",
             "Keep owner-only setup questions in the conversation, not the card's recurring questions. Save evidence-answerable business questions for repeated analysis and confirmed definitions in reusable context. Tool-supplied windows or confidence defaults do not establish the owner's business policy.",
             "Source inspection may execute queries; respect user-approved access and cost limits.",
         ],
-        "next": "Start with what the person wants to understand, inspect the relevant evidence and give one useful current report. Preserve distinct source scopes and uncertainty. Then review the reusable card and ask only for the missing context needed for recurring decisions or delivery.",
+        "next": "Start with what the person wants to understand, inspect the relevant evidence and give one useful current report. Preserve distinct source scopes and uncertainty. If the person wants recurrence, review the reusable card and ask only for the missing context needed for recurring decisions or delivery.",
     }
     if task == "start":
         response["first_readout"] = (
-            "During onboarding, show the proposed human message from the first owner-approved, "
-            "delivery-disabled evaluation, not just its decision or receipt. Check with the owner "
+            "Give the initial source-backed answer before recurring card setup or approval. "
+            "When the owner requests recurrence and explicitly approves the reviewed card, show the "
+            "proposed human message from its first delivery-disabled evaluation as the recurring "
+            "demonstration. Check with the owner "
             "or their designated data expert that it answers the question and fits the intended reader. "
             "Reuse what that reader already knows; explain material scope differences, changed definitions "
             "and real data gaps without copying the whole glossary into every update. Keep business "
