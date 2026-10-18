@@ -172,6 +172,48 @@ The next test should keep judgments narrow, consistent with
 [TypeSafe's primitive guidance](https://docs.typesafe.ai/introduction), rather
 than assume that a longer global policy prompt is a solution.
 
+### Forward contrast check: clearer card, same evidence
+
+A separate, independently admitted test then compared the original guidance
+with a compact ordered policy through the production engine and Jev transport.
+Only `decision_guidance` differed within each pair. Snapshots, advisory watches,
+questions and the 0.70 routing floor stayed identical. Two cases reused known
+inspections; six were explicitly hypothetical, with totals and distinct-date
+coverage recomputed from altered date/channel rows. Expectations were frozen
+before inference, outside provider inputs.
+
+| Case | Original routed result | Ordered-policy routed result |
+| --- | --- | --- |
+| September 5 increase; Mobile declined | `ignore` | `ignore` |
+| September 12 increase; seasonal context unknown | `investigate` | `ignore` |
+| Digital −15%, company total increased | `investigate` | `investigate` |
+| Complete windows, −9.99% | `ignore` | `ignore` |
+| Complete windows, exactly −10% | `investigate` | `investigate` |
+| Missing current date | `insufficient_data` | `insufficient_data` |
+| Seven prior rows per channel, six distinct dates | `investigate` | `insufficient_data` |
+| Incompatible population and conflicting totals | `investigate` | `insufficient_data` |
+
+The original coverage/scope rules did not uniquely specify a raw review label;
+`investigate` is not automatically wrong there. The ordered policy proposes an
+explicit `insufficient_data` mapping. Its repair handoffs preserve evidence,
+ask for correction/reconciliation, and do not assert a supported decline.
+Qualifying investigations retain Analytics/Data Trust first and conditional
+Leadership follow-up; no delivery occurs. Quiet cases do not acquire mandatory
+seasonal research. The September 12 ordered result selected `ignore` at 0.79;
+the original selected it at 0.60 and routed to investigation below the floor.
+
+All 16 attempts completed once, resolving to `jev-1.13.0`: 98,012 input /
+3,204 output tokens, zero errors or unknown usage. This supports the narrower
+onboarding recommendation to make owner-intended branches explicit. It is one
+sample per cell, not reliability, a new human readout, or superiority evidence.
+The stored card and earlier failed cohort were not rewritten or rescored.
+
+[Method](../../evaluations/northstar_policy_contrasts.py) ·
+[Protocol](../../evaluations/protocols/northstar-policy-contrasts.json).
+Ignored local records: `artifacts/northstar-policy-contrasts-v1`; prepared SHA-256
+`cdd5abf79f615813b8d3089b8c85f7bd7a635c1443ab57fcff6bf5904801d878`, results
+`49a02028cfaa2828cf5eaea67a7f442e1625b58bfc045f6f10a0edfe588d3022`.
+
 ## Source repair and retained negative results
 
 The original saved card requested `time_range: Last week`; a later native probe
@@ -192,6 +234,9 @@ and updated skill (production fingerprint
 `050812d6a939b55b316a168b7cc518fc9e8b4285fbd55027293040851d314ca6`).
 Both isolated source/native skill-install journeys passed. No new business
 workflow or provider judgment was run by that packaging check.
+After adding the contrast harness, full offline verification passed 4,625 tests
+with 13 skipped. Independent internal review checked the frozen cases, complete
+responses and report; this is not external peer review or human usability proof.
 
 An earlier first-use baseline was terminated after 60 admitted MCP calls plus
 three rejected attempts. It saved no brief and returned no terminal usage:
