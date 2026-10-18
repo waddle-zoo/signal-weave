@@ -4,8 +4,11 @@ Original six-actor journey: both authors and all four fresh recurring analysts c
 with known usage, unchanged frozen inputs and no actor retries. Three live Jev
 calls exercised the reviewed treatment card. Both paths delivered useful local
 assessments; **overall comparative advantage was not established**.
-The later ordinary-workspace extension completed its baseline but the separate
-treatment timed out; see the [extension results](#ordinary-workspace-continuation-2026-10-18).
+The first ordinary-workspace attempts stopped or timed out. A separately admitted
+as-of continuation then completed both arms: treatment was faster and supplied a
+30-case worklist, with two errors in its supporting evidence. See the
+[extension results](#ordinary-workspace-continuation-2026-10-18). This is a useful
+bounded result, not proof of whole-journey savings or error-free analysis.
 
 The first zero-inference native preflight found a transport compatibility gap:
 the company MCP's bare `dict` return annotation produced JSON text without
@@ -247,11 +250,11 @@ comparison of one isolated product change. Method:
 `evaluations/redwood_workspace_compatibility.py`.
 The executed v1 method is preserved at
 [commit 757f77a](https://github.com/waddle-zoo/signal-weave/blob/757f77a43ea436041a13d6dd6ff270caf0f088b5/evaluations/redwood_workspace_compatibility.py).
-The current v2 method clarifies the as-of question and baseline instructions,
-with prospective resource bounds; it has not been executed and does not revise
-any v1 result. Its final offline verification passed **4,489 tests, 13 skipped**;
-116 focused checks and a separate internal scope review cover the framing repair.
-Those checks do not establish that an acting agent now finishes the workflow.
+The v2 method clarifies the as-of question and baseline instructions, with
+separately frozen resource bounds. Its completed result is reported below;
+it does not revise v1. Pre-execution offline verification passed **4,489 tests,
+13 skipped**; 116 focused checks and an internal scope review cover the framing
+repair. Those software checks are not business-outcome evidence.
 
 A separately admitted **one-actor treatment-only compatibility probe timed out**
 at 300.85 response seconds, with no final CLI handoff and **unknown frontier
@@ -282,7 +285,8 @@ June cutoff in October; that historical/live ambiguity is a study-framing defect
 not evidence that production SignalWeave fails. It also does not explain away an
 unfinished user handoff. The next protocol must state the requested business
 clock and intended deliverable clearly; do not weaken the analysis or hide source
-limitations to obtain completion. No further paid actors ran after this timeout.
+limitations to obtain completion. No further paid actors were admitted to that
+closed probe.
 
 A separate zero-inference recovery check reconnected the same native home,
 recovered the receipt and replayed its exact idempotency key. All **17 evidence
@@ -296,3 +300,86 @@ matched all four saved exports. Private source, credential and future-result
 reads were denied in the actual OS checks; the treatment-only check also denied
 the external baseline's current-answer file. These are controls, not human
 onboarding, recipient delivery, a new company sample or comparative superiority.
+
+### Completed as-of continuation: v2
+
+Independent internal review admitted the frozen v2 cohort before inference,
+after checking 55 input hashes, both OS sandboxes, source parity, the restored
+card and normal tool profile. Both fresh analysts used the same source cutoff,
+company tools and ordinary file/command capabilities, plus their own actual
+earlier work. Only treatment received its installed skill and approved card.
+Neither received the earlier final-cutoff answer. This remains expert-assisted
+continuation of a known case, not a fresh installation or onboarding trial.
+
+Both actors completed, saved their briefs and evidence, and returned final
+handoffs with known usage, unchanged inputs and no retries. Treatment began with
+one compact card evaluation, continued through the data-gap result, and did not
+reread the guide, full card or receipt.
+
+| Measured continuation | Plain agent | With SignalWeave |
+| --- | ---: | ---: |
+| Analyst-response wall time | 248.96 s | 196.49 s |
+| Admitted MCP calls | 26 | 12 |
+| Ordinary workspace tool items | 15 | 13 |
+| Frontier aggregate input tokens | 1,297,975 | 824,544 |
+| Of which cached | 1,192,704 | 748,160 |
+| Of which uncached | 105,271 | 76,384 |
+| Frontier output tokens | 33,454 | 24,176 |
+
+Treatment additionally used one **Jev 1.13.0** request: 10,537 input / 240 output
+tokens, 0.260 seconds. In this one continuation, response time was 21.1% lower,
+uncached frontier input 27.4% lower and frontier output 27.7% lower. Aggregate
+input includes cached conversation replay; these are not dollar savings. Setup,
+source authoring and previous runs are not free or included in these response
+times. The earlier six-actor journey was slower overall with treatment and
+remains unchanged; the revised continuation is not a new independent company or
+an estimate of amortized workflow savings.
+
+**What the reader gets:** both briefs explain the observed improvement, its
+C-1/WH-01–04 concentration, unresolved WH-12 coverage and the prior 60 closed /
+30 open cases. Neither equates lower rates or case closure with customer
+recovery. Baseline explains the reconciled 11-warehouse subset more fully.
+Treatment links the actual **30 open-case identifiers**, dates, statuses and
+warehouses; internal review verified exact membership against the frozen source.
+That worklist is a concrete handoff benefit, not a SignalWeave-exclusive ability.
+The proposed reviewers in both briefs are reasonable under the owner's policy.
+
+**Evidence quality still needs work:** treatment's coverage CSV labels the
+metric's 1,656 observed shipments as the manifest expectation, which is unknown
+while WH-12's manifest is missing. Its brief also refers to 204 expected WH-12
+shipments rather than 204 observed records whose completeness is unconfirmed.
+Its provenance narrative gives both historical maintenance warehouses a
+denominator of 120; WH-06 has 132. The main movement and proposed actions remain
+supported, and the coverage gap stays explicit, but the original bundle cannot
+be called error-free or ready to send unchanged. Original files and timings are
+preserved. A more actionable case list does not cancel these defects.
+
+Main review independently recomputed the principal figures from raw shipment,
+manifest and case rows. The nonblind internal adversarial reviewer separately
+assessed the actual briefs, supporting files and justified actions. Its finding
+is useful completed work in both arms, with strengths and caveats—not external
+peer review, demonstrated recipient comprehension or overall superiority.
+
+Method: [frozen v2 at 8522ed9](https://github.com/waddle-zoo/signal-weave/blob/8522ed9/evaluations/redwood_workspace_compatibility.py).
+Native core and CLI identities match the earlier probe. Bounds were two actors,
+one Jev request, 420 response seconds and 40 MCP calls plus 40 workspace items per
+actor; baseline first, no retries. Before treatment, baseline was below both
+between-actor stops: 2.5 million aggregate input and 180,000 uncached tokens.
+Final aggregate uncached usage was 181,655: the last admitted actor crossed the
+stop in flight as allowed, not a reset or permission for another actor. Raw
+reports, workspaces and the prospective review remain ignored under
+`artifacts/redwood-ordinary-workspace-v2/`.
+
+The next value gate is the whole handoff: a correct, focused message and
+inspectable supporting evidence that let the intended person act. A local file,
+policy enum, smaller token count or successful process cannot establish that a
+recipient received it, understood it, or stopped inspecting dashboards. No real
+message was sent in this cohort.
+
+Post-comparison software verification: Ruff passed and **4,489 tests passed,
+13 skipped**, in 300.90 seconds. The first attempt hit `ENOSPC` in generated
+pytest fixtures (2 failed, 44 setup errors); its log is retained. Only that
+run's temporary fixtures were removed before the unchanged suite passed in a
+fresh temporary directory. No live actor or Jev judgment was retried, and both
+reported workspaces still match their saved file hashes. These software checks
+do not resolve the agent-authored evidence mistakes above.

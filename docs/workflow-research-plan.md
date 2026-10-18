@@ -547,12 +547,16 @@ time; name the full analytical job and the final human handoff; mention installe
 software only in the arm that has it. Do not make the baseline search for an
 absent skill or make a historical replay search for unrequested live connections.
 Current monitoring still requires current evidence; do not suppress genuine
-staleness or source gaps. The revised Redwood v2 method is **unexecuted**: it
-allows 420 response seconds and a 2.5-million aggregate-input between-actor stop,
-with the same actor/tool/Jev counts and 180,000-uncached stop. These prospective
-resource changes do not revise v1's stopped/censored results or prove an
-improvement. Freeze and independently admit any new cohort before execution;
-do not promote a tuned repeat of the same known case to unseen transfer evidence.
+staleness or source gaps. The separately frozen and independently admitted
+Redwood v2 pair **completed**, under 420 response seconds and a 2.5-million
+aggregate-input between-actor stop, with the same actor/tool/Jev counts and
+180,000-uncached stop. It produced useful briefs in both arms; treatment used
+less time and frontier inference in that continuation and supplied an actual
+case worklist, but introduced two supporting-evidence errors. See the full
+[result and unchanged v1 failures](evidence/redwood-workflow-2026-10-17.md#completed-as-of-continuation-v2).
+These resource changes and results do not revise v1 or establish onboarding,
+whole-journey superiority or unseen transfer. Freeze and independently admit
+each new cohort before execution.
 
 Prioritize the human handoff next, not a larger count of chart classifications:
 observe a recipient getting the requested brief, opening its evidence, knowing
