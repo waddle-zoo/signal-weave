@@ -137,6 +137,42 @@ prompt revision, extra attempt or budget extension occurred. Records remain in
 ignored `artifacts/northstar-forward-continuation-v1`; independent internal
 method and PM/DE reviews found useful analysis, not a comparative product win.
 
+### Direct-source authoring: an engineering burden, not an onboarding result
+
+A separate [frozen authoring stage](../../evaluations/protocols/northstar-direct-source-authoring.json)
+asked each expert to operationalize its own retained procedure. Baseline could
+implement deterministic querying, rules and reporting without another LLM call;
+treatment would need a direct-query reader, manifest, card and result renderer.
+Both had the same raw company tools and public SDK access. No researcher SQL,
+analysis or replacement policy was supplied. This was explicitly not a fresh install.
+
+Only baseline ran. At 479.41 seconds its 51st workspace operation exceeded the
+50-operation cap. The harness terminated it before final usage: **cost is unknown,
+not zero**. Original captures remained unchanged. There were zero company-source
+calls and zero Jev calls. Treatment was not admitted; the protocol remains closed,
+without retry or a paired result. This was a research guard, not a SignalWeave
+failure or evidence of failed source execution.
+
+The partial work is substantive: a 679-line runner around its retained 428-line
+calculator, three SQL templates, explicit historical cutoffs and a deployment
+handoff. A September 18 offline replay reproduced the supported quiet readout and
+company bridge. In a separate **post-stop** check, an internal reviewer ran the
+seven authored tests offline with credentials absent: all passed, and workspace
+file bytes were unchanged. This did not complete or rescore the interrupted
+actor. Live credentials, source execution and later cutoffs were not tested.
+The handoff's example replay destination was
+already populated, so its command was not directly repeatable as written.
+
+Both internal reviewers found a meaningful product/process gap, not a reason to
+raise the cap and claim success: converting existing analysis into unattended
+reuse still required bespoke transport, decoding, polling, evidence persistence
+and reporting code. That is substantial integration engineering. It must not be
+a hidden prerequisite for a business owner's simple recurring check.
+The next priority is a [built-in reviewed-query path](../reviewed-query-source-plan.md),
+not paying another expert to build a custom wrapper. Its comparative value remains
+unproved. Raw work and the interrupted trace remain ignored under
+`artifacts/northstar-direct-source-authoring-v1`.
+
 ## What worked—and where the product added work
 
 Each agent kept its own actual workspace, SQL and calculations. Treatment

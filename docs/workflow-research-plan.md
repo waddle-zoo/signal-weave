@@ -102,6 +102,14 @@ those additional steps. This is not another fresh-install claim. Source code
 consent, native connection, exact source inspection and card approval are
 separate, counted steps—not things authoring completion proves.
 
+That authoring stage is now **closed after the baseline's workspace-operation
+guard**, with unknown frontier cost, zero source/Jev calls and no admitted
+treatment. It yielded a useful offline engineering draft, not operationalization
+or a comparative result. Both reviewers recommend removing the custom connector
+burden before another authoring pair. The immediate implementation direction is
+the [reviewed-query source plan](reviewed-query-source-plan.md); no new paid
+execution is admitted by that plan.
+
 The unit of value is a reusable business check and what its reader receives.
 Correct measurements and a typed receipt show functioning; comparative value
 requires less ongoing work or a materially better maintained handoff. Two quiet
