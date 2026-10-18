@@ -107,12 +107,12 @@ async def test_dispatch_mismatch_cannot_be_confirmed_or_silently_filtered(tmp_pa
 
 
 @pytest.mark.parametrize("name", AUTHORING)
-async def test_mcp_schema_and_dispatch_reject_explicit_empty_windows(tmp_path, name):
-    server = make_server(tmp_path)
+async def test_mcp_schema_and_dispatch_accept_explicit_noncomparative_windows(tmp_path, name):
+    server = make_server(tmp_path, catalog=catalog_with_windows([]))
     spec = next(spec for spec in await server.list_tools() if spec.name == name)
     field = spec.inputSchema["properties"]["comparison_windows"]
     array = next(item for item in field["anyOf"] if item.get("type") == "array")
-    assert array["minItems"] == 1 and array["maxItems"] == 20
+    assert "minItems" not in array and array["maxItems"] == 20
     assert "available_comparison_windows" in json.dumps(field)
     assert "not required_comparison_keys" in json.dumps(field)
     if name == "draft_insight_card":
@@ -122,10 +122,45 @@ async def test_mcp_schema_and_dispatch_reject_explicit_empty_windows(tmp_path, n
         assert "do not invent" in description
     validator = Draft202012Validator(spec.inputSchema)
     assert not list(validator.iter_errors(arguments(name, comparison_windows=[CUSTOM])))
-    assert list(validator.iter_errors(arguments(name, comparison_windows=[])))
-    with pytest.raises(Exception, match="at least 1 item"):
-        await dispatch(server, name, arguments(name, comparison_windows=[]))
-    assert server._test_runtime.card_store.list_cards() == []
+    point_in_time = arguments(
+        name,
+        what_to_watch="Current unanswered ticket count",
+        questions=["How many tickets are currently unanswered?"],
+        comparison_windows=[],
+    )
+    assert not list(validator.iter_errors(point_in_time))
+    response = await dispatch(server, name, point_in_time)
+    assert response["card"]["comparison_windows"] == response["plan"]["comparison_windows"] == []
+    if "setup_questions" in response:
+        assert not any("comparison window" in question.lower() for question in response["setup_questions"])
+    review = (await dispatch(server, "review_insight_card", {
+        "card_id": response["card"]["id"],
+    }))["review"]
+    assert windows_blocker(review) is None
+    assert not any("comparison windows are undeclared" in warning.lower() for warning in review["warnings"])
+
+
+async def test_revision_can_clear_comparison_for_point_in_time_card_and_review_it(tmp_path):
+    server = make_server(tmp_path)
+    created = await dispatch(server, "onboard_insight_card", arguments(
+        "onboard_insight_card",
+        what_to_watch="Current unanswered ticket count",
+        questions=["How many tickets are currently unanswered?"],
+    ))
+    card_id = created["card"]["id"]
+
+    revised = await dispatch(server, "revise_insight_card", {
+        "card_id": card_id,
+        "expected_card_version": created["card"]["version"],
+        "changes": {"comparison_windows": []},
+        "reason": "This is a current-state queue check.",
+    })
+    assert revised["card"]["comparison_windows"] == []
+    assert revised["card"]["compiled_plan"] is None
+
+    review = (await dispatch(server, "review_insight_card", {"card_id": card_id}))["review"]
+    assert windows_blocker(review) is None
+    assert not any("comparison window" in question.lower() for question in review["questions"])
 
 
 @pytest.mark.parametrize("optional", [False, True])
@@ -459,8 +494,7 @@ def test_declaration_validation_and_exact_runtime_matching():
         with pytest.raises(ValidationError):
             ResourceContract(available_comparison_windows=invalid)
     source = SourceRef(key="metric", adapter="test", resource="opaque", label="Metric")
-    with pytest.raises(ValueError, match="nonempty"):
-        resolve_comparison_windows([], [source], {})
+    assert resolve_comparison_windows([], [source], {}) == []
     measured = comparison(comparison_window=CUSTOM)
     assert analyze_comparison("metric", measured, comparison_window=CUSTOM).status == "complete"
     assert analyze_comparison("metric", measured, comparison_window="previous_period").status == "insufficient_data"

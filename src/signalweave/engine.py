@@ -253,13 +253,14 @@ class InsightEngine:
         # tampered windows cannot be treated as harmless transport metadata.
         if card.compiled_plan is not None:
             if (
-                not card.compiled_plan.comparison_windows
+                (card.comparison_windows and not card.compiled_plan.comparison_windows)
                 or not set(card.compiled_plan.comparison_windows).issubset(
                     card.comparison_windows
                 )
             ):
                 raise ValueError(
-                    "compiled_plan comparison windows must be a nonempty subset of card windows"
+                    "compiled_plan comparison windows must be a nonempty subset of card windows "
+                    "unless both are empty"
                 )
             InsightCard.model_validate(card.model_dump(mode="json"))
             # The cached plan has already passed the card-version validator.
@@ -569,7 +570,10 @@ class InsightEngine:
                     status = "unavailable"
                 elif any(resource.observations or resource.evidence for resource in relevant) or any(
                     report.status == "complete" for report in analytical_reports
-                ) or any(
+                ) or (not plan.comparison_windows and any(
+                    InsightEngine._has_current_comparison_inputs(comparison)
+                    for resource in relevant for comparison in resource.analytical_comparisons
+                )) or any(
                     comparison.coverage == "complete" and comparison.comparable
                     for resource in relevant
                     for comparison in resource.contract.comparison_contracts
@@ -1030,6 +1034,12 @@ class InsightEngine:
             warnings=warnings,
         )
 
+    @staticmethod
+    def _has_current_comparison_inputs(comparison) -> bool:
+        return any(value is not None for value in comparison.current_total.model_dump().values()) or any(
+            value is not None for segment in comparison.segments for value in segment.current.model_dump().values()
+        )
+
     def _evaluation_materials(
         self,
         card: InsightCard,
@@ -1055,9 +1065,45 @@ class InsightEngine:
             if resource.source_key not in plan.selected_source_keys and resource.source_key not in required_sources:
                 continue
             for comparison in resource.analytical_comparisons:
+                if not plan.comparison_windows:
+                    # A comparison table may be the only carrier of current
+                    # facts. Keep its current side as source input, not as a
+                    # validated change or decomposition.
+                    if not self._has_current_comparison_inputs(comparison):
+                        continue
+                    current = comparison.model_dump(mode="json", exclude={
+                        "baseline_start", "baseline_end", "baseline_total", "comparison_window",
+                        "comparable", "require_equal_duration", "required", "segments", "query_refs",
+                    })
+                    current["segments"] = [
+                        {"segment": segment.segment, "current": segment.current.model_dump(mode="json")}
+                        for segment in comparison.segments
+                    ]
+                    current["source_comparison_coverage"] = current.pop("coverage")
+                    analytical_evidence.append(Evidence(
+                        source_key=resource.source_key, subject_id=comparison.key,
+                        subject_label=comparison.metric,
+                        statement=(f"Source-reported current-period inputs for {comparison.metric}; "
+                                   "no period comparison or reconciliation was performed."),
+                        values=current, origin="source", provenance=comparison.query_refs,
+                        source_url=resource.source_url,
+                    ))
+                    missing_refs = sorted(
+                        ref for ref in comparison.query_refs if "|" in ref
+                        and ref.split("|", 1)[0] in registered_adapters and ref not in inspected_resource_refs
+                    )
+                    if missing_refs:
+                        source_errors.append({
+                            "source_key": resource.source_key, "resource": resource.resource,
+                            "label": resource.title,
+                            "message": "Current-input provenance names unresolved resource(s): " + ", ".join(missing_refs),
+                            "blocking": resource.source_key in required_sources,
+                            "quality_status": "provenance_incomplete", "source_url": resource.source_url,
+                        })
+                    continue
                 report = analyze_comparison(
                     resource.source_key, comparison,
-                    comparison_window=plan.comparison_windows[0] if plan.comparison_windows else None,
+                    comparison_window=plan.comparison_windows[0],
                 )
                 report = report.model_copy(update={
                     "required": resource.source_key in required_sources and (
@@ -1142,6 +1188,10 @@ class InsightEngine:
             if (observation.source_key, observation.subject_id, observation.metric)
             not in priority_keys
         ]
+        statements = evidence_statements(
+            evidence_observations,
+            include_comparison=bool(plan.comparison_windows),
+        )
         evidence = [
             Evidence(
                 source_key=observation.source_key,
@@ -1150,9 +1200,6 @@ class InsightEngine:
                 statement=statement,
                 values={
                     "current": observation.current,
-                    "baseline": observation.baseline,
-                    "previous": observation.previous,
-                    "change_pct": observation.change_pct,
                     "freshness": observation.freshness,
                     "priority": (
                         observation.source_key,
@@ -1164,14 +1211,15 @@ class InsightEngine:
                     "unit": observation.unit,
                     "dimensions": observation.dimensions,
                     **observation.attributes,
+                    **({
+                        "baseline": observation.baseline,
+                        "previous": observation.previous,
+                        "change_pct": observation.change_pct,
+                    } if plan.comparison_windows else {}),
                 },
                 source_url=observation.source_url,
             )
-            for observation, statement in zip(
-                evidence_observations,
-                evidence_statements(evidence_observations),
-                strict=False,
-            )
+            for observation, statement in zip(evidence_observations, statements, strict=False)
         ]
         evidence.extend(
             item
@@ -1238,8 +1286,18 @@ class InsightEngine:
     def _apply_comparison_window(
         observations: list[Observation], plan: InsightPlan
     ) -> list[Observation]:
-        """Use the compiled window when the source exposes that baseline."""
-        window = plan.comparison_windows[0] if plan.comparison_windows else "previous_period"
+        """Apply a selected window, or expose current-only observations."""
+        if not plan.comparison_windows:
+            return [
+                observation.model_copy(update={
+                    "baseline": None,
+                    "previous": None,
+                    "change_pct": None,
+                    "comparison_baselines": {},
+                })
+                for observation in observations
+            ]
+        window = plan.comparison_windows[0]
         if window == "previous_period":
             return observations
         adjusted: list[Observation] = []
@@ -1285,6 +1343,19 @@ class InsightEngine:
             )
         for key, source in declared.items():
             resource = provided.get(key)
+            if not card.comparison_windows and source.required_comparison_keys:
+                errors.append({
+                    "source_key": key,
+                    "resource": source.resource,
+                    "label": source.label,
+                    "message": (
+                        "Required comparison keys cannot be evaluated when the card selects no "
+                        "comparison windows: " + ", ".join(source.required_comparison_keys)
+                    ),
+                    "source_url": resource.source_url if resource is not None else None,
+                    "blocking": source.required,
+                    "quality_status": "comparison_window_mismatch",
+                })
             if resource is None:
                 errors.append(
                     {

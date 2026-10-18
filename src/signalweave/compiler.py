@@ -20,10 +20,18 @@ SUPPORTED_CAPABILITIES: dict[str, str] = {
     "question_checks": "Evaluate whether the available evidence supports each owner-authored question.",
     "rank_relevant_signals": "Rank the observations most relevant to the card's stated purpose.",
 }
+PERIOD_COMPARISON_CAPABILITIES = {
+    "percent_change",
+    "baseline_comparison",
+    "seasonality_check",
+    "dimension_contribution",
+}
 
 
 def _base_capabilities(card: InsightCard) -> list[str]:
-    capabilities = ["percent_change", "baseline_comparison", "freshness_check"]
+    capabilities = ["freshness_check"]
+    if card.comparison_windows:
+        capabilities[:0] = ["percent_change", "baseline_comparison"]
     if len(card.sources) > 1:
         capabilities.append("cross_source_comparison")
     if card.watch_for:
@@ -48,6 +56,8 @@ def _evidence_slots(card: InsightCard) -> list[EvidenceSlot]:
             question=(
                 f"What changed in {source.label} that is relevant to the card's stated "
                 "purpose and comparison window?"
+                if card.comparison_windows else
+                f"What is currently reported in {source.label} that is relevant to the card's stated purpose?"
             ),
             source_keys=[source.key],
             source_refs=[source],
@@ -55,7 +65,11 @@ def _evidence_slots(card: InsightCard) -> list[EvidenceSlot]:
             completion_criteria=(
                 ("Return complete, reconciled analytical comparisons: " + ", ".join(source.required_comparison_keys))
                 if source.required_comparison_keys else
-                "Return a bounded observation or evidence statement with its source and comparison window."
+                (
+                    "Return a bounded observation or evidence statement with its source and comparison window."
+                    if card.comparison_windows else
+                    "Return a bounded current observation or evidence statement with its source."
+                )
             ),
         )
         for source in card.sources
@@ -122,7 +136,10 @@ async def compile_with_typesafe(
     base = base_plan(card)
     selected = answers.get("capabilities", [])
     known = set(SUPPORTED_CAPABILITIES)
-    capabilities = [value for value in selected if value in known]
+    capabilities = [
+        value for value in selected
+        if value in known and (card.comparison_windows or value not in PERIOD_COMPARISON_CAPABILITIES)
+    ]
     selected_window = answers.get("baseline")
     comparison_windows = (
         [selected_window]

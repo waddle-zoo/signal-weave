@@ -22,13 +22,13 @@ EvidenceRequirementKey = Annotated[
 ]
 
 ComparisonWindows = Annotated[list[str], Field(
-    min_length=1, max_length=20,
+    max_length=20,
     description=(
         "Exact source-declared comparison identifiers from discovery's "
         "contract.available_comparison_windows, not translated labels. "
         "These are not required_comparison_keys: those must be exact analytical_comparisons[].key "
         "or reviewed catalog required_comparison_keys. Inspect the source; do not invent keys. "
-        "Omit to resolve defaults from required sources; an explicit empty list is invalid."
+        "Omit to resolve defaults from required sources; an explicit empty list means no period comparison."
     ),
 )]
 
@@ -938,6 +938,14 @@ class InsightCard(BaseModel):
             values = getattr(self, field_name)
             if any(not value.strip() for value in values):
                 raise ValueError(f"{field_name} entries must not be empty")
+        if not self.comparison_windows and self.numeric_conditions:
+            raise ValueError("comparison_windows cannot be empty when numeric_conditions are configured")
+        if not self.comparison_windows and any(
+            source.required_comparison_keys for source in self.sources
+        ):
+            raise ValueError(
+                "comparison_windows cannot be empty when required_comparison_keys are bound"
+            )
         source_by_key = {source.key: source for source in self.sources}
         for condition in self.numeric_conditions:
             source = source_by_key.get(condition.source_key)
@@ -960,10 +968,14 @@ class InsightCard(BaseModel):
                 + ", ".join(sorted(unknown))
             )
         if self.compiled_plan:
-            if not self.compiled_plan.comparison_windows or not set(
-                self.compiled_plan.comparison_windows
-            ).issubset(self.comparison_windows):
-                raise ValueError("compiled_plan comparison windows must be a nonempty subset of card windows")
+            if (
+                (self.comparison_windows and not self.compiled_plan.comparison_windows)
+                or not set(self.compiled_plan.comparison_windows).issubset(self.comparison_windows)
+            ):
+                raise ValueError(
+                    "compiled_plan comparison windows must be a nonempty subset of card windows "
+                    "unless both are empty"
+                )
             if self.compiled_plan.card_id != self.id:
                 raise ValueError("compiled_plan must belong to its insight card")
             if self.compiled_plan.card_version != self.version:

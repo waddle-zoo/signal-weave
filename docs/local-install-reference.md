@@ -141,6 +141,10 @@ native release.
   controls), bounded saved-query definitions, and owner-reviewed
   shadow evaluation without requiring custom BI metric contracts. Missing
   declarations stay unverified and recipient mappings do not certify delivery.
+  Explicit `comparison_windows=[]` supports point-in-time cards without an
+  invented baseline; older published builds require a nonempty list. The agent
+  guide also distinguishes native card-source scope from the caller's existing
+  authorized investigation tools.
   Use an explicitly identified source build for these capabilities and verify
   its embedded production fingerprint; the version string alone is insufficient.
 

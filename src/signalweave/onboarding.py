@@ -236,7 +236,7 @@ def resolve_comparison_windows(
 ) -> list[str]:
     """Resolve omitted defaults; explicit identifiers are never rewritten."""
     if requested is not None:
-        if not requested or any(not value.strip() for value in requested):
+        if any(not value.strip() for value in requested):
             raise ValueError("comparison_windows must contain nonempty identifiers")
         return list(requested)
     declared = declared_comparison_windows([source for source in sources if source.required], contracts)
@@ -756,31 +756,52 @@ class InsightAuthoringService:
         window_refs: list[str] = []
         undeclared_refs: list[str] = []
         optional_window_issues: list[str] = []
+        numeric_source_keys = {condition.source_key for condition in card.numeric_conditions}
         for source in card.sources:
             ref = f"{source.adapter}|{source.resource}"
-            available = declared_windows.get(ref)
-            comparison_required = _comparison_window_required(source, matches)
-            if not available:
-                undeclared_refs.append(ref)
-            elif comparison_required and not set(card.comparison_windows).issubset(available):
-                message = f"{ref}: requested {card.comparison_windows!r}; available {available!r}."
-                if source.required:
-                    window_issues.append(message)
-                    window_refs.append(ref)
-                else:
-                    optional_window_issues.append(message)
+            if not card.comparison_windows:
+                match = matches.get(ref)
+                required_keys = set(source.required_comparison_keys)
+                if match is not None:
+                    required_keys.update(match.contract.required_comparison_keys)
+                if required_keys or source.key in numeric_source_keys:
+                    requirements = []
+                    if required_keys:
+                        requirements.append(
+                            f"required comparison keys {sorted(required_keys)!r} need a selected window"
+                        )
+                    if source.key in numeric_source_keys:
+                        requirements.append("numeric conditions need a selected comparison window")
+                    message = f"{ref}: {'; '.join(requirements)}."
+                    if source.required or source.key in numeric_source_keys:
+                        window_issues.append(message)
+                        window_refs.append(ref)
+                    else:
+                        optional_window_issues.append(message)
+            else:
+                available = declared_windows.get(ref)
+                comparison_required = _comparison_window_required(source, matches)
+                if not available:
+                    undeclared_refs.append(ref)
+                elif comparison_required and not set(card.comparison_windows).issubset(available):
+                    message = f"{ref}: requested {card.comparison_windows!r}; available {available!r}."
+                    if source.required:
+                        window_issues.append(message)
+                        window_refs.append(ref)
+                    else:
+                        optional_window_issues.append(message)
         if undeclared_refs:
             warnings.append("Comparison windows are undeclared; compatibility is unverified for: "
                             + ", ".join(undeclared_refs))
         if optional_window_issues:
             warnings.append("Optional source comparison-window mismatch: " + " ".join(optional_window_issues))
-        if not card.comparison_windows:
-            window_issues.append("The card must select at least one comparison window.")
         if card.compiled_plan is not None and (
-            not card.compiled_plan.comparison_windows
+            (card.comparison_windows and not card.compiled_plan.comparison_windows)
             or not set(card.compiled_plan.comparison_windows).issubset(card.comparison_windows)
         ):
-            window_issues.append("Cached plan windows must be a nonempty subset of the card's windows.")
+            window_issues.append(
+                "Cached plan windows must be a nonempty subset of the card's windows unless both are empty."
+            )
         if window_issues:
             question = "Select exact compatible source identifiers and recompile the card before approval."
             questions.append(question)

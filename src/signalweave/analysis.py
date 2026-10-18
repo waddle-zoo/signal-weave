@@ -36,7 +36,9 @@ def candidate_observations(
     return result
 
 
-def evidence_statements(observations: Iterable[Observation]) -> list[str]:
+def evidence_statements(
+    observations: Iterable[Observation], *, include_comparison: bool = True
+) -> list[str]:
     statements: list[str] = []
     for observation in observations:
         label = observation.subject_label or observation.subject_id
@@ -46,6 +48,8 @@ def evidence_statements(observations: Iterable[Observation]) -> list[str]:
         unit = f" {observation.unit}" if observation.unit not in {"", "number"} else ""
         if observation.current is None:
             statement = f"No current value is available for {label}."
+        elif not include_comparison:
+            statement = f"{label} is currently {observation.current:g}{unit}."
         elif observation.change_pct is None:
             statement = f"{label} is currently {observation.current:g}{unit}."
             if observation.baseline is None:

@@ -60,7 +60,7 @@ def agent_getting_started(task: str = "start", *, decision_provider: str = "jev-
             {"tool": "get_decision_receipt", "purpose": "Read only needed omitted receipt details with result_path, offset and limit; a deferred handoff's observation_facts is the first view. Paging makes no new queries or inference."},
         ],
         "limits": [
-            "No runtime catalog expansion; add newly needed sources to the card with owner review.",
+            "No runtime catalog expansion by SignalWeave; add sources with owner review when SignalWeave itself must fetch or judge them. The calling agent keeps its already-authorized company tools for follow-up; not every detail query needs to become a card source.",
             "Jev makes the card-bounded policy judgment; it does not discover the business, infer causality, or replace the frontier agent's deeper investigation.",
             "A returned evidence bundle is not a causal finding. Distinguish facts, hypotheses, and unknowns.",
             "A difference between the last two returned chart buckets is arithmetic, not proof of a like-for-like business decline. Verify period coverage and comparison basis; if unverified, put that caveat beside the headline, not only in setup questions. Never infer a currency from a metric name.",
@@ -124,6 +124,13 @@ def agent_getting_started(task: str = "start", *, decision_provider: str = "jev-
             "belong inside the context object alongside facts; they are not top-level evaluation "
             "arguments. Follow the tool schema. Caller-supplied context is unverified and does not "
             "authorize policy changes or delivery."
+        )
+        response["follow_up_scope"] = (
+            "The card bounds SignalWeave's automatic evidence reads and policy inputs, not the "
+            "agent's existing company-tool access. Use the returned aggregate to identify a trigger, "
+            "then query authorized records for the human handoff when useful. That detail need not "
+            "be registered as another card source unless SignalWeave itself must read or judge it. "
+            "Keep those agent findings attributed separately; the provider did not verify unread facts."
         )
         response["analyst_publications"] = (
             "If an analyst publication is already an owner-approved source on this card, an "

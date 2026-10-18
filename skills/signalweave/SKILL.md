@@ -15,7 +15,7 @@ company-context and clarification tools available.
 ## Give a useful first answer
 
 For setup, read `get_signalweave_guide(task="start")` unless already supplied.
-Use only the connected profile's exposed tools. Discover a few plausible assets
+For SignalWeave calls, use only its connected profile's exposed tools. Discover a few plausible assets
 with `search_catalog`, inspect their meaning and data with `inspect_resource`,
 and use company tools for missing breakdowns or context. Prefer a suitable saved
 aggregate over paging raw detail just to reconstruct it. A title match is not
@@ -46,8 +46,12 @@ Use `onboard_insight_card` to save a draft. Put ordered policy and exceptions in
 `decision_guidance`; `watch_for` and `questions` are optional analytical prompts,
 not mandatory forms. Resolve owner-only choices in conversation rather than
 making every recurring run ask them again. Use relative periods for recurrence
-unless a fixed period was requested. Keep presentation preferences in caller
-notes, not business purpose or policy. Do not store today's values as future facts.
+unless a fixed period was requested. For a point-in-time policy with no period
+comparison, explicitly set `comparison_windows=[]`; do not invent a baseline.
+Put the agent's follow-up procedure in `follow_up_guidance`, not an extra
+prerequisite for a policy that the selected evidence already answers. Keep
+presentation preferences in caller notes, not business purpose or policy. Do not
+store today's values as future facts.
 
 Copy source identities exactly: selected refs are `adapter|resource`; inspection
 takes the two separately. Use only source-declared parameters. With an applicable
@@ -101,7 +105,14 @@ support numerical claims.
 
 Read policy and evidence together. For attention-worthy results, investigate
 with authorized company tools and produce the smallest useful next action.
-Do not add those sources to future runs without an owner-reviewed card update.
+Card scope bounds SignalWeave's automatic retrieval and policy inputs, not the
+calling agent's existing company-tool permissions. An aggregate can support the
+card's decision while you query authorized ticket, account or transaction detail
+for its human handoff. That does not require registering every follow-up query
+as a card source. Request a card update only when SignalWeave itself must fetch
+those sources or use their facts in future policy decisions; do not claim the
+provider judged facts it never received. Ordinary tool access, query-cost and
+delivery permissions still apply.
 Check current dates, coverage and comparability every run; raw arithmetic alone
 does not establish like-for-like movement or causation. Setup warnings and past
 readouts are history, not today's source health.

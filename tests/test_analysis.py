@@ -40,3 +40,10 @@ def test_missing_current_value_is_described_as_missing_without_claiming_a_change
         observation(current=None, baseline=100, change_pct=None),
     ])[0]
     assert statement == "No current value is available for Orders."
+
+
+def test_current_only_format_omits_comparative_language_even_when_baseline_is_present():
+    statement = evidence_statements([
+        observation(current=100, baseline=80, change_pct=25, unit="users"),
+    ], include_comparison=False)[0]
+    assert statement == "Orders is currently 100 users."

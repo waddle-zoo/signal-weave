@@ -191,6 +191,14 @@ sources to the recurring card; ask for an owner-reviewed card update if those
 sources should be read on future runs. Scheduling and external delivery belong
 to separately authorized caller tools, not SignalWeave.
 
+That card update is for **SignalWeave's own** automatic reads and policy inputs,
+not every query the calling agent performs. For example, an aggregate may answer
+whether any priority work crossed its clock; the agent can use its already-
+authorized company SQL tool to retrieve the affected records for the handoff.
+It need not add each detail query to the card first. Keep those findings source-
+linked and distinct from what the policy provider actually judged. New tool
+access, query cost and actual delivery still need their normal authorization.
+
 For the human readout, lead with the supported finding and the caveat that changes
 its interpretation. Cite the actual source URL or exact `adapter|resource`
 reference—not just the decision receipt—and finish with the smallest justified
