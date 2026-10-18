@@ -1,10 +1,10 @@
 # From an analyst's answer to a repeatable check
 
-Status: source implementation and native packaging were tested, but the first
-full onboarding attempt failed at native inspection. Interface repairs and
-expert migration are being evaluated. **Not a published release, successful
-onboarding trial or demonstrated comparative benefit.** See the
-[actual journey and retained failure](evidence/query-source-onboarding-2026-10-18.md).
+Status: after the first native-inspection failure, the repaired source-built
+executable completed expert migration, card setup, a useful readout and an
+unchanged fresh-cutoff run with a separately counted writer. **Two known quiet
+dates, not a published release or demonstrated comparative benefit.** See the
+[actual journey and retained failures](evidence/query-source-onboarding-2026-10-18.md).
 
 The implementation uses the existing connection and a private reviewed artifact;
 see [query-source usage](query-sources.md). Offline tests cover schema/SQL shape,
@@ -69,6 +69,12 @@ route for an agent's reviewed analytical query without requiring another reader.
 Start with the actual Superset connection, then verify the Preset authentication
 path separately. This is a connector capability, not a Superset-only product
 direction. Do not claim Hex, Looker or arbitrary company MCP support from it.
+
+One known connector follow-up is intentional SQL top-N output: the transport's
+truncation guard can reject valid `LIMIT`/`TOP` results. Resolve that distinction
+without accepting genuinely truncated results before claiming broad query
+compatibility. The current journey uses an unlimited aggregate, so it does not
+validate that behavior.
 
 Superset documents [SQL execution](https://superset.apache.org/developer-docs/api/execute-a-sql-query/)
 and [result retrieval](https://superset.apache.org/developer-docs/api/sql-lab/).

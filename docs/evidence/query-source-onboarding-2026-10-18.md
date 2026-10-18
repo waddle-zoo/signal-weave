@@ -1,9 +1,9 @@
 # Native query onboarding: remove the custom reader
 
-Status: **source preparation completed; the first native journey failed before
-card evaluation**. Interface repairs are under evaluation. No Jev request,
-completed business handoff, recurring benefit or enterprise-readiness result
-is claimed by this study.
+Status: **the repaired native path completed a useful first readout and an
+unchanged fresh-cutoff check with a separately counted human-message writer**.
+The original failed journey remains below. This establishes a working mechanism
+on two known quiet dates, not comparative advantage or enterprise readiness.
 
 ## What the user should get
 
@@ -82,13 +82,114 @@ limits. Legacy artifacts are rejected for explicit expert migration; their
 health is not silently changed to make them pass. Decision quantities should
 remain unrounded; human formatting is separate.
 
-These are generalized interface repairs, not repaired v1 results. The next
-gate is expert migration/review, a new current-native inspection, exact card
-review and a useful agent readout, then an unchanged fresh-cutoff run. Count
-every additional step. Subsequent attention, quiet, data-gap, schema/connector
-transfer and fair-baseline cases remain required. Two quiet dates cannot prove
-recurring efficacy, reduced toil or comparative value.
+These are generalized interface repairs, not repaired v1 results.
+
+## What the repaired user workflow actually delivered
+
+A new source-built native executable from clean commit `4d73948` (production
+fingerprint `ae8d4cd29c714acabf3764c8958378968a4a4daee6b3a61b4a0e546b1ec28cf0`)
+completed fresh-home setup and isolated Codex registration. The expert retained
+its own analysis and migrated the artifact; no researcher supplied replacement
+SQL, metric definitions or target decisions. Its only SQL change removed
+percentage rounding, verified through real Superset query 82.
+
+After exact-artifact consent, native inspection returned all **79 fields**,
+including nulls, source quantities, coverage and the company bridge. The expert
+then saved, reviewed and approved the same-policy card under the simulated
+owner's actual delegation. It recovered from two incorrect inspection calls,
+catalog detours and a comparison-window identifier correction without operator
+analytical rescue. Those operations are counted, not erased as setup noise.
+
+- **First readout, September 18:** digital sales +7.92%, company change
+  +43,731.00 source units, seven represented dates in both windows and zero
+  bridge residual. Jev selected `ignore`; the agent correctly explained that no
+  decline investigation was indicated. It retained an executable caller handoff.
+- **Unchanged refresh, September 4:** the native process executed the stored SQL
+  with the new cutoff, fetched fresh measurements and applied the unchanged card
+  without frontier pre-analysis, SQL edits or a new analyst publication. Digital
+  sales were +6.65%, company change +18,665.42 source units; `ignore` correctly
+  suppressed triggered routing. The card and source remained unchanged.
+- **Human message:** a separately counted writer used that returned evidence,
+  with zero MCP calls, source requeries or Jev calls. It correctly explained the
+  quiet result, company/channel bridge and limits. This is a local demonstration,
+  not a sent alert or evidence that a person found it useful. Its operator note
+  was unnecessarily technical; the underlying measurements were available even
+  though engine-generated report counters described no normalized observations.
+
+The practical improvement is a complete answer-to-repeat path through existing
+credentials, without the custom Python reader or publication refresh. It does
+not establish an advantage over a competent agent's retained automation.
+
+### Counted effort, not a latency headline
+
+| Frontier stage | Seconds | MCP calls | Uncached input tokens |
+| --- | ---: | ---: | ---: |
+| Original v1 source author (native handoff failed later) | 349.76 | 8 | 219,784 |
+| Explicit v2 expert migration | 228.44 | 1 | 78,398 |
+| Card setup and first human readout | 156.38 | 13 | 86,366 |
+| Later human-message writer | 62.70 | 0 | 48,258 |
+
+These are actor timings, not total onboarding time: operator consent, independent
+reviews, installation/build and native-process overhead also occurred. Combined
+frontier usage was 4,123,814 input including cache, 432,806 uncached and 84,296
+output tokens. No dollar or total-work savings are inferred.
+
+The two live Jev calls used 7,124/84 and 7,121/84 input/output tokens respectively,
+about 0.24–0.26 seconds at the proxy. Those are policy-call timings, **not**
+end-to-end investigation or human-report speed. Both requests preserved all
+79 source fields. Model probabilities are not calibrated correctness estimates.
+
+The full current offline suite passed **4,838 tests, 13 skipped**; the separate
+source/native skill journeys passed two tests. These are component/build checks,
+not thousands of enterprise outcomes. An earlier verification exhausted local
+disk; its failed log remains. Only generated temporary fixtures from completed
+runs were removed before rerunning verification, not trial evidence.
+
+The original post-card research guard also rejected descriptive route metadata
+as if it enabled delivery. No repeat query or provider call occurred in that
+failed attempt. A separately frozen continuation checks the actual shadow
+receipt and preserves the original method/logs; no routes or business rules were
+changed to pass. The normal MCP evaluation never sends configured destinations.
+
+### What remains unproved
+
+Both dates were known before this continuation. This is not a holdout, live
+customer, observed-human onboarding study or downloaded-release test. Attention,
+data-gap, boundary and schema/connector-transfer cases remain necessary before
+claiming unattended reliability. The original baseline's authoring was censored
+with unknown cost; it is not a valid total-cost denominator.
+
+## The capable baseline also worked
+
+A separately reviewed, deployment-only continuation ran the baseline's actual
+unchanged runner, calculator, SQL and September 4 context. It used the same
+authorized synthetic Superset through its retained community MCP, with no replay
+flags, new analysis, researcher repairs, frontier model or Jev.
+
+The run completed in **3.41 seconds**, produced a useful quiet brief and left
+the original workspace and business warehouse unchanged. Fresh queries 87–89
+returned the sales rollup, **84 daily detail rows** and **eight reconciliation
+rows**. Independent review recomputed all twelve period/scope totals and checked
+matching daily sums and source-fact/Executive-mart values. Digital/company
+totals, channel movements and the decision agree with SignalWeave's result. It
+did more reconciliation work than the treatment; query counts are not an
+equal-work efficiency comparison.
+
+Both paths therefore produced useful recurring answers. SignalWeave demonstrated
+native query reuse, saved policy and durable receipts without a custom reader or
+frontier pre-analysis. The baseline also automated the answer, including a human
+brief with zero recurring inference. **No SignalWeave recurring cost, speed or
+accuracy advantage, or overall ROI, was demonstrated.** The two Jev latencies
+cannot be compared with the baseline's complete run, nor can unknown baseline
+authoring cost be treated as zero or infinity.
+
+The next useful test is [owner revision and successor handoff](../shared-policy-handoff-trial-plan.md):
+does maintained, shared intent reduce work when another authorized colleague or
+agent uses the workflow? Give the baseline its real shared scripts, notes and
+full BI access. Another correct quiet threshold check will not answer that.
 
 Raw methods, frozen inputs, source replies and outcomes remain ignored under
-`artifacts/northstar-native-query-journey-v1`. Reviewers are internal agents,
+`artifacts/northstar-native-query-journey-v1`, `-v2` and
+`artifacts/northstar-baseline-deployment-v1`. This report is not a
+self-contained public reproduction bundle. Reviewers are internal agents,
 not customers, human study participants or external peer reviewers.
