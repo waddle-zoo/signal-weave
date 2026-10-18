@@ -301,7 +301,7 @@ def main() -> None:
             else:
                 catalog = import_queries(args.home, args.source, args.file, yes=args.yes,
                                          allow_live_queries=args.allow_live_queries)
-                print(f"Imported {len(catalog.queries)} reviewed queries. Reconnect your agent to load them.")
+                print(f"{len(catalog.queries)} reviewed queries active. Reconnect your agent to load them.")
                 print("Ask your agent to inspect the new query sources, review a card, and show a delivery-disabled report.")
             return
         if args.command == "uninstall":

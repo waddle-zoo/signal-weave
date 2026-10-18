@@ -44,7 +44,11 @@ signalweave queries list
 ```
 
 Import confirms consent and saves a private versioned copy; it does not execute
-SQL. `--yes` confirms an already-reviewed file non-interactively. Reconnect your
+SQL. It adds or updates queries by `key`, retaining the other active queries;
+an agent can import another workflow without rebuilding the whole catalog.
+Changing an existing definition changes its resource identity, so dependent cards
+need review rather than silently executing replacement SQL. `--yes` confirms an
+already-reviewed file non-interactively. Reconnect your
 agent to load it. The normal MCP profile can discover/inspect `superset_sql`
 sources and onboard, review, approve and evaluate a card. Review the proposed
 human message, not just its decision label. Scheduling and sending remain yours.
