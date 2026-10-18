@@ -24,6 +24,7 @@ from .sources import SourceParameterError, source_read_instant
 
 DATE_TOKEN = "{{cutoff_date}}"
 MAX_CATALOG_BYTES = 2_000_000
+MAX_QUERY_RESPONSE_BYTES = 1_000_000
 
 
 class QueryClock(BaseModel):
@@ -74,6 +75,26 @@ def validate_read_query(sql: str, dialect: str) -> None:
         raise ValueError("Expected one supported SELECT query without writes, locks or unbound parameters") from None
 
 
+class QueryMeaning(BaseModel):
+    """Author-described meaning, never connection authority or runtime quality."""
+
+    model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
+    domain: str = Field(default="unknown", min_length=1, max_length=160)
+    scope: str = Field(default="", max_length=1000)
+    population: str = Field(default="", max_length=1000)
+    grain: str = Field(default="", max_length=1000)
+    metric_names: list[str] = Field(default_factory=list, max_length=100)
+    lineage: list[str] = Field(default_factory=list, max_length=100)
+    available_comparison_windows: list[str] = Field(default_factory=list, max_length=20)
+
+    @field_validator("available_comparison_windows")
+    @classmethod
+    def nonblank_windows(cls, values):
+        if any(not value.strip() for value in values):
+            raise ValueError("available_comparison_windows entries must not be empty")
+        return values
+
+
 class QueryDefinition(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
     key: str = Field(min_length=1, max_length=100, pattern=r"^[a-z][a-z0-9_-]*$")
@@ -87,9 +108,9 @@ class QueryDefinition(BaseModel):
     schema_name: str | None = Field(default=None, alias="schema", min_length=1, max_length=240)
     clock: QueryClock | None = None
     max_rows: int = Field(default=100, ge=1, le=1000)
-    max_bytes: int = Field(default=100_000, ge=1000, le=1_000_000)
+    max_evidence_bytes: int = Field(default=100_000, ge=1000, le=1_000_000)
     timeout_seconds: int = Field(default=90, ge=1, le=300)
-    contract: ResourceContract = Field(default_factory=ResourceContract)
+    meaning: QueryMeaning | None = None
 
     @field_validator("read_only", mode="before")
     @classmethod
@@ -100,6 +121,9 @@ class QueryDefinition(BaseModel):
 
     @model_validator(mode="after")
     def query_shape(self):
+        remainder = self.sql.replace(DATE_TOKEN, "")
+        if any(marker in remainder for marker in ("{{", "}}", "{%", "%}", "{#", "#}")):
+            raise ValueError("Only the quoted cutoff_date placeholder is supported; no other Jinja")
         validate_read_query(self.sql, self.dialect)
         has_date = DATE_TOKEN in self.sql
         if has_date != (self.clock is not None):
@@ -126,14 +150,14 @@ class QueryDefinition(BaseModel):
 
 class QueryCatalog(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
-    version: Literal[1]
+    version: Literal[2]
     queries: list[QueryDefinition] = Field(min_length=1, max_length=1000)
 
     @field_validator("version", mode="before")
     @classmethod
     def exact_version(cls, value):
-        if type(value) is not int or value != 1:
-            raise ValueError("query catalog version must be 1")
+        if type(value) is not int or value != 2:
+            raise ValueError("query catalog version must be 2; review and reauthor legacy artifacts")
         return value
 
     @model_validator(mode="after")
@@ -169,15 +193,18 @@ class SupersetQueryAdapter:
         self.tenant_id = base_adapter.tenant_id
         self.base_adapter = base_adapter
         self.queries = {query.resource: query for query in catalog.queries}
-        if not self.tenant_id or any(q.contract.tenant_id not in {"default", self.tenant_id} for q in self.queries.values()):
-            raise ValueError("Query sources require the connection's explicit matching tenant")
+        if not self.tenant_id:
+            raise ValueError("Query sources require the connection's explicit tenant")
 
     @property
     def binding_namespace(self):
         return namespace_fingerprint({"connection": self.base_adapter.binding_namespace, "kind": "reviewed-sql"})
 
     def _descriptor(self, query):
-        contract = query.contract.model_copy(deep=True, update={"tenant_id": self.tenant_id})
+        # Healthy describes adapter availability, not author-certified business
+        # trust. Execution failures propagate to the registry's source errors.
+        contract = ResourceContract(tenant_id=self.tenant_id, source_status="healthy",
+                                    **(query.meaning.model_dump() if query.meaning else {}))
         contract.lineage = [*contract.lineage, "reviewed-query:" + query.fingerprint]
         return ResourceDescriptor(adapter=self.name, resource=query.resource, kind="query",
             title=query.title, description=query.definition, contract=contract,
@@ -210,7 +237,7 @@ class SupersetQueryAdapter:
         sql, cutoff = query.render()
         result = await execute_sql(self.client, sql=sql, database_id=query.database_id,
             catalog=query.catalog, schema=query.schema_name, max_rows=query.max_rows,
-            max_bytes=query.max_bytes, timeout_seconds=query.timeout_seconds)
+            max_bytes=MAX_QUERY_RESPONSE_BYTES, timeout_seconds=query.timeout_seconds)
         provenance = {"query_fingerprint": query.fingerprint, "executed_sql_sha256": hashlib.sha256(sql.encode()).hexdigest(),
                       "query_id": result.query_id, "client_id": result.client_id, "results_key": result.results_key,
                       "cutoff_date": cutoff, "row_count": len(result.rows), "columns": result.columns}
@@ -225,7 +252,8 @@ class SupersetQueryAdapter:
             title=query.title, description=query.definition, contract=descriptor.contract,
             evidence=evidence, metadata={**provenance, "received_at": result.received_at.isoformat()},
             source_captured_at=None)
-        limit = min(query.max_bytes, policy.max_snapshot_bytes) if policy is not None else query.max_bytes
+        limit = (min(query.max_evidence_bytes, policy.max_snapshot_bytes)
+                 if policy is not None else query.max_evidence_bytes)
         if len(snapshot.model_dump_json().encode()) > limit:
             raise ValueError("Reviewed query snapshot exceeds its configured byte limit; no partial evidence was returned")
         return snapshot
