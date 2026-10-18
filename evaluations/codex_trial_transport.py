@@ -342,7 +342,13 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                         expected_registry_sha256: str | None = None,
                         report_remaining_budget: bool = False,
                         strict_single_turn_usage: bool = False,
-                        enforce_wall_response_timeout: bool = False) -> dict:
+                        enforce_wall_response_timeout: bool = False,
+                        finish_on_final_message: bool = False) -> dict:
+    """Run one Codex episode; opt-in completion means invocation completion only.
+
+    ``finish_on_final_message`` does not establish approval, an external effect,
+    delivery, or semantic/business quality.
+    """
     from evaluations.bootstrap_agent_trial import (
         COMMON_SYSTEM,
         MODEL,
@@ -451,6 +457,11 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
     resource_discovery_attempt_ids = set()
     registry_isolation = None
     final_message = ""
+    last_completed_item_is_nonblank_agent_message = False
+    pending_item_ids = set()
+    pending_unidentified_items = 0
+    turn_completion_has_final_message = []
+    post_completion_item_activity = False
     exit_code = None
     with tempfile.TemporaryDirectory(prefix="signalweave-agent-") as cwd:
         async with serve_trial(bridge) as url:
@@ -475,14 +486,40 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
 
             def record_event(line):
                 nonlocal usage, error, final_message
+                nonlocal last_completed_item_is_nonblank_agent_message, pending_unidentified_items
+                nonlocal post_completion_item_activity
                 event = json.loads(line)
                 audit.emit("codex.event", event=event)
+                if finish_on_final_message and usage_reports and event.get("type", "").startswith("item."):
+                    post_completion_item_activity = True
                 if event.get("type") == "turn.completed":
                     usage = event.get("usage")
                     usage_reports.append(usage)
+                    turn_completion_has_final_message.append(
+                        last_completed_item_is_nonblank_agent_message
+                        and not pending_item_ids
+                        and pending_unidentified_items == 0
+                    )
                 if event.get("type") in {"turn.failed", "error"}:
                     error = "codex_error"
                 item = event.get("item", {})
+                if isinstance(item, dict) and isinstance(item.get("type"), str):
+                    item_id = item.get("id")
+                    if event.get("type") == "item.started":
+                        if isinstance(item_id, str) and item_id:
+                            pending_item_ids.add(item_id)
+                        else:
+                            pending_unidentified_items += 1
+                    elif event.get("type") == "item.completed":
+                        if isinstance(item_id, str) and item_id in pending_item_ids:
+                            pending_item_ids.remove(item_id)
+                        elif not isinstance(item_id, str) and pending_unidentified_items:
+                            pending_unidentified_items -= 1
+                        last_completed_item_is_nonblank_agent_message = (
+                            item.get("type") == "agent_message"
+                            and isinstance(item.get("text"), str)
+                            and bool(item["text"].strip())
+                        )
                 if item.get("type") in {"command_execution", "web_search", "file_change"}:
                     foreign_tools.append(item["type"])
                 if item.get("type") == "agent_message" and isinstance(item.get("text"), str):
@@ -623,6 +660,29 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
     if strict_single_turn_usage and len(usage_reports) != 1:
         normalized_usage = None
         error = error or "ambiguous_codex_turn_usage"
+    completion_usage_valid = (
+        len(usage_reports) == 1
+        and normalized_codex_usage(usage_reports[0]) is not None
+    )
+    if finish_on_final_message and not completion_usage_valid:
+        if not usage_reports:
+            completion_usage_error = "missing_completion_usage"
+        elif len(usage_reports) != 1:
+            completion_usage_error = "ambiguous_completion_usage"
+        else:
+            completion_usage_error = "invalid_completion_usage"
+        normalized_usage = None
+        if error is None or error == "ambiguous_codex_turn_usage":
+            error = completion_usage_error
+    if finish_on_final_message:
+        # The eligibility observed at turn.completed must remain terminal
+        # through EOF; later work cannot inherit an earlier final reply.
+        if post_completion_item_activity:
+            error = error or "post_completion_item_activity"
+        if pending_item_ids or pending_unidentified_items:
+            error = error or "unfinished_item_activity"
+        if foreign_tools or bridge.exhausted:
+            error = error or ("foreign_tool_used" if foreign_tools else "tool_call_budget_exhausted")
     if normalized_usage is not None:
         audit.emit("api.response", provider="openai", request_id=request_id,
                    transport="codex_cli", model=selected_model, effort=effort,
@@ -633,10 +693,25 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                    error_type=error or ("missing_usage" if usage is None else "invalid_usage"),
                    usage_known=False)
     done = session.setup_complete if session.phase == "onboarding" else session.submission is not None
-    success = done and not error and exit_code == 0
+    structured_success = (
+        done and not error and exit_code == 0
+        and (not finish_on_final_message or completion_usage_valid)
+    )
+    final_message_success = (
+        finish_on_final_message
+        and len(turn_completion_has_final_message) == 1
+        and turn_completion_has_final_message[0]
+        and bool(final_message.strip())
+        and exit_code == 0
+        and not error
+        and not foreign_tools
+        and not bridge.exhausted
+        and completion_usage_valid
+    )
+    success = structured_success or final_message_success
     elapsed = time.perf_counter() - started
-    return {"status": "complete" if success else "failed", "error": error if success else
-            error or ("codex_exit" if exit_code else "no_structured_submission"),
+    result = {"status": "complete" if success else "failed", "error": error if success else
+              error or ("codex_exit" if exit_code else "no_structured_submission"),
             "final_message": audit.redact(final_message[:12000]),
             "tool_calls": bridge.calls, "seconds": elapsed,
             "resource_discovery_calls": len(resource_discovery_ids),
@@ -653,3 +728,10 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
             "wall_time_overrun_seconds": max(0., elapsed - timeout_seconds),
             "transport": "codex_cli", "model": selected_model, "effort": effort,
             "exit_code": exit_code, "foreign_tools": foreign_tools}
+    if finish_on_final_message:
+        result["completion_basis"] = (
+            "setup_complete" if structured_success and session.phase == "onboarding" else
+            "structured_submission" if structured_success else
+            "final_message" if final_message_success else "none"
+        )
+    return result

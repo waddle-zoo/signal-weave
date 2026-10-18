@@ -488,3 +488,22 @@ The product consultant also reviewed the blank human-session form. Its feedback
 added a distinct ordinary/no-alert observation and neutral comprehension prompts,
 so a useful quiet check is not confused with failed execution or forced action.
 These changes improve the experiment; they are not executed human sessions.
+
+The next [Harbor workflow materials](../evaluations/data/harbor-workflow-controls.md)
+separate product-authored fictional owner intent from controlled raw workload.
+They add priority/response non-trigger controls, a designed quiet background and
+an appropriately timed resolved-cohort follow-up. Their software checks validate
+inputs only; no owner interview, acting analyst, live judgment or comparative
+business outcome follows from authoring the materials.
+
+New protocols may opt into the research CLI transport's
+`finish_on_final_message` mode. It accepts a clean, accounted terminal reply
+without requiring the analyst to call a special report-recording tool. A
+completed message must follow tool work; partial messages, missing/ambiguous
+usage, timeouts and capped episodes cannot qualify through that path. The
+returned `completion_basis` is **invocation completion**, not proof the message
+answers the owner or that a usable card exists. Assess those artifacts separately.
+Older protocols retain their structured-submission behavior and results. This
+opt-in repair has offline return-path tests; it has not yet been used in a new
+actual analyst cohort. Ordinary unrestricted agent-workspace compatibility is
+still a separate gate from this isolated transport.
