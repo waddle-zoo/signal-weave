@@ -144,7 +144,9 @@ native release.
   Explicit `comparison_windows=[]` supports point-in-time cards without an
   invented baseline; older published builds require a nonempty list. The agent
   guide also distinguishes native card-source scope from the caller's existing
-  authorized investigation tools.
+  authorized investigation tools. The company MCP bridge also accepts a single
+  JSON text snapshot when structured content is absent, with the same typed
+  source and tenant checks; older published builds require structured content.
   Use an explicitly identified source build for these capabilities and verify
   its embedded production fingerprint; the version string alone is insufficient.
 

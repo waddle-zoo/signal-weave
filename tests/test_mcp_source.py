@@ -468,7 +468,7 @@ async def test_missing_runtime_assertion_is_unknown_and_only_required_binding_bl
     )
 
 
-@pytest.mark.parametrize("kind", ["exception", "is_error", "snapshot_error", "invalid", "text_only"])
+@pytest.mark.parametrize("kind", ["exception", "is_error", "snapshot_error", "invalid", "invalid_text"])
 async def test_errors_never_expose_payloads(tmp_path, manifest, payload, source, kind, caplog):
     sentinel = "credential-sentinel@private-endpoint.invalid"
     fake = FakeTransport(payload)
@@ -483,7 +483,7 @@ async def test_errors_never_expose_payloads(tmp_path, manifest, payload, source,
         fake.result.structuredContent["observations"] = sentinel
     else:
         fake.result.structuredContent = None
-        fake.result.content = [types.TextContent(type="text", text=json.dumps(payload))]
+        fake.result.content = [types.TextContent(type="text", text=sentinel)]
     adapter, = build(tmp_path, manifest, fake)
     with caplog.at_level(logging.DEBUG):
         result = await adapter.inspect(source)
@@ -498,6 +498,68 @@ async def test_structured_wrapper_pointer(tmp_path, manifest, payload, source, p
     manifest["connections"][0]["resources"][0]["snapshot_pointer"] = pointer
     wrapped = {"data": {"a/b": {"~rows": [payload]}}} if pointer else payload
     adapter, = build(tmp_path, manifest, FakeTransport(wrapped))
+    assert (await adapter.inspect(source)).error is None
+
+
+@pytest.mark.parametrize("pointer", ["", "/data/snapshot"])
+async def test_single_json_text_uses_same_pointer_and_identity_contract(tmp_path, manifest, payload, source, pointer):
+    manifest["connections"][0]["resources"][0]["snapshot_pointer"] = pointer
+    fake = FakeTransport(None)
+    fake.result.content = [types.TextContent(type="text", text=json.dumps(
+        {"data": {"snapshot": payload}} if pointer else payload))]
+    adapter, = build(tmp_path, manifest, fake)
+    snapshot = await adapter.inspect(source)
+    assert snapshot.error is None and snapshot.observations[0].current == 120
+    assert snapshot.source_key == snapshot.evidence[0].source_key == source.key
+    assert snapshot.contract.tenant_id == "tenant-a" and snapshot.contract.grain == "day"
+    payload["contract"]["tenant_id"] = "foreign"
+    fake.result.content = [types.TextContent(type="text", text=json.dumps(
+        {"data": {"snapshot": payload}} if pointer else payload))]
+    assert (await adapter.inspect(source)).error == "MCP snapshot identity contract mismatch"
+
+
+@pytest.mark.parametrize("kind", ["multiple", "prose", "fenced", "duplicate", "nonfinite", "exponent", "media", "empty"])
+async def test_text_fallback_never_guesses_or_repairs_payloads(tmp_path, manifest, payload, source, kind):
+    text = json.dumps(payload)
+    blocks = [types.TextContent(type="text", text=text)]
+    if kind == "multiple":
+        blocks *= 2
+    elif kind == "prose":
+        blocks[0].text = "Here is the snapshot: " + text
+    elif kind == "fenced":
+        blocks[0].text = "```json\n"+text+"\n```"
+    elif kind == "duplicate":
+        blocks[0].text = text[:-1]+',"resource":"measurement:orders"}'
+    elif kind == "nonfinite":
+        blocks[0].text = text[:-1]+',"metadata":{"value":NaN}}'
+    elif kind == "exponent":
+        blocks[0].text = text[:-1]+',"metadata":{"value":1e999}}'
+    elif kind == "media":
+        blocks.append(types.ImageContent(type="image", data="", mimeType="image/png"))
+    else:
+        blocks = []
+    fake = FakeTransport(None)
+    fake.result.content = blocks
+    adapter, = build(tmp_path, manifest, fake)
+    result = await adapter.inspect(source)
+    assert result.error and result.evidence == result.observations == []
+
+
+async def test_unselected_text_wrapper_also_rejects_unrepresentable_numbers(tmp_path, manifest, payload, source):
+    manifest["connections"][0]["resources"][0]["snapshot_pointer"] = "/data"
+    fake = FakeTransport(None)
+    fake.result.content = [types.TextContent(type="text", text='{"data":'+json.dumps(payload)+',"unused":1e999}')]
+    adapter, = build(tmp_path, manifest, fake)
+    assert (await adapter.inspect(source)).error
+
+
+async def test_invalid_explicit_structured_payload_does_not_fall_back_to_valid_text(tmp_path, manifest, payload, source):
+    fake = FakeTransport({"not": "a snapshot"})
+    fake.result.content = [types.TextContent(type="text", text=json.dumps(payload))]
+    adapter, = build(tmp_path, manifest, fake)
+    assert (await adapter.inspect(source)).error
+    fake.result.structuredContent = payload
+    fake.result.content[0].text = "not JSON"
     assert (await adapter.inspect(source)).error is None
 
 
@@ -525,7 +587,7 @@ async def test_invalid_analytical_table_fails_closed(tmp_path, manifest, payload
     assert result.analytical_comparisons == result.observations == result.evidence == []
 
 
-@pytest.mark.parametrize("part", ["structured", "content", "wrapper"])
+@pytest.mark.parametrize("part", ["structured", "content", "wrapper", "text_fallback"])
 async def test_entire_result_has_byte_budget(tmp_path, manifest, payload, source, part):
     manifest["connections"][0]["max_response_bytes"] = 1024
     fake = FakeTransport(payload)
@@ -533,9 +595,13 @@ async def test_entire_result_has_byte_budget(tmp_path, manifest, payload, source
         fake.result.structuredContent["metadata"] = {"large": "é" * 2000}
     elif part == "content":
         fake.result.content = [types.TextContent(type="text", text="x" * 2000)]
-    else:
+    elif part == "wrapper":
         manifest["connections"][0]["resources"][0]["snapshot_pointer"] = "/data"
         fake.result.structuredContent = {"data": payload, "unused": "x" * 2000}
+    else:
+        payload["metadata"] = {"large": "é" * 2000}
+        fake.result.structuredContent = None
+        fake.result.content = [types.TextContent(type="text", text=json.dumps(payload))]
     adapter, = build(tmp_path, manifest, fake)
     result = await adapter.inspect(source)
     assert result.error == "MCP response exceeded the byte limit"
@@ -662,8 +728,9 @@ async def test_http_env_references_and_no_redirects(tmp_path, manifest, payload,
 
 
 @pytest.mark.parametrize("analytical_only", [False, True])
+@pytest.mark.parametrize("text_only", [False, True])
 async def test_real_sdk_stdio_read_and_stderr_redaction(
-    tmp_path, manifest, payload, source, comparison, capfd, caplog, analytical_only,
+    tmp_path, manifest, payload, source, comparison, capfd, caplog, analytical_only, text_only,
 ):
     if analytical_only:
         payload["observations"] = []
@@ -675,7 +742,7 @@ async def test_real_sdk_stdio_read_and_stderr_redaction(
         "from mcp.server.fastmcp import FastMCP\n"
         "server = FastMCP('local-contract-test')\n"
         "@server.tool()\n"
-        "def read_measurement(measurement: str, window: dict) -> dict[str, object]:\n"
+        f"def read_measurement(measurement: str, window: dict) -> {'dict' if text_only else 'dict[str, object]'}:\n"
         "    assert measurement == 'orders' and window == {'days': 7}\n"
         "    assert os.environ['SERVER_TEST_TOKEN'] == 'test-only-sentinel'\n"
         "    print('test-only-sentinel', file=sys.stderr)\n"

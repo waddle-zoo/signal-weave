@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import os
 import re
 from collections import Counter
@@ -156,6 +157,38 @@ class MCPReadSession(Protocol):
 
 
 TransportFactory = Callable[[MCPConnection], AbstractAsyncContextManager[MCPReadSession]]
+
+
+def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("ambiguous JSON object")
+        result[key] = value
+    return result
+
+
+def _reject_json_constant(value: str) -> None:
+    raise ValueError("non-JSON numeric constant")
+
+
+def _finite_json_float(value: str) -> float:
+    parsed = float(value)
+    if not math.isfinite(parsed):
+        raise ValueError("unrepresentable JSON number")
+    return parsed
+
+
+def _result_payload(result: types.CallToolResult) -> Any:
+    # MCP content may be text-only even when that text is serialized JSON.
+    # Prefer an explicit structured channel; never rescue an invalid one by
+    # guessing which of several alternate representations is authoritative.
+    if result.structuredContent is not None:
+        return result.structuredContent
+    if len(result.content) != 1 or not isinstance(result.content[0], types.TextContent):
+        raise ValueError("one JSON text block required without structured content")
+    return json.loads(result.content[0].text, object_pairs_hook=_unique_json_object,
+                      parse_constant=_reject_json_constant, parse_float=_finite_json_float)
 
 
 class _SDKReadSession:
@@ -318,7 +351,7 @@ class MCPSourceAdapter:
                 return self._failure(source, descriptor, "MCP read tool reported an error")
             if _json_size(result.model_dump(mode="json", by_alias=True)) > self._connection.max_response_bytes:
                 return self._failure(source, descriptor, "MCP response exceeded the byte limit")
-            payload = _pointer(result.structuredContent, entry.snapshot_pointer)
+            payload = _pointer(_result_payload(result), entry.snapshot_pointer)
             snapshot = ResourceSnapshot.model_validate(payload)
             if (
                 snapshot.adapter != descriptor.adapter or snapshot.resource != descriptor.resource
