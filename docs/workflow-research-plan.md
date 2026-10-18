@@ -598,3 +598,23 @@ onboarding, retaining the same real source/query/artifact capabilities in both
 arms through later readouts. Read-only preflight confirms its catalog is
 reachable; that is access evidence, not onboarding or analysis success. Keep
 the human message, useful supporting worklist and correction effort in scope.
+
+The local source candidate at `aac8efd` was rebuilt and checked through a fresh
+private home against that Superset. The scripted PTY wizard registered the
+installed executable with Codex; independent inventory readback matched its
+exact path and private home. User-scope skill bytes matched the candidate, CLI
+help/status/live catalog health passed, and the normal 11-tool MCP profile
+started and returned its guide with a zero-judgment provider budget. The binary
+SHA-256 is `09f7a1fe41ffa8e3b68eee8d140e79f0572f2c03e40c50a791bb29ef73e4dcb6`.
+This is neither a published/downloaded release nor a real-person, card-authoring
+or analytical-value result. Source health checked catalog access, not chart
+data, freshness or metric semantics.
+
+Two preliminary smoke-script failures remain recorded: an omitted isolated
+`CODEX_HOME` directory, then an attempt to overwrite an exclusive checkpoint.
+Neither was a SignalWeave defect; the existing journey runner already creates
+that client directory. The valid check used an initialized private client home
+and separate checkpoints, without changing the binary or personal setup. Raw
+methods/results remain in `artifacts/source-export-native-smoke-v1/` through
+`v3/`. The previous `7212ef0` binary is also retained unchanged for its historical
+trial. No business actor or policy judgment was retried in these setup checks.
