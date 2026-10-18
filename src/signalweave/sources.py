@@ -19,6 +19,10 @@ from .models import (
 )
 
 
+class SourceParameterError(ValueError):
+    """The requested query scope is unsupported, not a permission failure."""
+
+
 def _without_agent_query_definitions(
     metadata: dict[str, Any],
 ) -> tuple[dict[str, Any], bool]:

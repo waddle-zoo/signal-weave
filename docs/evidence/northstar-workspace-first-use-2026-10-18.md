@@ -1,6 +1,6 @@
 # Northstar: useful first answer before recurring automation
 
-Status: revised first-use pair completed; owner approval and recurrence remain open.
+Status: useful first readouts completed; saved recurring draft needs source repair.
 This is a synthetic business on real local Superset, not customer validation.
 Separate internal reviewer agents checked the method and actual handoffs;
 this is not external peer review or a panel of human participants.
@@ -27,8 +27,8 @@ still be reported, but equal duration alone does not establish that stronger cla
 This is evidence of useful first answers and a saved workflow draft—not a
 completed onboarding or an incremental whole-journey advantage. The card still
 needs owner choices about scope, comparison, significance and freshness. Its
-saved `Last week` parameter differs from the unfiltered inspection and has not
-been evaluated against this historical fixture. The next test must resolve the
+saved `Last week` parameter differs from the unfiltered inspection. A later
+native probe established that it was silently ignored (repair below). The next test must resolve the
 owner choices and exercise that exact saved workflow, not count approval readiness
 as success or blame historical fixture dates on the product.
 
@@ -188,3 +188,25 @@ These changes are not credited with the earlier readouts or a recurrence win.
 An initial source-review concern about unavailable preview guidance was corrected:
 the default root already excluded that tool. The demonstrated wording issue was
 the start guide's conflation of first answer with approved-card evaluation.
+
+### Exact-scope probe found a consequential product defect
+
+The rebuilt `15ce3ce` native completed fresh scripted setup and returned the
+updated guide without inference. But inspecting the draft's exact `Last week`
+parameter still returned all 8,937 saved-query rows. Metadata echoed the requested
+parameter beside results from saved `No filter`; it did not apply that parameter.
+This is a real retrieval-contract defect, not a problem with Jev or fixture age.
+
+The bounded repair rejects unsupported source parameters during both source
+authorization and inspection, including Preset's inherited path. Charts execute
+their saved query; dashboards additionally support `chart_ids`. This does not
+add time-range override support or silently remove the requested filter. A
+specific parameter error survives onboarding rather than misleadingly presenting
+it as a permission/catalog failure. Company BI/SQL tools remain available for
+the analysis; a repeated card must use a source that actually supplies its
+intended evidence. Existing invalid cards need review, not automatic rewriting.
+
+The original pair and the faulty probe remain unchanged. Rejecting a bad scope
+closes silent substitution; it does not demonstrate that this daily card now
+works. Correct source selection/aggregation and a complete shadow handoff remain
+the next business acceptance test.

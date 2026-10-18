@@ -176,7 +176,7 @@ and the bounded Trino query path are shipped in this repository. The remaining
 examples are extension points:
 
 ```text
-Superset   dashboard:7                 parameters.chart_ids=[62,64]
+Superset   dashboard:7                 parameters.chart_ids=["62","64"]
 Looker     dashboard:executive-growth  native dashboard/saved-query API
 Hex        project:retention            published run/cell-output API
 SQL        query:orders_quality         reviewed query catalog
@@ -236,6 +236,16 @@ appropriate aggregate instead of reconstructing it from detail rows. Original
 snapshots retain the declaration when the snapshot budget permits it; recurring
 policy input excludes query definitions marked `audience="agent"`. That marker
 controls payload projection, not authorization or confidentiality.
+
+Superset and Preset chart references execute the saved chart query; their
+`SourceRef.parameters` must be empty. Dashboard references additionally accept
+`chart_ids` (a list of string IDs) to select a subset. Saved chart fields such as
+`time_range`, filters and grouping describe that saved query, not supported
+`SourceRef` overrides. Unsupported keys are rejected rather than echoed beside
+unfiltered measurements. Use the connected BI/SQL tools for a different analysis,
+or choose a separately reviewed saved source when SignalWeave must retrieve that
+filtered aggregate on future runs. Do not silently delete requested filters to
+make a card runnable.
 
 The local runtime registers `SupersetAdapter` when `SUPERSET_URL` is configured.
 If `SIGNALWEAVE_TENANT_ID` is set, the adapter inherits that tenant binding;

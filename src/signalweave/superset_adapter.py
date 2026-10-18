@@ -13,6 +13,7 @@ from .models import (
     SourceRef,
 )
 from .source_identity import namespace_fingerprint, namespace_uri
+from .sources import SourceParameterError
 from .superset_client import (
     _MISSING,
     SupersetClient,
@@ -191,6 +192,8 @@ class SupersetAdapter:
         ):
             return None
         resource_type, resource_id = _resource_id(source.resource)
+        if resource_type in {"dashboard", "chart"}:
+            self._validate_source_parameters(source, resource_type)
         if resource_type == "dashboard":
             metadata = await self.client.get_dashboard_metadata(resource_id)
             if str(metadata.get("id")) != resource_id:
@@ -268,13 +271,27 @@ class SupersetAdapter:
             for item in dashboards
         ]
 
+    def _validate_source_parameters(self, source: SourceRef, resource_type: str) -> None:
+        supported = {"chart_ids"} if resource_type == "dashboard" else set()
+        unsupported = set(source.parameters) - supported
+        if unsupported:
+            raise SourceParameterError(
+                f"Unsupported {self.provider_name} {resource_type} source parameters: "
+                + ", ".join(sorted(unsupported))
+                + ". This adapter reads saved chart queries, including their saved filters; "
+                "SourceRef parameters do not override those queries. Only dashboard chart_ids "
+                "is supported for selecting charts. Use company BI/SQL tools or a reviewed "
+                "saved source for a different query scope."
+            )
+
     async def inspect(self, source: SourceRef) -> ResourceSnapshot:
         resource_type, resource_id = _resource_id(source.resource)
+        if resource_type not in {"dashboard", "chart"}:
+            raise ValueError(f"unsupported Superset resource kind: {resource_type}")
+        self._validate_source_parameters(source, resource_type)
         if resource_type == "dashboard":
             return await self._inspect_dashboard(source, resource_id)
-        if resource_type == "chart":
-            return await self._inspect_chart(source, resource_id)
-        raise ValueError(f"unsupported Superset resource kind: {resource_type}")
+        return await self._inspect_chart(source, resource_id)
 
     async def _inspect_dashboard(self, source: SourceRef, dashboard_id: str) -> ResourceSnapshot:
         chart_ids = source.parameters.get("chart_ids")

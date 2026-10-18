@@ -637,3 +637,10 @@ cutoff or current-dated simulation; do not misclassify stale fixture dates as a
 product failure. Only after that should changing business states test repeated
 investigation, quiet days and follow-through. Do not add a scheduler or another
 framework to make this sequence look complete.
+
+An exact-scope native check then proved the draft's `Last week` parameter was
+ignored while echoed into metadata. The Superset/Preset boundary now rejects
+unsupported overrides with an actionable parameter error, not a permission
+failure. It does not implement new filter support or rewrite the old card. This
+is why the next acceptance test must connect the good analysis to a source that
+actually executes the intended check, rather than counting `ready_for_approval`.

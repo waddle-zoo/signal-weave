@@ -36,7 +36,7 @@ from .models import (
 )
 from .numeric_conditions import NumericCondition
 from .retrieval import _search_text, build_candidate_pool, resource_ref
-from .sources import SourceRegistry
+from .sources import SourceParameterError, SourceRegistry
 
 
 class ResourceRelevanceJudger(Protocol):
@@ -1672,6 +1672,10 @@ class InsightAuthoringService:
                     source,
                     authorized_tenants=[principal.tenant_id] if principal else None,
                 )
+            except SourceParameterError:
+                # Preserve actionable scope feedback instead of calling a bad
+                # query parameter an authorization or catalog failure.
+                raise
             except Exception:  # noqa: BLE001 - fail closed before paid ranking
                 descriptor = None
             if descriptor is not None:
