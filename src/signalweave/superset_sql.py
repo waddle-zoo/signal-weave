@@ -2,7 +2,7 @@
 
 This is not SQL validation, authorization, or a read-only security boundary.
 The caller also owns Preset data-mode admission. Authentication is delegated to
-the existing client; this module never retries a query submission.
+the existing client; a submission is retried only once after an explicit 401.
 """
 from __future__ import annotations
 
@@ -26,6 +26,10 @@ _PENDING = {"pending", "running", "queued", "scheduled", "fetching", "processing
 
 class SQLQueryError(ValueError):
     """A sanitized SQL Lab transport, result, or admission failure."""
+
+
+class _Unauthorized(SQLQueryError):
+    """An explicit authentication rejection, not an ambiguous execution failure."""
 
 
 @dataclass(frozen=True)
@@ -60,6 +64,8 @@ async def _request(session, client, method, path, max_bytes, **kwargs):
     counts = client._request_path_counts
     counts[path] = counts.get(path, 0) + 1
     async with session.stream(method, path, **kwargs) as response:
+        if response.status_code == 401:
+            raise _Unauthorized("SQL Lab HTTP request failed (401)")
         if response.status_code not in {200, 202}:
             raise SQLQueryError(f"SQL Lab HTTP request failed ({response.status_code})")
         body = bytearray()
@@ -113,7 +119,7 @@ def _rows(payload, max_rows):
     if any(item.get(key) for item in (payload, query)
            for key in ("truncated", "displayLimitReached", "limit_reached")):
         raise SQLQueryError("SQL Lab returned a truncated result")
-    if query.get("limitingFactor") not in (None, "", "NOT_LIMITED"):
+    if query.get("limitingFactor") not in (None, "", "NOT_LIMITED", "not_limited"):
         raise SQLQueryError("SQL Lab reported a limited result")
     rows, metadata = payload.get("data"), payload.get("columns")
     if not isinstance(rows, list) or not isinstance(metadata, list):
@@ -139,8 +145,9 @@ async def execute_sql(
     catalog: str | None = None, schema: str | None = None, max_rows: int = 1000,
     max_bytes: int = 500000, timeout_seconds: float = 90, max_polls: int = 60,
 ) -> SQLQueryResult:
-    """Execute once; fail rather than return partial, timed-out, or truncated rows.
+    """Fail rather than return partial, timed-out, or truncated rows.
 
+    Only an explicit 401 can refresh authentication and retry submission once.
     SQL Lab 4.x uses a Rison ``q`` object containing the results ``key``.
     Byte limits apply to each decoded HTTP response, not cumulative traffic.
     A timeout stops local waiting; it does not cancel a backend query.
@@ -172,15 +179,25 @@ async def execute_sql(
                 "Referer": client.base_url + "/",
             }, transport=client._transport, timeout=timeout_seconds,
                 follow_redirects=False, trust_env=False) as session:
-                csrf, _ = await _request(session, client, "GET", _CSRF, max_bytes)
-                token = csrf.get("result")
-                if not isinstance(token, str) or not token.strip():
-                    raise SQLQueryError("SQL Lab CSRF token is unavailable")
-                session.headers["X-CSRFToken"] = token
                 body = {"sql": sql, "database_id": database_id, "runAsync": False,
                         "queryLimit": max_rows + 1}
                 body.update({key: value for key, value in (("catalog", catalog), ("schema", schema)) if value is not None})
-                payload, status = await _request(session, client, "POST", _EXECUTE, max_bytes, json=body)
+                for attempt in range(2):
+                    try:
+                        csrf, _ = await _request(session, client, "GET", _CSRF, max_bytes)
+                        token = csrf.get("result")
+                        if not isinstance(token, str) or not token.strip():
+                            raise SQLQueryError("SQL Lab CSRF token is unavailable")
+                        session.headers["X-CSRFToken"] = token
+                        payload, status = await _request(session, client, "POST", _EXECUTE, max_bytes, json=body)
+                        break
+                    except _Unauthorized:
+                        if attempt:
+                            raise
+                        headers = await client._auth_headers(force_refresh=True)
+                        if not headers:
+                            raise SQLQueryError("SQL Lab authentication refresh is unavailable") from None
+                        session.headers.update(headers)
                 for poll in range(max_polls + 1):
                     _update_ids(payload, identities)
                     if not _pending(payload, status):

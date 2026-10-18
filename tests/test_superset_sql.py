@@ -132,6 +132,139 @@ async def test_preset_token_exchange_is_reused_without_chart_request_retry_layer
     client._request.assert_not_awaited()
 
 
+@pytest.mark.parametrize("preset", [False, True])
+@pytest.mark.parametrize("rejected_path", [CSRF, EXECUTE])
+async def test_expired_cached_jwt_refreshes_once_with_same_session_and_fresh_csrf(preset, rejected_path):
+    calls, submissions = [], []
+    csrf_count = 0
+    rejected = False
+
+    def handler(request):
+        nonlocal csrf_count, rejected
+        calls.append(request)
+        if request.url.path in {"/api/v1/security/login", "/v1/auth/"}:
+            token = {"access_token": "fresh-jwt"}
+            return httpx.Response(200, json={"payload": token} if preset else token)
+        if request.url.path == CSRF:
+            csrf_count += 1
+        else:
+            assert request.url.path == EXECUTE
+            submissions.append(request.content)
+        if request.url.path == rejected_path and not rejected:
+            rejected = True
+            assert request.headers["Authorization"] == "Bearer expired-jwt"
+            return httpx.Response(401, text=SQL + " secret-token",
+                                  headers={"Set-Cookie": "session=retained; Path=/"})
+        if request.url.path == CSRF:
+            if rejected:
+                assert request.headers["Authorization"] == "Bearer fresh-jwt"
+                # The first run's refresh must not discard its session cookies.
+                if csrf_count == 2:
+                    assert request.headers["Cookie"] == "session=retained"
+            return httpx.Response(200, json={"result": f"csrf-{csrf_count}"},
+                                  headers={"Set-Cookie": "session=retained; Path=/"})
+        assert request.headers["Authorization"] == "Bearer fresh-jwt"
+        assert request.headers["X-CSRFToken"] == f"csrf-{csrf_count}"
+        assert request.headers["Cookie"] == "session=retained"
+        return httpx.Response(200, json=payload())
+
+    backend = httpx.MockTransport(handler)
+    client = (PresetCloudClient("https://workspace.invalid", api_token_name="name", api_token_secret="secret", transport=backend)
+              if preset else SupersetClient("https://source.invalid", username="user", password="secret", transport=backend))
+    client._token = "expired-jwt"
+    auth = AsyncMock(wraps=client._auth_headers)
+    client._auth_headers = auth
+    for _ in range(2):
+        result = await execute_sql(client, sql=SQL, database_id=2, catalog="catalog", schema="schema")
+        assert result.rows == [{"value": None}] and result.query_id == "17"
+    assert client._token == "fresh-jwt"
+    assert sum(call.kwargs.get("force_refresh", False) for call in auth.await_args_list) == 1
+    assert sum(request.url.path in {"/api/v1/security/login", "/v1/auth/"} for request in calls) == 1
+    assert len(submissions) == (3 if rejected_path == EXECUTE else 2)
+    assert all(body == submissions[0] for body in submissions)
+    assert json.loads(submissions[0])["sql"] == SQL
+    assert client.request_path_counts[CSRF] == 3
+    assert client.request_path_counts[EXECUTE] == len(submissions)
+    assert client.requests_made == 3 + len(submissions) + int(preset)
+
+
+@pytest.mark.parametrize("rejected_path", [CSRF, EXECUTE])
+async def test_preset_bearer_only_401_cannot_refresh_or_resubmit(rejected_path):
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        assert request.headers["Authorization"] == "Bearer expired-bearer"
+        if request.url.path == rejected_path:
+            return httpx.Response(401, text=SQL + " expired-bearer")
+        assert request.url.path == CSRF
+        return httpx.Response(200, json={"result": "csrf"})
+
+    client = PresetCloudClient("https://workspace.invalid", access_token="expired-bearer",
+                               transport=httpx.MockTransport(handler))
+    with pytest.raises(SQLQueryError, match="authentication") as failure:
+        await execute_sql(client, sql=SQL, database_id=2)
+    assert SQL not in str(failure.value) and "expired-bearer" not in str(failure.value)
+    assert [request.url.path for request in calls] == ([CSRF] if rejected_path == CSRF else [CSRF, EXECUTE])
+    assert client.requests_made == len(calls)
+
+
+@pytest.mark.parametrize("rejected_path", [CSRF, EXECUTE, "both"])
+async def test_repeated_401_has_one_shared_refresh_budget(rejected_path):
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        rejected = (request.url.path == rejected_path or
+                    (rejected_path == "both" and (len(calls) == 1 or request.url.path == EXECUTE)))
+        return httpx.Response(401, text=SQL + " secret") if rejected else httpx.Response(200, json={"result": "csrf"})
+
+    client = SupersetClient("https://source.invalid", transport=httpx.MockTransport(handler))
+    client._auth_headers = AsyncMock(side_effect=[{"Authorization": "Bearer expired"}, {"Authorization": "Bearer refreshed"}])
+    with pytest.raises(SQLQueryError, match="401"):
+        await execute_sql(client, sql=SQL, database_id=2)
+    expected = {CSRF: [CSRF, CSRF], EXECUTE: [CSRF, EXECUTE, CSRF, EXECUTE], "both": [CSRF, CSRF, EXECUTE]}
+    assert [request.url.path for request in calls] == expected[rejected_path]
+    assert client._auth_headers.await_count == 2
+    client._auth_headers.assert_awaited_with(force_refresh=True)
+    assert client.requests_made == len(calls)
+
+
+@pytest.mark.parametrize("network_failure", [False, True])
+async def test_post_failure_after_401_refresh_is_not_retried_again(network_failure):
+    submissions = []
+
+    def handler(request):
+        if request.url.path == CSRF:
+            return httpx.Response(200, json={"result": "csrf"})
+        submissions.append(request.content)
+        if len(submissions) == 1:
+            return httpx.Response(401)
+        if network_failure:
+            raise httpx.ReadError(SQL + " secret", request=request)
+        return httpx.Response(503, text=SQL + " secret")
+
+    client = SupersetClient("https://source.invalid", transport=httpx.MockTransport(handler))
+    client._auth_headers = AsyncMock(side_effect=[{"Authorization": "Bearer expired"}, {"Authorization": "Bearer refreshed"}])
+    with pytest.raises(SQLQueryError):
+        await execute_sql(client, sql=SQL, database_id=2)
+    assert len(submissions) == 2 and submissions[0] == submissions[1]
+    assert client._auth_headers.await_count == 2
+
+
+@pytest.mark.parametrize("factor", ["NOT_LIMITED", "not_limited"])
+async def test_explicit_nonlimited_enum_forms_are_accepted(factor):
+    client, _ = client_for(payload(query={"limitingFactor": factor}))
+    assert (await execute_sql(client, sql=SQL, database_id=2)).rows == [{"value": None}]
+
+
+@pytest.mark.parametrize("factor", ["QUERY", "query", "display_limit", "unlimited", "not-limited", "not_limited "])
+async def test_limited_and_unknown_enum_forms_remain_rejected(factor):
+    client, _ = client_for(payload(query={"limitingFactor": factor}))
+    with pytest.raises(SQLQueryError, match="limited result"):
+        await execute_sql(client, sql=SQL, database_id=2)
+
+
 @pytest.mark.parametrize("options", [
     {"sql": ""}, {"sql": " \n"}, {"sql": None}, {"database_id": True}, {"database_id": 0},
     {"database_id": "1"}, {"catalog": []}, {"schema": ""}, {"max_rows": False}, {"max_rows": 0},
