@@ -17,8 +17,8 @@ other company histories and real-human usability remain separate gates.
 | Card-bound meaning and staleness | Contract tests cover exact pins, reapproval, deferred policy and historical receipts; no automatic notification service is claimed |
 | Approved cards with live decisions | V5 authored/approved its own card and evaluated the adverse case with live Jev. A separate retained series reused it for missing-data and quiet observations: both native and final routes matched policy, card unchanged. Not a continuous company history |
 | Human-first, agent-led onboarding | Raw Northstar workflow v2 completed actual discovery, author-created card, separate evidence-reading experts, synthetic owner consent and native approval, then fresh reports/live Jev. One known fixture with noninteractive private CLI setup, not downloaded-binary/real-human usability success. Baseline first-answer currency error escaped its reviewer. Earlier failed/censored cohorts remain |
-| Useful recurring reports and investigations | The latest same-conversation agent workflow completed supported arithmetic and a human message, but routed to the wrong owner. The focused fix passed a separate native-only live check, not a corrected agent score. Earlier retained/courier/retail findings remain separate. General multi-step/causal investigation remains unproven |
-| Comparative business value | No overall lift established. Latest guided pair: treatment 488,780 vs baseline 236,168 CLI input tokens; 204.32s vs 137.91s; three saved-chart queries each. Original treatment routing failed. Earlier costs remain separate. Scaled noise/recall, amortized setup value, stronger SQL-capable baselines and realistic query costs remain open |
+| Useful recurring reports and investigations | Expert-assisted Harbor continuation completed three native/live-Jev checks and three final briefs per arm; both caught 80 qualifying cases and used intended review recipients only for that exception. Independent raw-table review confirmed all treatment handoff IDs/clocks. No delivery occurred; cohort status follow-through and recipient-accessible detail remain gaps. Earlier wrong-owner workflow remains failed, not rescored. General multi-step/causal investigation remains unproven |
+| Comparative business value | No overall lift established. Harbor recurrence: treatment 670,719 vs baseline 532,064 CLI input tokens; 182.05s vs 169.66s response time, despite 12 vs 22 admitted tools. Treatment message was longer. Onboarding and operator-assisted repair prevent a net-saving claim. Earlier negative costs remain separate. Scaled noise/recall, real human effort and realistic query costs remain open |
 
 These are separate gates. Passing storage, authentication or a scripted decision
 check cannot substitute for complete onboarding and useful final agent outcomes.
@@ -46,6 +46,14 @@ checks plus the actual rebuilt native authoring/revision control. It also keeps
 current facts from comparison-table inputs without deriving a period change.
 These checks do not rescore the original actors or prove that new onboarding
 and recurring human updates are better; that business gate remains open.
+
+The [separate assisted continuation](evidence/harbor-onboarding-2026-10-17.md#completed-continuation-what-the-person-would-receive)
+now establishes that the repaired card can drive current evidence checks and
+useful exception handoffs across three dependent states with live Jev. It does
+not establish a better whole experience than the same capable agent with saved
+notes: treatment used more recurring tokens/time and a longer message. The next
+work targets concise, accessible evidence handoffs and supported follow-through,
+not more internal validation labels or abstractions.
 
 ### Next business-evidence gate
 
