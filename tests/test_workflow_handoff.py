@@ -171,14 +171,25 @@ def test_delivery_handoff_requests_inspectable_actionable_prose_without_new_poli
     card = _card()
     route = DeliveryMethod(key="configured-route", outcome=outcome, label="Owner", destination="agent://owner")
     card.delivery_methods = [route]
+    slots = [
+        EvidenceSlot(key="required-gap", role="quality", question="Validate required coverage.",
+                     required=True, status="unavailable", source_keys=["required-source"]),
+        EvidenceSlot(key="optional-gap", role="watch", question="Optional context?",
+                     status="pending", source_keys=["optional-source"]),
+    ]
+    plan = EvidencePlan(objective="Inspect evidence", slots=slots,
+                        missing_slot_keys=[slot.key for slot in slots])
     result = InsightResult(card_id=card.id, outcome=outcome, summary="Supported result",
-                           rationale="Fixture", evaluator="contract-test", delivery_methods=[route])
+                           rationale="Fixture", evaluator="contract-test", delivery_methods=[route],
+                           source_keys=["existing-dependency"], evidence_plan=plan)
     before = result.model_dump(mode="json")
     handoff = InsightEngine._workflow_handoff(card, result)
     assert handoff.action == "deliver" and handoff.status == "ready"
     assert handoff.delivery_method_keys == ["configured-route"]
     assert "source URL or exact adapter|resource" in handoff.instructions
     assert "next check" in handoff.instructions
+    assert handoff.required_source_keys == ["existing-dependency", "required-source"]
+    assert handoff.evidence_plan == plan
     assert result.model_dump(mode="json") == before
     if outcome == Outcome.INSUFFICIENT_DATA:
         assert "not a business regression" in handoff.instructions
@@ -201,9 +212,83 @@ async def test_workflow_exposes_compiled_evidence_slots_and_completion_state():
     assert slots["source:growth-dashboard"].source_refs[0].resource == "dashboard:growth"
     assert slots["question:1"].status == "pending"
     assert slots["watch:1"].status == "pending"
+    assert not slots["question:1"].required
+    assert not slots["watch:1"].required
     assert "question:1" in run.result.evidence_plan.missing_slot_keys
-    assert "Evidence slots to complete:" in run.result.workflow.instructions
-    assert "Did the affected funnel step change?" in run.result.workflow.instructions
+    assert run.result.workflow.evidence_plan == run.result.evidence_plan
+    assert run.result.workflow.instructions == card.follow_up_guidance
+    assert run.result.workflow.required_source_keys == []
+
+
+@pytest.mark.parametrize("status", ["pending", "unavailable"])
+@pytest.mark.parametrize(
+    ("outcome", "guidance", "action", "handoff_status"),
+    [
+        (Outcome.INVESTIGATE, "Inspect approved diagnostics; do not send.",
+         "retrieve_evidence", "pending"),
+        (Outcome.INVESTIGATE, "", "request_review", "blocked"),
+        (Outcome.IGNORE, "Inspect approved diagnostics; do not send.", "suppress", "complete"),
+    ],
+)
+def test_optional_gaps_remain_visible_without_generated_mandatory_work(
+    status, outcome, guidance, action, handoff_status,
+):
+    card = _card(follow_up_guidance=guidance)
+    slot = EvidenceSlot(key="watch:1", role="watch", question="Optional context?",
+                        source_keys=["optional-source"], status=status)
+    plan = EvidencePlan(objective="Inspect evidence", slots=[slot], status="complete",
+                        missing_slot_keys=[slot.key])
+    result = InsightResult(card_id=card.id, outcome=outcome, summary="Policy result",
+                           rationale="Fixture", evaluator="contract-test", confidence=0.8,
+                           probabilities={outcome.value: 0.8}, evidence_plan=plan)
+    before = result.model_dump(mode="json")
+
+    handoff = InsightEngine._workflow_handoff(card, result)
+
+    assert handoff.action == action and handoff.status == handoff_status
+    assert handoff.required_source_keys == []
+    assert "Evidence slots to complete:" not in handoff.instructions
+    assert slot.question not in handoff.instructions
+    assert handoff.evidence_plan == plan
+    assert result.model_dump(mode="json") == before
+    if outcome == Outcome.INVESTIGATE and guidance:
+        assert handoff.instructions == guidance
+
+
+@pytest.mark.parametrize("status", ["pending", "unavailable"])
+@pytest.mark.parametrize("outcome", [Outcome.INVESTIGATE, Outcome.INSUFFICIENT_DATA])
+def test_mixed_gaps_require_only_required_evidence_and_preserve_follow_up(status, outcome):
+    guidance = "Inspect approved diagnostics; do not send."
+    card = _card(follow_up_guidance=guidance)
+    required = EvidenceSlot(key="required-gap", role="quality", question="Validate coverage.",
+                            source_keys=["growth-dashboard"], required=True, status=status)
+    optional = EvidenceSlot(key="optional-gap", role="watch", question="Optional context?",
+                            source_keys=["optional-source"], status=status)
+    plan = EvidencePlan(objective="Inspect evidence", slots=[required, optional],
+                        missing_slot_keys=[required.key, optional.key])
+    result = InsightResult(card_id=card.id, outcome=outcome, summary="Policy result",
+                           rationale="Fixture", evaluator="contract-test",
+                           probabilities={outcome.value: 0.8}, evidence_plan=plan)
+    before = result.model_dump(mode="json")
+
+    handoff = InsightEngine._workflow_handoff(card, result)
+
+    assert handoff.required_source_keys == ["growth-dashboard"]
+    assert "Evidence slots to complete:" in handoff.instructions
+    assert required.question in handoff.instructions
+    assert optional.question not in handoff.instructions
+    assert "optional-source" not in handoff.instructions
+    assert guidance in handoff.instructions
+    assert handoff.evidence_plan == plan
+    assert result.model_dump(mode="json") == before
+    if outcome == Outcome.INSUFFICIENT_DATA:
+        assert handoff.action == "repair_source" and handoff.status == "blocked"
+        assert handoff.instructions.startswith("Repair or validate")
+        assert "after evidence repair and re-evaluation" in handoff.instructions
+        assert handoff.instructions.endswith(guidance)
+    else:
+        assert handoff.action == "retrieve_evidence" and handoff.status == "pending"
+        assert handoff.instructions.startswith(guidance)
 
 
 @pytest.mark.asyncio
@@ -313,7 +398,7 @@ def test_repair_handoff_preserves_large_plan_and_references_untruncated_owner_gu
     assert len(handoff.instructions) <= 8000
     assert handoff.instructions.startswith("Repair or validate")
     assert handoff.evidence_plan == plan
-    assert "Consult the attached evidence_plan" in handoff.instructions
+    assert "Consult the attached evidence_plan for required evidence gaps." in handoff.instructions
     assert card.follow_up_guidance == guidance
     if len(guidance) == 8000:
         assert "exceeds this handoff's text limit" in handoff.instructions

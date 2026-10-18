@@ -655,29 +655,21 @@ class InsightEngine:
         objective = card.why_watch or card.what_to_watch
         delivery_keys = [method.key for method in result.delivery_methods]
         evidence_plan = result.evidence_plan
-        pending_sources = (
-            sorted(
-                {
-                    source_key
-                    for slot in evidence_plan.slots
-                    if slot.status in {"pending", "unavailable"}
-                    for source_key in slot.source_keys
-                }
-            )
-            if evidence_plan
-            else []
-        )
+        required_pending_slots = [
+            slot for slot in evidence_plan.slots
+            if slot.required and slot.status in {"pending", "unavailable"}
+        ] if evidence_plan else []
+        pending_sources = sorted({
+            source_key
+            for slot in required_pending_slots
+            for source_key in slot.source_keys
+        })
         plan_instructions = ""
-        if evidence_plan and evidence_plan.missing_slot_keys:
-            plan_slots = {
-                slot.key: slot
-                for slot in evidence_plan.slots
-                if slot.key in evidence_plan.missing_slot_keys
-            }
+        if required_pending_slots:
             plan_instructions = "Evidence slots to complete:\n" + "\n".join(
                 f"- {slot.key}: {slot.question} "
                 f"(sources: {', '.join(slot.source_keys) or 'caller-authorized catalog'})"
-                for slot in plan_slots.values()
+                for slot in required_pending_slots
             )
         if result.outcome == Outcome.IGNORE:
             return WorkflowHandoff(
@@ -743,11 +735,11 @@ class InsightEngine:
             # 8,000-character limit together. Reference full structured content
             # rather than truncating an owner's policy mid-sentence.
             if len(instructions) > 8000:
-                instructions = repair_instructions + "\n\nConsult the attached evidence_plan for all evidence slots." + follow_up
+                instructions = repair_instructions + "\n\nConsult the attached evidence_plan for required evidence gaps." + follow_up
             if len(instructions) > 8000:
                 instructions = (
                     repair_instructions
-                    + "\n\nConsult the attached evidence_plan for all evidence slots. "
+                    + "\n\nConsult the attached evidence_plan for required evidence gaps. "
                     "The full follow-up guidance exceeds this handoff's text limit; read "
                     f"card {card.id} version {card.version}'s follow_up_guidance after "
                     "evidence repair and re-evaluation."

@@ -55,7 +55,11 @@ probe: reuse the actual retained analysis at a later measurement cutoff, refresh
 any caller-produced evidence, and inspect the final agent message. Compare with
 the baseline's own retained procedure. Observe whether the owner only reviews
 business choices or must rescue technical preparation. Northstar's assisted
-fixed-publication check does not establish this benefit.
+fixed-publication check does not establish this benefit. Two subsequent rolling
+checkpoint pairs exercised refresh and final messages, but the second native
+policy judgment was wrong and needed frontier interception. Further expansion
+is withheld while that policy contract is investigated; completing the planned
+trajectory is not an admission to repeat a known unreliable path unchanged.
 
 The intended intervention remains cards, reusable context, source evidence,
 narrow typed policy decisions and workflow handoffs. The frontier agent owns

@@ -1,297 +1,226 @@
-# Northstar: useful first answer before recurring automation
+# Northstar: from a useful answer to a repeated check
 
-Status: useful first answers and owner-clarified readouts completed. A replacement
-historical card was reviewed and approved in simulation; a separate live-Jev
-check exercised its policy. Comparative recurring benefit remains unproved.
-This is a synthetic business on real local Superset, not customer validation.
-Separate internal reviewer agents checked the method and actual handoffs;
-this is not external peer review or a panel of human participants.
+Status: both agents delivered supported analysis. SignalWeave completed one
+correct rolling-policy handoff, then selected an unnecessary investigation on
+the next checkpoint. The frontier agent caught it. This is not an enterprise
+readiness, general accuracy or overall efficiency win.
 
-## What the owner actually received
+One synthetic company, one sales workflow, real local Superset/PostgreSQL,
+current native MCP, Luna and live Jev. Internal independent reviewer agents
+checked the method, source replies, calculations and final messages. They were
+not external peer reviewers or human participants.
 
-Both agents produced useful historical sales readouts. They identified the
-misleading partial-month dashboard drop, separated executive net sales from
-non-reconciling funnel revenue, and proposed concrete Analytics/Data Trust
-checks rather than inventing a campaign or technical cause.
+## What the person received
 
-The baseline supplied a weekday-aligned prior-year comparison, raw-fact/mart
-reconciliation, reusable SQL and two material owner questions. Its report omitted
-an explicit company-wide sales bridge and falsely implied that Analytics and
-Data Trust had already reviewed the work. They were intended reviewers, not
-participants. Those original claims remain recorded and need correction before use.
+The owner saw apparent online-sales losses and wanted to understand their
+contribution to total sales. Analytics and Data Trust should investigate first;
+Leadership should receive supported findings afterward.
 
-SignalWeave's agent made the company-wide net-sales impact explicit, supplied
-an arithmetic orders/value decomposition, and saved/reviewed one card. Its
-equal-length August/September comparison was repeatedly called “like-for-like”
-without establishing weekday/seasonal comparability. The measured figures can
-still be reported, but equal duration alone does not establish that stronger claim.
+Both first-use agents identified a misleading partial-month comparison and
+avoided claiming that unrelated funnel revenue explained executive net sales.
+The baseline reconciled facts/marts but omitted an explicit company bridge and
+falsely implied teams had already reviewed it. Treatment supplied the bridge
+but overstated equal-duration periods as “like-for-like” and saved an invalid
+filtered source. Those original defects remain recorded, not rescored.
 
-This is evidence of useful first answers and a saved workflow draft—not a
-completed onboarding or an incremental whole-journey advantage. The card still
-needs owner choices about scope, comparison, significance and freshness. Its
-saved `Last week` parameter differs from the unfiltered inspection. A later
-native probe established that it was silently ignored (repair below). The next test must resolve the
-owner choices and exercise that exact saved workflow, not count approval readiness
-as success or blame historical fixture dates on the product. The continuation
-below resolves those choices without rescoring this first-use pair.
+The fictional owner then clarified the recurring policy:
 
-## Executed first-use pair
+> Digital means Online + Mobile + Marketplace. Compare seven dates with the
+> same weekdays 52 weeks earlier. Investigate a decline of at least 10% only
+> when both windows have all seven dates; missing dates go to Data Trust.
+> Keep the company-sales bridge. Optional holiday/promotion context is not
+> established; do not invent it. Show the local demonstration even when quiet.
 
-| Recorded component | Luna + company MCP | Luna + company MCP + SignalWeave |
+Both agents produced correct clarified readouts and retained their own
+calculations. The owner later delegated the expert agent to implement, review
+and approve that rolling policy for delivery-disabled historical checks.
+That was simulated delegation, not a claim of human sign-off.
+
+## Actual rolling outcomes
+
+| Historical cutoff | Supported measurements | Baseline handoff | SignalWeave handoff |
+| --- | --- | --- | --- |
+| September 5 | Digital +7.62%; company +2.65% | Correct quiet readout | Fresh analysis, rolling card revision/approval, live Jev `ignore`, correct readout |
+| September 12 | Digital +14.57%; company +16.14% | Correct quiet readout | Fresh correct analysis, but Jev `investigate`; agent disclosed the contradiction and did not claim a qualifying decline |
+| September 19 | Not admitted | Not executed | Not executed |
+
+All completed windows had seven represented dates. Date presence does not
+certify ingestion completeness or seasonal equivalence. Amounts remain in source
+units because currency is undeclared. No causal mechanism, consultation, actual
+delivery or schedule was established.
+
+September 5 includes a useful distinction: Mobile fell 11.4%, but digital
+sales increased overall. Both agents respected the aggregate trigger.
+Digital added 21,250.46 while Store lost 8,015.17, reconciling to company growth
+of 13,235.29. Its 160.6% contribution to growth is valid, not a sales-share claim.
+
+On September 12, the native model itself selected `investigate` at 0.53 versus
+`ignore` at 0.45. This was not the code's confidence fallback. The reviewed
+rolling card remained version 2, and the updated publication/receipt matched
+the correct query and calculations. The human answer was rescued by the
+frontier agent, not by a reliable native exception decision.
+
+## Experience and measured effort
+
+| Phase | Baseline response time | With SignalWeave |
 | --- | ---: | ---: |
-| Response time | 401.15 s | 491.88 s |
-| Admitted research MCP calls | 70 | 44 |
-| CLI input tokens, including cached prefixes | 2,957,506 | 3,934,074 |
-| Cached input tokens | 2,809,600 | 3,751,168 |
-| Uncached input tokens | 147,906 | 182,906 |
-| Output tokens | 46,959 | 54,927 |
-| Live Jev requests | 0 | 0 |
+| First useful answer | 401.15 s | 491.88 s |
+| Owner clarification | 410.06 s | 258.76 s |
+| Fixed-snapshot repeat | 153.58 s | Not admitted under that study's budget |
+| Rolling September 5, including procedure adaptation | 280.30 s | 393.00 s |
+| Rolling September 12 | 185.77 s | 234.10 s |
 
-Both had a final message, known terminal usage, retained briefs/notes, no process
-errors and unchanged business-data fingerprints. Treatment includes extra card
-authoring/review work. Fewer tool calls did not mean faster or cheaper onboarding;
-native internal HTTP reads are not included in a total warehouse-work counter.
-No dollar cost, general quality ranking or Jev advantage follows from this pair.
-The prior incomplete actor below remains an additional unknown-cost attempt.
+CLI counts below are **input including cache / uncached input / output**.
+They are not dollar costs or complete warehouse-work counters.
 
-The actual binary was the unpublished `aac8efd` candidate, production fingerprint
-`95b0bc319748c0f0c8ecb4029ecff8a97a5fd8d8bd121bf4baa9bd0a3fb3d7d1`,
-SHA-256 `09f7a1fe41ffa8e3b68eee8d140e79f0572f2c03e40c50a791bb29ef73e4dcb6`.
-It was current when the closed pair ran. Later guidance fixes do not rescore it.
+| Phase | Baseline tokens | With SignalWeave tokens |
+| --- | --- | --- |
+| First useful answer | 2,957,506 / 147,906 / 46,959 | 3,934,074 / 182,906 / 54,927 |
+| Owner clarification | 2,734,768 / 121,904 / 47,609 | 1,203,752 / 93,992 / 34,097 |
+| Fixed-snapshot repeat | 388,300 / 42,316 / 14,453 | Not admitted |
+| Rolling September 5 | 1,463,572 / 81,300 / 35,891 | 3,311,438 / 137,806 / 47,470 |
+| Rolling September 12 | 1,172,960 / 72,416 / 20,333 | 1,422,355 / 96,787 / 22,318 |
 
-## Owner clarification through an actual policy check
+The rolling checks used three company MCP calls per baseline checkpoint.
+Treatment used eight then six research MCP calls, including one company SQL
+query per checkpoint and card/policy operations. Native internal reads are not
+a complete warehouse-cost measure. The two Jev requests used 13,412 input /
+399 output tokens. They do not include the cost of producing the analysis.
 
-The fictional owner clarified “online” as Online + Mobile + Marketplace, with a
-seven-day window ending September 19, 2026 versus the same weekdays 52 weeks
-earlier. Investigate an observed decline of at least 10% when all seven dates
-are represented; missing dates go to Data Trust. Analytics/Data Trust investigate
-first, with leadership receiving supported findings afterward. This was business
-clarification, not supplied arithmetic, approval, sending or scheduling.
+The fixed-snapshot continuation stopped after cumulative input reached
+4,326,820. Treatment repetition was not admitted. A separate operator-native
+wiring check used one Jev request (6,331 input / 198 output), returned
+`ignore`, and invoked no frontier analyst. It is not a substitute treatment arm.
 
-Both agents retained their own actual work and company tools. Both correctly
-found digital net sales **253,078.35 → 271,329.51 (+7.21%)** and company net sales
-**445,838.19 → 480,764.44 (+7.83%)**. All seven dates were represented in each
-window; neither claimed that proves complete ingestion or seasonal equivalence.
-Independent reviewer agents checked actual SQL replies, calculations and messages.
+The separately budgeted rolling study stopped after four actual actors:
+7,370,325 input, 388,309 uncached input and two Jev requests. September 19 was
+withheld for diagnosis of the native policy mismatch, not silently rerun or
+counted as a successful third checkpoint.
 
-| Clarification phase | Luna + company MCP | + SignalWeave |
-| --- | ---: | ---: |
-| Response time | 410.06 s | 258.76 s |
-| Research MCP calls | 6 | 10 |
-| CLI input tokens, including cached prefixes | 2,734,768 | 1,203,752 |
-| Cached input tokens | 2,612,864 | 1,109,760 |
-| Uncached input tokens | 121,904 | 93,992 |
-| Output tokens | 47,609 | 34,097 |
-| Jev requests | 0 | 0 |
+## What worked—and where the product added work
 
-The baseline retained fact/mart reconciliation and reusable calculations.
-Treatment queried the Executive mart, published four compact measured findings,
-and saved/reviewed one deliberate replacement card. The invalid original remained
-unchanged. Publication contained measurements and caveats, not outcome labels.
+Each agent kept its own actual workspace, SQL and calculations. Treatment
+created its own publisher/refresh procedure; the operator did not supply one.
+The same card served the later cutoff without reapproval or new business
+questions. Treatment hit a SQL date-substitution collision and repaired its own
+helper within the measured episode. That is autonomous recovery with friction,
+not zero-friction reuse or operator rescue.
 
-**Assistance matters:** an operator connected the existing
-[publication reader](../../examples/analysis_publication/README.md) before the
-analyst ran. It reads an agent-owned file, not SQL. The agent performed the
-calculation and publication; this does not demonstrate unassisted onboarding or
-future-period refresh. Missing catalog metric contracts remained disclosed;
-the simulated owner confirmed the actual scope and policy, not another metadata
-questionnaire. Approval was simulated-expert review, not a real participant.
+There was still setup assistance: an operator had connected the existing
+[publication reader](../../examples/analysis_publication/README.md), which reads
+an agent-written file rather than executing SQL. The rolling study preserved
+that connection/state and manually upgraded the old bundled project skill.
+This is not unassisted onboarding or a seamless upgrade demonstration.
 
-The baseline then completed its historical repeat in 153.58 seconds, with three
-MCP calls, 388,300 input tokens (345,984 cached), and 14,453 output tokens. It
-again produced a supported quiet readout. Cumulative continuation input reached
-**4,326,820**, crossing the frozen 4-million between-actor admission stop.
-Treatment repetition was **not admitted**, not failed. There was no budget
-reset, retry or completed paired recurrence comparison.
+Two failures matter to the person:
 
-A separately admitted **operator-native wiring check**, not a replacement
-treatment actor, evaluated the actual approved card once. One live Jev request
-used **6,331 input / 198 output tokens** and returned `ignore`, with a durable,
-delivery-disabled receipt and unchanged reviewed inputs. No frontier analyst
-was invoked for this check. It verifies publication → saved policy → receipt,
-not the cost of producing the analysis or a better final agent outcome.
+- **Unreliable policy application:** correct facts still yielded an unnecessary
+  investigation. The saved policy leaves its quiet branch implicit; the request
+  already says diagnostic watches are not extra triggers. Neither policy
+  ambiguity nor pending plan metadata has yet been proved to explain the error.
+- **Optional work becomes mandatory:** handoff generation promoted an unresolved
+  optional seasonal-equivalence slot into “Evidence slots to complete.” This is
+  a confirmed downstream code conflict, separate from the preceding model choice.
 
-The meaningful remaining gap is continuity: the owner should review business
-choices while the agent retains and refreshes the working analysis. This fixed
-historical publication does not prove that next-period workflow. Conditional
-refresh guidance was subsequently added to the bundled skill and MCP/docs;
-that wording change is not credited to these measured runs.
+The generated report also says no validated quantitative analysis is available
+when its typed numeric-claim list is empty, despite usable analyst-calculated
+source evidence. That wording propagated into the human message. Removing it
+alone would not fix the incorrect policy decision.
 
-Method: `evaluations/northstar_owner_continuation.py`; actual reports, SQL,
-publication, bound owner review and receipt remain in ignored
-`artifacts/northstar-owner-continuation-v2`. The separate probe script/log is
-also retained under ignored `artifacts/`. This phase used the clean `197ef92`
-native SHA-256 `8ae6d23968c8be6482da3a2feb6e22d49fa603dc229e734e50d14b13912da3aa`.
-This is one known synthetic company at one unchanged historical state, not
-months of operation, general enterprise readiness or an overall efficiency win.
+The optional-work bug was then repaired: only required pending/unavailable
+slots generate mandatory completion instructions and source dependencies.
+Optional gaps remain visible in the full plan; owner guidance, real source
+requirements, outcome and probabilities are unchanged. A forward component
+check using the retained September 12 result confirmed that exact distinction
+with zero model calls. The original wrong decision and human report were not
+rewritten. Full offline verification passed 4,616 tests with 13 skipped; these
+are software checks, not additional business cases.
 
-Forward verification of the guidance change passed 4,598 offline tests with 13
-skipped, plus two isolated source/native skill journeys covering Codex and Claude.
-The clean rebuilt `fba509b` native returned the updated monitor guide and tool
-description with zero provider calls; SHA-256
-`08b54747c50363b37b7567a7a427aa1a740c249bf8ebd9d51be317996e57e684`.
-That is packaging/guidance verification, not another business trial. The
-pre-final-guidance verification was intentionally interrupted and is not credited.
+## Bounded policy-input diagnosis
 
-## What matters to the user
+Six live Jev requests compared canonicalized recorded inputs, omission of three
+plan-bookkeeping fields, and one explicit quiet-branch sentence. No source facts
+or questions changed. These are known-case component probes, not native reruns
+or a general repair. One sample per configuration, no retries:
 
-The owner sees an unexpected online-sales decline and wants its contribution to
-net sales explained. Analytics and Data Trust investigate first; leadership gets
-a concise update after investigation. The owner also wants to repeat the check
-daily. A useful answer comes before card approval, not after a setup questionnaire.
+| Case | Original-input control P(ignore) | Without plan progress P(ignore) | Explicit quiet branch P(ignore) |
+| --- | ---: | ---: | ---: |
+| September 5 | 0.98 | 0.97 | 1.00 |
+| September 12 | 0.62 | 0.62 | 0.72 |
 
-We assess the whole handoff, not whether an outcome enum matches a label:
+The control is not a byte-identical native replay: recorded JSON was serialized
+canonically. Its September 12 result differs from the original native choice;
+0.62 still falls below the unchanged 0.70 routing floor. Removing bookkeeping
+did not demonstrate a repair. An explicit quiet branch is only a candidate:
+0.72 in one sample is not a robust acceptance result. Missing required dates,
+qualifying declines and the threshold boundary must be checked before changing
+production policy guidance.
 
-1. Does the readout answer the sales question with reproducible arithmetic,
-   correctly scoped sources and actual measurement dates?
-2. Does the investigation narrow the next useful check without asserting an
-   unproved cause, complete coverage or completed delivery?
-3. Is the message short and relevant to its intended reader, with evidence the
-   next analyst can inspect rather than a verbose inventory of tool calls?
-4. Does onboarding preserve useful definitions and source choices, identify only
-   material owner questions, and avoid inventing approval or business rules?
-5. Is there a credible reusable workflow? In the treatment, inspect the saved
-   draft and actual review. In the baseline, inspect its actual notes/runbook.
+All six responses resolved to `jev-1.13.0` and used 40,010 input / 1,188 output
+tokens. A local logging defect stopped execution after two submitted calls;
+their original audit/usage were retained, then only the four unsubmitted frozen
+requests ran after an independently reviewed logger repair. No request was
+repeated. Methods: [runner](../../evaluations/policy_input_diagnostic.py) and
+[frozen protocol](../../evaluations/protocols/northstar-rolling-policy-diagnostic.json).
+The next test should keep judgments narrow, consistent with
+[TypeSafe's primitive guidance](https://docs.typesafe.ai/introduction), rather
+than assume that a longer global policy prompt is a solution.
 
-Independent review should classify each item as supported, partial, unsupported,
-or not exercised, with examples from the actual work. Successful setup or model
-completion does not establish any of these outcomes.
+## Source repair and retained negative results
 
-## Arms and execution
+The original saved card requested `time_range: Last week`; a later native probe
+proved that the adapter silently ignored it and returned all 8,937 saved-query
+rows. The repair at `197ef92` rejects unsupported Superset/Preset overrides
+before source access. Charts run their saved query; dashboards additionally
+allow `chart_ids`. It does not implement time-range filtering or rewrite old
+cards. Actual before/after card objects remained equal.
 
-Both fresh Luna agents receive the same owner request, analytical guidance,
-independent community Superset MCP, private ordinary workspace, shell and files.
-They can discover databases, inspect dashboards/charts/datasets and run SQL or
-export results. Source mutations are excluded at discovery and dispatch. The
-fixture database disables DML; this is not proof of enterprise access isolation.
-Shared execution-history listing/detail tools are excluded so a later analyst
-cannot browse earlier agents' investigative SQL. Execution results and CSV export
-remain available from query identifiers returned to that analyst.
+The current rolling study used clean source-built native `fba509b`, binary
+SHA-256 `08b54747c50363b37b7567a7a427aa1a740c249bf8ebd9d51be317996e57e684`.
+The first-use pair used `aac8efd`; owner clarification and the separate wiring
+check used `197ef92`. Later changes do not rescore earlier results.
 
-The treatment additionally has the current native SignalWeave default `agent`
-profile and its actual native-installed workflow skill. It should return the
-first useful readout, then draft and review one reusable card if possible. It
-must not approve or evaluate the card without owner review. The baseline keeps
-its own notes and gets no instructions referring to unavailable SignalWeave tools.
+An earlier first-use baseline was terminated after 60 admitted MCP calls plus
+three rejected attempts. It saved no brief and returned no terminal usage:
+its cost is **unknown, not zero**. Three earlier zero-inference preparation/
+admission defects—canary text, shared SQL-history visibility and inventory
+ordering—were fixed before the completed pair. All original attempts remain
+retained. Both rolling actors also rewrote saved query-response files into
+equivalent result copies; the original byte hashes no longer describe those
+copies. Independent checks used original audited source content and verified
+decoded rows. No byte-preservation claim follows.
 
-The native executable is copied to a fresh private installation and the real
-PTY setup wizard registers it with isolated Codex configuration. This tests a
-source-built candidate, not downloading a published release or a human panel.
-The community MCP is
-[bintocher/mcp-superset](https://github.com/bintocher/mcp-superset), revision
-`4e0a856a1d45b8f2799e6926dac41fbc64307191`, in a separate environment.
-The analyst launch uses an isolated audited MCP bridge to those actual source
-and native processes, not the user's personal registered MCP inventory. Original
-source replies are also saved into both workspaces; this is an experimental
-convenience, not an advertised native SignalWeave export feature.
+## Method and limits
 
-The declared order is baseline then treatment. Each has one attempt, at most
-600 response seconds, 90 MCP calls and 40 workspace calls. Admission stops
-between actors at 4 million cumulative CLI input tokens or 350,000 uncached
-input tokens. In-flight usage may cross an admission threshold. Missing usage
-or an incomplete attempt stops further admission; neither is counted as zero.
-No Jev requests are admitted in this first-use phase because approval has not
-occurred. Later policy evaluations require a separately reviewed continuation.
-Both agents see remaining tool budget, are asked to begin with targeted named
-assets, and save a supported provisional brief before optional wider exploration.
+[First-use driver](../../evaluations/northstar_workspace_journey.py) ·
+[Owner continuation](../../evaluations/northstar_owner_continuation.py) ·
+[Rolling driver](../../evaluations/northstar_rolling_analysis.py)
 
-This pair is diagnostic, not a statistically powered superiority comparison.
-Treatment card setup is extra work: raw first-use times cannot establish the
-ROI of recurrence. Baseline source access must remain available in later runs.
+Both arms had ordinary workspace tools and the same independent
+[bintocher/mcp-superset](https://github.com/bintocher/mcp-superset) source,
+revision `4e0a856a1d45b8f2799e6926dac41fbc64307191`. Treatment additionally
+used the native default agent profile and installed skill. Shared SQL-history
+browsing and business-data mutations were excluded; own result/export access
+remained available. The fixture used administrator credentials, not an
+enterprise access-isolation test.
 
-## Reproduction and audit
+Rolling cutoffs September 5/12/19 were fixed before querying their outcomes.
+These are retrospective recomputations over one unchanged warehouse, not
+contemporaneous information availability, unseen cases or new production days.
+Prespecified ceilings: six actors, 600 seconds and 60 MCP/40 workspace calls each;
+between-actor stops at 8M CLI input or 600k uncached; three Jev requests total,
+no retries. Independent review admitted each pair separately.
 
-Method: `evaluations/northstar_workspace_journey.py` (`prepare`, then `actor`).
-Revised evidence stays in ignored `artifacts/northstar-workspace-first-use-v5`;
-the original attempt remains in `artifacts/northstar-workspace-first-use-v4`.
-The frozen study records native/Codex identities, source revision, prompts,
-tool scope, workspace inventories, sandbox checks and before/after warehouse
-data fingerprints. The source environment's installed code and dependencies are
-fingerprinted too, not just its entrypoint. Source replies are retained as original JSON/content with
-hashes in each analyst's workspace for code-derived supporting evidence.
+Raw work, archives, requests, usage, provider versions and independent SQL
+reference remain under ignored `artifacts/northstar-rolling-analysis-v1` and
+the earlier `northstar-workspace-first-use-v4/v5` and
+`northstar-owner-continuation-v2` directories. The public drivers require the
+fixture and predecessor workspaces; this report does not bundle them as a
+downloadable reproduction dataset. Detailed prior stage records remain in
+[the earlier report](https://github.com/waddle-zoo/signal-weave/blob/246999a95b587b57c2cd3556cbd43e2552beb89e/docs/evidence/northstar-workspace-first-use-2026-10-18.md).
 
-Preparation exercised the fresh wizard, registration, native skill installation,
-company SQL and sandbox checks without inference. Three earlier preparation/
-admission defects are retained: wrong canary text, shared SQL history visibility,
-and inventory captured before the probe file. They were corrected before analysts
-ran, not rescored as analytical trials. The continuation likewise retains its
-earlier zero-inference preparation separately.
-
-## Original attempt: incomplete, not a product comparison
-
-The baseline made 60 admitted MCP calls before its 175-second run was terminated
-at the research tool budget. Three additional attempts were rejected. It had
-retrieved the full 1,200-chart catalog twice and reached 12 substantive SQL
-queries, but saved no business brief or working notes. Terminal CLI usage was
-not returned: its cost is unknown, not zero. Treatment was not admitted; Jev
-requests were zero. This is not evidence for or against SignalWeave.
-
-Two method problems were retained, not rescored: the hidden remaining budget
-and short termination drain did not allow a normal synthesis handoff at the
-cap; a 6.9 MB retained source reply also exceeded the borrowed 2 MB inventory
-limit, adding an unrelated collection error after termination. The revised
-method shows remaining budget, reserves finalization effort, uses an appropriate
-streaming file inventory, and keeps collection errors separate from episode and
-brief status. The original is not converted into a completed baseline.
-
-Independent review admitted a separately specified revised pair on the same
-known question, not an untouched holdout or a continuation under the original
-accounting. All three actual analyst attempts (including
-the incomplete original) belong in any overall effort discussion. The revised
-pair still stops at its tool/time bounds: remaining-budget guidance is not a
-guarantee of completion, and unknown terminal usage will stop its second arm.
-
-Provider cost, total warehouse work, actual delivery, owner satisfaction and
-recurring reliability remain unproved by this phase. Native internal source
-reads are not a complete warehouse-cost counter. A real human must still test
-the installation and decide whether the resulting workflow is worth using.
-
-## Product follow-through
-
-After closing the pair, the default onboarding guidance was clarified: give a
-source-backed answer before card setup/approval, and treat the first approved,
-delivery-disabled evaluation as the separate recurring demonstration. It also
-asks the agent to inspect the proposed source's exact parameters and aggregation
-before approval and retain the working SQL/procedure in caller notes. This uses
-the existing `inspect_resource(parameters=...)`, not a new API or approval gate.
-These changes are not credited with the earlier readouts or a recurrence win.
-
-An initial source-review concern about unavailable preview guidance was corrected:
-the default root already excluded that tool. The demonstrated wording issue was
-the start guide's conflation of first answer with approved-card evaluation.
-
-### Exact-scope probe found a consequential product defect
-
-The rebuilt `15ce3ce` native completed fresh scripted setup and returned the
-updated guide without inference. But inspecting the draft's exact `Last week`
-parameter still returned all 8,937 saved-query rows. Metadata echoed the requested
-parameter beside results from saved `No filter`; it did not apply that parameter.
-This is a real retrieval-contract defect, not a problem with Jev or fixture age.
-
-The bounded repair rejects unsupported source parameters during both source
-authorization and inspection, including Preset's inherited path. Charts execute
-their saved query; dashboards additionally support `chart_ids`. This does not
-add time-range override support or silently remove the requested filter. A
-specific parameter error survives onboarding rather than misleadingly presenting
-it as a permission/catalog failure. Company BI/SQL tools remain available for
-the analysis; a repeated card must use a source that actually supplies its
-intended evidence. Existing invalid cards need review, not automatic rewriting.
-
-The original pair and the faulty probe remain unchanged. Rejecting a bad scope
-closes silent substitution; it does not demonstrate that this daily card now
-works. Correct source selection/aggregation and a complete shadow handoff remain
-the next business acceptance test.
-
-The clean `197ef92` native was then exercised against a private copy of the
-actual saved card/configuration. Both exact-parameter inspection and review of
-the invalid card returned the specific unsupported-parameter error. The saved
-card's before/after JSON objects were equal; no filter or policy was
-rewritten. An unparameterized saved-chart control still returned 8,937 rows
-with its original partial semantics, and a dashboard subset returned only the
-requested chart. Zero Jev/analyst calls, no approval or delivery. Raw results:
-`artifacts/northstar-source-contract-native-v2`; native SHA-256
-`8ae6d23968c8be6482da3a2feb6e22d49fa603dc229e734e50d14b13912da3aa`.
-This verifies the scope-contract repair, not a working daily investigation.
-Final offline verification passed 4,583 tests with 13 skipped, including the
-Superset/Preset parameter and onboarding regressions. That is a software check,
-not 4,583 business trials or evidence of recurring analytical success.
+This proves useful assisted analysis and a real refresh-to-policy-to-message
+path. It also demonstrates why that path is not yet dependable enough to
+replace expert inspection: the frontier had to catch an incorrect policy result.
+A broader advantage, unattended reliability, triggered-investigation coverage,
+multi-company generalization and real-user adoption remain unproved.
