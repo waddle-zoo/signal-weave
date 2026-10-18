@@ -61,6 +61,19 @@ policy judgment was wrong and needed frontier interception. Further expansion
 is withheld while that policy contract is investigated; completing the planned
 trajectory is not an admission to repeat a known unreliable path unchanged.
 
+Do not substitute a larger count of the same repeats for evidence of a useful
+product. In the delegated-publication path, the caller still refreshes SQL and
+calculations; the baseline also retains a working procedure. A policy-only
+repair cannot establish savings for that whole path. After the bounded policy
+controls, the next useful comparison is an analyst handover: a fresh analyst
+inherits each arm's actual notes and working procedure, then handles one new
+checkpoint. Treatment additionally inherits its existing card and receipts.
+Observe reconstruction, owner questions, correct context and final message,
+including setup and repair effort. This is a proposed next journey, not an
+executed result or proof of employee permission transfer. Suitable saved-source
+decision-first workflows are a separate path; a publication must be refreshed
+before its policy is judged.
+
 The intended intervention remains cards, reusable context, source evidence,
 narrow typed policy decisions and workflow handoffs. The frontier agent owns
 discovery, analysis, SQL, causal hypotheses and the human message. The caller

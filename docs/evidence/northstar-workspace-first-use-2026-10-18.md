@@ -136,6 +136,12 @@ with zero model calls. The original wrong decision and human report were not
 rewritten. Full offline verification passed 4,616 tests with 13 skipped; these
 are software checks, not additional business cases.
 
+The bundled skill now asks the agent to preserve explicit attention, quiet and
+missing-data branches from the owner's intent and to distinguish executed
+contrast checks from untested examples before proposing unattended use. It adds
+no form or new replay tool. This is a reviewed instruction change, not evidence
+that a new onboarding journey succeeds.
+
 ## Bounded policy-input diagnosis
 
 Six live Jev requests compared canonicalized recorded inputs, omission of three
@@ -179,6 +185,13 @@ The current rolling study used clean source-built native `fba509b`, binary
 SHA-256 `08b54747c50363b37b7567a7a427aa1a740c249bf8ebd9d51be317996e57e684`.
 The first-use pair used `aac8efd`; owner clarification and the separate wiring
 check used `197ef92`. Later changes do not rescore earlier results.
+
+Forward verification rebuilt native `93664d7` with the optional-work correction
+and updated skill (production fingerprint
+`95e7fdf4522b0cd63f9924cef3391cd76b79482447b71ce20b584ae48c2cf420`, binary
+`050812d6a939b55b316a168b7cc518fc9e8b4285fbd55027293040851d314ca6`).
+Both isolated source/native skill-install journeys passed. No new business
+workflow or provider judgment was run by that packaging check.
 
 An earlier first-use baseline was terminated after 60 admitted MCP calls plus
 three rejected attempts. It saved no brief and returned no terminal usage:
