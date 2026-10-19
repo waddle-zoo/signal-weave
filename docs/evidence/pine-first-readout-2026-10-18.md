@@ -108,6 +108,11 @@ Its script, calls and result remain in ignored
 preparation failures and schema/CLI failures are retained; none are extra
 business samples or retroactively passing onboarding attempts.
 
+Repair verification passed Ruff and 4,970 tests with 13 opt-in skips in the
+restricted environment. Two further checks were denied secure-terminal/socket
+access there; both passed unchanged outside that sandbox (1.84s). These are
+engineering checks, not additional business observations.
+
 ## Method and reproduction
 
 Two Luna 6 xhigh Codex sessions, baseline first, one attempt each. Both kept the
