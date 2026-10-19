@@ -89,6 +89,25 @@ explicit replacement manifest even through `connections update`; a separate
 repair makes that command honor its existing update option. Neither correction
 changes the original pair or validates the analysis for later weeks.
 
+## Forward native handoff check
+
+A rebuilt native executable from `c521642` completed the connection update,
+inspected the unchanged saved SQL through the real source, and revised a copy
+of the original card from version 1 to 2. Its identity, business intent and
+policy survived; it stayed draft, and evaluation without approval was rejected.
+The original store and source were unchanged. This used the recorded operator
+schema correction above and **zero provider calls**: it verifies the repaired
+handoff, not clean self-onboarding or a successful recurring analysis.
+
+The executable SHA-256 is
+`283479ae083c734c877e1a4629dbfcb37b311123c3242e952365f01fe435f258`,
+production fingerprint
+`99cec53e50c8fbb297037fbb5b6fb6218a5c867a77e70a4b5b0182799d69e8dc`.
+Its script, calls and result remain in ignored
+`artifacts/pine-native-source-handoff-v5`. Earlier semaphore/closed-SQLite
+preparation failures and schema/CLI failures are retained; none are extra
+business samples or retroactively passing onboarding attempts.
+
 ## Method and reproduction
 
 Two Luna 6 xhigh Codex sessions, baseline first, one attempt each. Both kept the
