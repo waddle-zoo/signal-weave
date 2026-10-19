@@ -202,6 +202,14 @@ from evidence, observations and analyses; an empty generated numeric-claim list
 does not erase them. `report.full_report_ref` identifies the unchanged full
 report in the receipt for audit or explicit report requests.
 
+SQL and other tabular sources may publish quantities in `evidence[].values`
+without any `observations`. Large completed responses keep a lossless evidence
+prefix and advertise its exact `evidence_access.evidence_coverage`; page that
+receipt path for omitted rows. Do not rerun a query merely because the generated
+comparison report has no numeric claims. Keep internal report/runtime status in
+the operator handoff, not every business digest; explain source gaps and other
+limitations when they change the reader's conclusion or next step.
+
 For a later run, ask the agent to evaluate the approved card for the current
 period. Each distinct run needs a new stable idempotency key; reusing a key
 replays its saved receipt rather than refreshing evidence. Read the typed

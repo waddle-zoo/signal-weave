@@ -825,7 +825,8 @@ def test_front_matter_is_compact_and_route_audience_has_quiet_fallback():
     markdown = render_investigation_report(report)
     front_matter = markdown.split("<details>", 1)[0]
     assert len(front_matter) < 1200
-    assert "Intended route audience: No notification intended \\(quiet outcome\\)." in markdown
+    assert "Intended route audience: No policy-triggered notification \\(quiet outcome\\)" in markdown
+    assert "requested routine reports are separate" in markdown
     assert "## Policy checks" not in front_matter
 
 

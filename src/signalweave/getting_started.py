@@ -14,6 +14,9 @@ EVIDENCE_INTERPRETATION = (
     " When present, analyses[].comparison retains original totals, segment counts and measurement windows; "
     "source_contracts retains capture dates and declared quality/freshness. Check these before rereading "
     "the same source. Page omitted receipt details instead of requerying to recover already-fetched facts."
+    " Source-provided SQL rows may be in evidence[].values with no observations. An empty generated "
+    "comparison-claim list does not mean those quantities are missing. Keep runtime/report plumbing "
+    "in the operator handoff; business readers need the finding, material limitations and next step."
 )
 
 

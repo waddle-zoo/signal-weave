@@ -230,7 +230,7 @@ def test_compact_report_does_not_confuse_no_engine_comparisons_with_no_source_me
     original = copy.deepcopy(packet)
     report = packet["result"]["report"]
     assert report["numeric_claims"] == []
-    assert "No validated quantitative analysis was available for this report." in report["limitations"]
+    assert "No engine-computed comparison claims were produced; inspect source evidence for any source-provided measurements." in report["limitations"]
     compact = _compact_evaluation_response(packet)["result"]
     assert compact["evidence"] == original["result"]["evidence"]
     assert compact["report"]["limitations"] == []

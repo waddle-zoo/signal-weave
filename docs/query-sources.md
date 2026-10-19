@@ -81,6 +81,9 @@ does not authorize SQL.
   numeric values and provider query/result references, not guessed metric mappings.
   Decimal measurements may appear as JSON strings to preserve their precision.
   Jev applies the saved policy; the agent investigates and explains.
+  Keep the recurring policy input compact: broad diagnostic detail can be read
+  with the agent's existing BI tools when needed. A source's row/byte ceiling is
+  not a guarantee that its full result fits the decision provider's context.
 - Defaults: 100 rows, 100,000 **normalized evidence** bytes and 90 seconds;
   `max_evidence_bytes` includes the complete snapshot and its provenance, with a
   1 MB ceiling. SQL Lab's echoed SQL/technical metadata is separately bounded by

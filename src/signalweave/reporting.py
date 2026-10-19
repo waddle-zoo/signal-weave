@@ -1002,7 +1002,9 @@ def build_investigation_report(
     elif warnings or unresolved or not numeric_claims:
         status = "partial"
         if not numeric_claims:
-            limitations.append("No validated quantitative analysis was available for this report.")
+            limitations.append(
+                "No engine-computed comparison claims were produced; inspect source evidence for any source-provided measurements."
+            )
     else:
         status = "complete"
 
@@ -1056,7 +1058,7 @@ def _claim_is_provisional(report: InvestigationReport, claim: NumericClaim) -> b
 
 def _route_audience(report: InvestigationReport) -> str:
     if report.outcome == "ignore":
-        return "No notification intended (quiet outcome)."
+        return "No policy-triggered notification (quiet outcome); requested routine reports are separate."
     if report.intended_routes_not_delivered:
         audiences = []
         for route in report.intended_routes_not_delivered:
@@ -1151,7 +1153,10 @@ def render_investigation_report(report: InvestigationReport) -> str:
         lines.extend(["", heading])
         lines.extend(_claim_markdown(claim) for claim in claims[:3])
     else:
-        lines.extend(["", "## Measured changes", "- No validated quantitative claims are available."])
+        lines.extend([
+            "", "## Measured changes",
+            "- No engine-computed comparison claims. Inspect returned source evidence for source-provided measurements.",
+        ])
 
     gap_text = _front_gap_messages(report)
     if gap_text:

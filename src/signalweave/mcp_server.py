@@ -611,10 +611,14 @@ _COMPACT_OBSERVATION_ATTRIBUTE_VALUE_BYTES = 1024
 _COMPACT_OBSERVATION_OMITTED_KEYS = 24
 _COMPACT_OBSERVATION_KEY_CHARS = 160
 _COMPACT_OBSERVATION_PREFIX_ITEMS = 100
+_COMPACT_EVIDENCE_PREFIX_ITEMS = 25
 
 
 def _json_bytes(value: Any) -> int:
-    return len(json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
+    # Include ordinary JSON whitespace: clients may serialize the handoff with
+    # default separators, so packing to a minified-only limit can exceed the
+    # advertised byte bound when evidence rows are added.
+    return len(json.dumps(value, ensure_ascii=False).encode("utf-8"))
 
 
 def _compact_observation(observation: Any, index: int) -> Any:
@@ -877,6 +881,7 @@ def _compact_evaluation_response(response: dict[str, Any]) -> dict[str, Any]:
             "This artifact reports bounded analytical coverage; it is not independently certified truth.",
             "Accounting contributions explain measured differences and do not establish causality or mechanism.",
             "No validated quantitative analysis was available for this report.",
+            "No engine-computed comparison claims were produced; inspect source evidence for any source-provided measurements.",
         }
         if isinstance(report.get("limitations"), list):
             report["limitations"] = [
@@ -1076,6 +1081,56 @@ def _compact_evaluation_response(response: dict[str, Any]) -> dict[str, Any]:
                         fallback_access.pop("source_directory", None)
                     evidence_access.clear()
                     evidence_access.update(fallback_access)
+        # SQL and other tabular adapters legitimately publish Evidence rows
+        # without Observation mappings. Preserve those facts too, rather than
+        # making the caller requery the source to recover its quantities.
+        # Deferred judgments already advertise their raw judgment-state paths;
+        # do not alias those to a different canonical result section here.
+        evidence_rows = result.get("evidence")
+        include_evidence = (
+            isinstance(evidence_rows, list)
+            and not (isinstance(judgment, dict) and judgment.get("status") == "deferred")
+        )
+
+        def evidence_coverage(included: int) -> dict[str, Any]:
+            complete = included == len(evidence_rows)
+            return {
+                "result_path": ["evidence"], "total": len(evidence_rows),
+                "included": included,
+                "coverage": "complete_section" if complete else "partial_section",
+                "next_offset": None if complete else included,
+            }
+
+        evidence_prefix: list[Any] = []
+        if include_evidence:
+            compact["result"]["evidence"] = []
+            evidence_access["evidence_coverage"] = evidence_coverage(0)
+            evidence_access["instruction"] += (
+                " Source-provided quantities, including SQL rows, may be in evidence.values "
+                "even when observations is empty. Read included evidence before paging or "
+                "requerying. Report comparison checks do not erase those source facts."
+            )
+            # Reserve the first source-evidence row before observations can
+            # consume the budget. Mixed sources must not hide every tabular
+            # fact behind a long observation prefix. No row is sampled/skipped.
+            if evidence_rows:
+                first_access = {**evidence_access, "evidence_coverage": evidence_coverage(1)}
+                first_candidate = {
+                    **compact,
+                    "result": {**compact["result"], "evidence": evidence_rows[:1]},
+                    "evidence_access": first_access,
+                }
+                if _json_bytes(first_candidate) > AGENT_HANDOFF_BYTES and "card" in compact:
+                    without_card = {key: value for key, value in first_candidate.items() if key != "card"}
+                    without_card["card_details_available"] = True
+                    if _json_bytes(without_card) <= AGENT_HANDOFF_BYTES:
+                        compact.pop("card")
+                        compact["card_details_available"] = True
+                        first_candidate = without_card
+                if _json_bytes(first_candidate) <= AGENT_HANDOFF_BYTES:
+                    evidence_prefix = evidence_rows[:1]
+                    compact["result"]["evidence"] = evidence_prefix
+                    evidence_access["evidence_coverage"] = evidence_coverage(1)
         observations = result.get("observations")
         if isinstance(observations, list):
             def observation_coverage(included: int) -> dict[str, Any]:
@@ -1119,6 +1174,23 @@ def _compact_evaluation_response(response: dict[str, Any]) -> dict[str, Any]:
                 prefix = candidate_prefix
             compact["result"]["observations"] = prefix
             evidence_access["observation_coverage"] = observation_coverage(len(prefix))
+        if include_evidence:
+            for item in evidence_rows[len(evidence_prefix):_COMPACT_EVIDENCE_PREFIX_ITEMS]:
+                candidate_prefix = [*evidence_prefix, item]
+                candidate_access = {
+                    **evidence_access,
+                    "evidence_coverage": evidence_coverage(len(candidate_prefix)),
+                }
+                candidate = {
+                    **compact,
+                    "result": {**compact["result"], "evidence": candidate_prefix},
+                    "evidence_access": candidate_access,
+                }
+                if _json_bytes(candidate) > AGENT_HANDOFF_BYTES:
+                    break
+                evidence_prefix = candidate_prefix
+            compact["result"]["evidence"] = evidence_prefix
+            evidence_access["evidence_coverage"] = evidence_coverage(len(evidence_prefix))
         compact["evidence_access"] = evidence_access
         if _json_bytes(compact) > AGENT_HANDOFF_BYTES:
             compact.pop("card", None)
