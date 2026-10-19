@@ -7,6 +7,7 @@ The parent retains private labels, credentials and mutable trial state.
 from __future__ import annotations
 
 import asyncio
+import base64
 import hashlib
 import json
 import os
@@ -20,6 +21,7 @@ import uvicorn
 from jsonschema import validate
 from mcp import types
 from mcp.server.lowlevel import Server
+from mcp.server.lowlevel.helper_types import ReadResourceContents
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 from starlette.applications import Starlette
 from starlette.routing import Route
@@ -36,6 +38,104 @@ DISABLED_FEATURES = (
 ACCOUNTING_DRAIN_SECONDS = 5.0
 ACCOUNTING_DRAIN_ABORT_AFTER_REJECTIONS = 3
 MAX_RESOURCE_DISCOVERY_CALLS = 4
+MAX_ALLOWLISTED_RESOURCE_URIS = 16
+MAX_RESOURCE_URI_CHARS = 4096
+MAX_RESOURCE_RESPONSE_BYTES = 500_000
+
+
+def _validated_resource_uris(resource_uris) -> tuple[str, ...]:
+    if not isinstance(resource_uris, (tuple, list)):
+        raise ValueError("resource_uris must be a list or tuple")
+    if len(resource_uris) > MAX_ALLOWLISTED_RESOURCE_URIS:
+        raise ValueError("resource_uris exceeds the allowlist limit")
+    normalized = []
+    for uri in resource_uris:
+        if (type(uri) is not str or not uri or len(uri) > MAX_RESOURCE_URI_CHARS
+                or any(ord(character) < 32 for character in uri)):
+            raise ValueError("resource_uris must contain bounded URI strings")
+        if uri.lower().startswith("file:"):
+            raise ValueError("local file resources are not permitted")
+        try:
+            parsed_uri = types.Resource(name=uri, uri=uri).uri
+        except Exception as error:
+            raise ValueError("resource_uris must contain valid MCP URIs") from error
+        if str(parsed_uri) != uri:
+            raise ValueError("resource_uris must use canonical exact URI strings")
+        if uri in normalized:
+            raise ValueError("resource_uris must be unique")
+        normalized.append(uri)
+    return tuple(normalized)
+
+
+def scoped_resource_read(item: dict, resource_uris) -> bool:
+    """Recognize only an exact read of a caller-declared trial resource."""
+    arguments = item.get("arguments")
+    identifier = item.get("id")
+    allowed = resource_uris if isinstance(resource_uris, (tuple, list)) else ()
+    return (
+        item.get("server") in ("codex", "trial")
+        and item.get("tool") == "read_mcp_resource"
+        and isinstance(identifier, str) and 0 < len(identifier) <= 200
+        and isinstance(arguments, dict) and set(arguments) == {"server", "uri"}
+        and arguments.get("server") == "trial"
+        and type(arguments.get("uri")) is str
+        and len(arguments["uri"]) <= MAX_RESOURCE_URI_CHARS
+        and arguments["uri"] in allowed
+    )
+
+
+def _resource_contents(uri: str, result) -> list[ReadResourceContents]:
+    """Convert only an SDK resource result or its JSON form without remapping data."""
+    if isinstance(result, types.ReadResourceResult):
+        rows = result.contents
+    elif isinstance(result, dict) and set(result) <= {"contents", "meta", "_meta"}:
+        rows = result.get("contents")
+    else:
+        raise ValueError("resource callback must return a ReadResourceResult")
+    if not isinstance(rows, list):
+        raise ValueError("resource callback returned invalid contents")
+
+    converted = []
+    for row in rows:
+        if isinstance(row, types.TextResourceContents):
+            row_uri, text = str(row.uri), row.text
+            mime_type, metadata = row.mimeType, row.meta
+            content = text
+        elif isinstance(row, types.BlobResourceContents):
+            row_uri, encoded = str(row.uri), row.blob
+            mime_type, metadata = row.mimeType, row.meta
+            try:
+                content = base64.b64decode(encoded, validate=True)
+            except (ValueError, TypeError) as error:
+                raise ValueError("resource callback returned invalid blob data") from error
+        elif isinstance(row, dict):
+            if set(row) - {"uri", "text", "blob", "mimeType", "meta", "_meta"}:
+                raise ValueError("resource callback returned unsupported content fields")
+            row_uri = row.get("uri")
+            mime_type = row.get("mimeType")
+            metadata = row.get("_meta", row.get("meta"))
+            has_text, has_blob = "text" in row, "blob" in row
+            if has_text == has_blob:
+                raise ValueError("resource content must contain exactly one text or blob value")
+            if has_text and type(row["text"]) is str:
+                content = row["text"]
+            elif has_blob and type(row["blob"]) is str:
+                try:
+                    content = base64.b64decode(row["blob"], validate=True)
+                except (ValueError, TypeError) as error:
+                    raise ValueError("resource callback returned invalid blob data") from error
+            else:
+                raise ValueError("resource content has an invalid text or blob value")
+        else:
+            raise ValueError("resource callback returned unsupported content")
+        if str(row_uri) != uri:
+            raise ValueError("resource callback returned a different URI")
+        if mime_type is not None and type(mime_type) is not str:
+            raise ValueError("resource callback returned invalid MIME metadata")
+        if metadata is not None and not isinstance(metadata, dict):
+            raise ValueError("resource callback returned invalid content metadata")
+        converted.append(ReadResourceContents(content=content, mime_type=mime_type, meta=metadata))
+    return converted
 
 
 def scoped_resource_discovery(item: dict) -> bool:
@@ -171,13 +271,19 @@ async def verify_trial_registry(executable, cwd, url):
 
 class TrialMCP:
     def __init__(self, session, audit, specs: list[dict], max_calls: int, *,
-                 accounting_drain: bool = False, report_remaining_budget: bool = False):
+                 accounting_drain: bool = False, report_remaining_budget: bool = False,
+                 resource_uris=()):
         self.session, self.audit = session, audit
         self.specs = {spec["name"]: spec for spec in specs}
+        self.resource_uris = _validated_resource_uris(resource_uris)
+        if self.resource_uris and not callable(getattr(session, "read_resource", None)):
+            raise ValueError("allowlisted resource reads require session.read_resource")
         self.max_calls = max_calls
         self.accounting_drain = accounting_drain
         self.report_remaining_budget = report_remaining_budget
         self.calls = 0
+        self.resource_read_attempts = 0
+        self.resource_reads = 0
         self.ingress_calls = 0
         self.exhausted = False
         self.rejected_calls = 0
@@ -194,6 +300,17 @@ class TrialMCP:
         @self.server.call_tool(validate_input=False)
         async def call_tool(name: str, arguments: dict):
             return await self.call(name, arguments)
+
+        if self.resource_uris:
+            @self.server.list_resources()
+            async def list_resources():
+                self.audit.emit("resource.list", resource_uris=list(self.resource_uris),
+                                meaning="declared resource metadata only; no source content read")
+                return [types.Resource(name=uri, uri=uri) for uri in self.resource_uris]
+
+            @self.server.read_resource()
+            async def read_resource(uri):
+                return await self.read_resource(str(uri))
 
     async def call(self, name: str, arguments: dict):
         ingress_call = None
@@ -264,12 +381,76 @@ class TrialMCP:
                         seconds=time.perf_counter() - started)
         content = [types.TextContent(type="text", text=json.dumps(result))]
         if self.report_remaining_budget:
+            call_label = ("company tool/resource calls" if self.resource_uris
+                          else "company-tool calls")
             content.append(types.TextContent(type="text", text=(
-                f"Research tool budget: {max(0, self.max_calls - self.calls)} company-tool calls remain. "
+                f"Research tool budget: {max(0, self.max_calls - self.calls)} {call_label} remain. "
                 "The final publication/submission also uses a call; reserve one. "
                 "This is operational status, not business/source evidence."
             )))
         return types.CallToolResult(content=content, isError=failed)
+
+    async def read_resource(self, uri: str):
+        ingress_call = None
+        if self.accounting_drain:
+            self.ingress_calls += 1
+            ingress_call = self.ingress_calls
+            self.audit.emit("resource.ingress", uri=uri, ingress_call=ingress_call,
+                            stage="bridge_handler_entered")
+        try:
+            await self.lock.acquire()
+        except asyncio.CancelledError:
+            if self.accounting_drain:
+                self.audit.emit("resource.cancelled", uri=uri, ingress_call=ingress_call,
+                                stage="waiting_for_bridge_lock",
+                                reason="cancelled_before_dispatch")
+            raise
+        try:
+            if self.calls >= self.max_calls:
+                self.exhausted = True
+                if self.accounting_drain:
+                    self.exhaustion_event.set()
+                    self.rejected_calls += 1
+                    if self.rejected_calls == ACCOUNTING_DRAIN_ABORT_AFTER_REJECTIONS:
+                        self.rejection_limit_event.set()
+                self.audit.emit("resource.rejected", uri=uri,
+                                reason="tool_call_budget_exhausted")
+                raise ValueError("tool_call_budget_exhausted; stop now")
+            self.calls += 1
+            self.resource_read_attempts += 1
+            started = time.perf_counter()
+            try:
+                if uri not in self.resource_uris:
+                    raise ValueError("resource not available")
+                if self.session.submission is not None or (
+                    self.session.phase == "onboarding" and self.session.setup_complete
+                ):
+                    raise ValueError("episode already submitted; stop now")
+                result = await self.session.read_resource(uri)
+                from evaluations.bootstrap_agent_trial import json_value
+
+                serialized_result = json.dumps(
+                    json_value(result), ensure_ascii=False, separators=(",", ":"), allow_nan=False,
+                ).encode("utf-8")
+                if len(serialized_result) > MAX_RESOURCE_RESPONSE_BYTES:
+                    raise ValueError(
+                        f"resource response exceeds {MAX_RESOURCE_RESPONSE_BYTES}-byte limit"
+                    )
+                contents = _resource_contents(uri, result)
+            except Exception as error:
+                message = self.audit.redact(str(error)[:2000])
+                self.audit.emit("resource.result", uri=uri,
+                                result={"error": type(error).__name__, "message": message},
+                                actor_role=getattr(self.session, "audit_role", "author"),
+                                seconds=time.perf_counter() - started)
+                raise ValueError("resource read failed") from None
+            self.resource_reads += 1
+            self.audit.emit("resource.result", uri=uri, result=result,
+                            actor_role=getattr(self.session, "audit_role", "author"),
+                            seconds=time.perf_counter() - started)
+            return contents
+        finally:
+            self.lock.release()
 
 
 @asynccontextmanager
@@ -362,7 +543,8 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                         finish_on_final_message: bool = False,
                         workspace_dir: str | None = None,
                         workspace_read_paths=(),
-                        max_workspace_tool_calls: int = 40) -> dict:
+                        max_workspace_tool_calls: int = 40,
+                        resource_uris=()) -> dict:
     """Run one Codex episode; opt-in completion means invocation completion only.
 
     ``finish_on_final_message`` does not establish approval, an external effect,
@@ -375,6 +557,11 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
         canonical,
     )
     selected_model = model or MODEL
+    resource_uris = _validated_resource_uris(resource_uris)
+    if resource_uris and not allow_trial_resource_discovery:
+        raise ValueError("resource_uris require explicit trial registry isolation")
+    if resource_uris and not callable(getattr(session, "read_resource", None)):
+        raise ValueError("resource_uris require session.read_resource")
     workspace = validate_workspace(workspace_dir) if workspace_dir is not None else None
     if workspace_read_paths:
         if workspace is None:
@@ -471,10 +658,14 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
             "shared_card": shared_card,
             "signalweave_evaluation": bundle})
     bridge = TrialMCP(session, audit, await session.specs(), max_tool_calls,
-                      accounting_drain=accounting_drain, report_remaining_budget=report_remaining_budget)
+                      accounting_drain=accounting_drain, report_remaining_budget=report_remaining_budget,
+                      resource_uris=resource_uris)
     # Distinct IDs from positive Jev request IDs. A Codex invocation is NOT an API request.
     request_id = -(1 + sum(e["kind"] == "api.request" and e.get("provider") == "openai"
                           for e in audit.events))
+    if bridge.resource_uris:
+        audit.emit("codex.resource_allowlist", resource_uris=list(bridge.resource_uris),
+                   meaning="caller-declared exact trial resource scope")
     audit.emit("api.request", provider="openai", request_id=request_id,
                transport="codex_cli", accounting_unit="agent_invocation",
                model=selected_model, effort=effort,
@@ -488,6 +679,7 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
     workspace_budget_exhausted = False
     resource_discovery_ids = set()
     resource_discovery_attempt_ids = set()
+    resource_read_attempt_ids = set()
     registry_isolation = None
     final_message = ""
     last_completed_item_is_nonblank_agent_message = False
@@ -566,7 +758,19 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                         foreign_tools.append(item["type"])
                 if item.get("type") == "agent_message" and isinstance(item.get("text"), str):
                     final_message = item["text"]
-                if item.get("type") == "mcp_tool_call" and (
+                if item.get("type") == "mcp_tool_call" and item.get("tool") == "read_mcp_resource":
+                    if registry_isolation and scoped_resource_read(item, resource_uris):
+                        identifier = item["id"]
+                        if identifier not in resource_read_attempt_ids:
+                            resource_read_attempt_ids.add(identifier)
+                            audit.emit("codex.resource_read", name=item["tool"],
+                                       arguments=item["arguments"], item_id=identifier,
+                                       meaning="exact caller-allowlisted trial resource")
+                    else:
+                        foreign_tools.append("resource_read_not_allowlisted")
+                        audit.emit("codex.resource_read_rejected", item_id=item.get("id"),
+                                   reason="resource_read_not_allowlisted")
+                elif item.get("type") == "mcp_tool_call" and (
                     item.get("server") != "trial"
                     or registry_isolation and (not isinstance(item.get("tool"), str) or item["tool"] not in bridge.specs)
                 ):
@@ -776,6 +980,14 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
             "wall_time_overrun_seconds": max(0., elapsed - timeout_seconds),
             "transport": "codex_cli", "model": selected_model, "effort": effort,
             "exit_code": exit_code, "foreign_tools": foreign_tools}
+    if bridge.resource_uris:
+        result.update({
+            "tool_calls": bridge.calls - bridge.resource_read_attempts,
+            "company_dispatches": bridge.calls,
+            "resource_read_calls": bridge.resource_reads,
+            "resource_read_dispatches": bridge.resource_read_attempts,
+            "resource_read_event_attempts": len(resource_read_attempt_ids),
+        })
     if workspace is not None:
         result["workspace"] = {"path": str(workspace), "permissions_profile": "signalweave-study",
             "tool_items": workspace_items, "tool_item_count": len(workspace_items),

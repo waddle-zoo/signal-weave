@@ -135,3 +135,19 @@ binary. This is one fictional company and seven dependent historical cohorts,
 not seven independent enterprise trials or external peer review. Together with
 the [Pine whole journey](pine-whole-journey-2026-10-19.md), it establishes working
 onboarding-to-delivery paths—not enterprise-wide superiority.
+
+### Current native: separate first-class Superset connection check
+
+The clean `97a5daa` native build completed fresh scripted terminal setup against
+the isolated Northstar replica: Superset credentials, Codex registration,
+bundled skill, source health and two cold native MCP starts. Each start returned
+a schema-valid, nonempty snapshot of the selected fulfillment chart: 132 rows.
+This used the production Superset adapter, not a normalized company-MCP bridge.
+No model judgment ran. Earlier setup-observer failures were retained and fixed
+before the fresh successful attempt.
+
+This verifies connection and source access, not another analytical journey,
+all-chart coverage, correct business aggregation or novice-human usability.
+Dashboard inspection also fetched other charts and produced failed fallback
+GETs; the selected chart's successful read does not certify the whole dashboard.
+The existing replica was reused; a fresh Superset image build was not tested.

@@ -1054,6 +1054,21 @@
       "claim_scope": "Independent internal reviews; not external peer review or customer adoption."
     }
   },
+  "separate_current_native_superset_setup": {
+    "status": "passed_fresh_attempt_005_after_retained_observer_failures",
+    "record_sha256": "42b8297789072d7e5d4342fb50edf15de05580c4e87ef7ef92d9192319735755",
+    "native_build_commit": "97a5daa103056963b5988921230da9688a241c42",
+    "native_source_sha256": "5a4d087b394a457dee0e0c46107870e8a8bcbf61cb16acc81c9908cd161f0b6d",
+    "native_binary_sha256": "a5dccb877c757f35a6f6f7d05e37afa7523f0ad6b6283f4128ea63db25a1f170",
+    "native_wizard": true,
+    "codex_registration_and_skill_verified": true,
+    "first_class_superset_adapter": true,
+    "cold_native_mcp_starts": 2,
+    "selected_chart": "chart:111",
+    "selected_chart_nonempty_schema_valid_rows_each_start": 132,
+    "provider_requests": 0,
+    "scope": "Scripted fresh-person setup on the existing isolated replica, not a published download, fresh Superset build, analytical result, all-chart validation or real-human study. Earlier observer failures retained."
+  },
   "limitations": [
     "One known company and seven dependent historical cohorts, not seven independent enterprise trials.",
     "The first treatment hit a scripted-owner approval dead end and did no native evaluation; its useful fallback reports and all costs remain.",

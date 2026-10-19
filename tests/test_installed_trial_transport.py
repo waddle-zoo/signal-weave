@@ -20,6 +20,19 @@ from signalweave.mcp_source import MCPConnection
 
 
 @pytest.mark.asyncio
+async def test_facade_reads_only_through_the_initialized_source_session():
+    reply = SimpleNamespace(contents=[{"text": "source-owned definition"}])
+    session = SimpleNamespace(read_resource=AsyncMock(return_value=reply))
+    facade = transport.InstalledServer(session, "", trial.Audit())
+
+    assert await facade.read_resource("company://definitions") is reply
+    session.read_resource.assert_awaited_once_with("company://definitions")
+    session.read_resource.side_effect = ValueError("source resource is unavailable")
+    with pytest.raises(ValueError, match="source resource is unavailable"):
+        await facade.read_resource("company://definitions")
+
+
+@pytest.mark.asyncio
 async def test_embedded_source_server_does_not_replace_controller_signals():
     public = public_scenario(build_scenarios()[0])
     audit = trial.Audit()

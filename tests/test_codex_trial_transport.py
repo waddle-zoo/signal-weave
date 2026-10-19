@@ -1,6 +1,7 @@
 """Offline transport contracts; no Codex process, socket server, or Jev calls."""
 
 import asyncio
+import base64
 import json
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -9,6 +10,9 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 import tomllib
+from mcp import ClientSession, types
+from mcp.client.streamable_http import streamable_http_client
+from mcp.shared.exceptions import McpError
 
 from evaluations import bootstrap_agent_trial as trial
 from evaluations import codex_trial_transport as transport
@@ -47,6 +51,18 @@ def test_child_environment_is_allowlisted_and_drops_provider_and_source_secrets(
     monkeypatch.setattr(transport.os, "environ", parent)
     assert transport.child_environment() == allowed
     assert parent == allowed | secrets
+
+
+def test_resource_uri_allowlist_is_bounded_exact_and_rejects_local_files():
+    uri = "orbitworks://source/metric-definitions"
+    assert transport._validated_resource_uris([uri]) == (uri,)
+    for invalid in (
+        None, "not-a-list", ["file://private"], [""], ["orbitworks://bad\nuri"],
+        [uri, uri], [f"orbitworks://source/{'x' * transport.MAX_RESOURCE_URI_CHARS}"],
+        [f"orbitworks://source/{n}" for n in range(transport.MAX_ALLOWLISTED_RESOURCE_URIS + 1)],
+    ):
+        with pytest.raises(ValueError):
+            transport._validated_resource_uris(invalid)
 
 
 def test_command_uses_isolated_read_only_trial_configuration():
@@ -106,6 +122,109 @@ async def test_new_workspace_bridge_can_forward_actual_mcp_instructions_without_
     assert transport.TrialMCP(legacy, trial.Audit(), await legacy.specs(), 3).server.instructions is None
     legacy.mcp_instructions = "Actual initialized native server instructions"
     assert transport.TrialMCP(legacy, trial.Audit(), await legacy.specs(), 3).server.instructions == legacy.mcp_instructions
+
+
+async def test_resource_handlers_are_opt_in_and_share_the_company_call_budget():
+    uri = "orbitworks://source/metric-definitions"
+    session, audit = session_stub(), trial.Audit()
+    result = types.ReadResourceResult(contents=[
+        types.TextResourceContents(uri=uri, text='{"metric":"renewal_rate"}',
+                                   mimeType="application/json", _meta={"source_key": "definitions"}),
+    ])
+    session.read_resource = AsyncMock(return_value=result)
+    legacy = transport.TrialMCP(session, audit, await session.specs(), max_calls=1)
+    assert transport.types.ListResourcesRequest not in legacy.server.request_handlers
+    assert transport.types.ReadResourceRequest not in legacy.server.request_handlers
+
+    bridge = transport.TrialMCP(session, audit, await session.specs(), max_calls=1,
+                                resource_uris=(uri,))
+    listed = await bridge.server.request_handlers[transport.types.ListResourcesRequest](
+        transport.types.ListResourcesRequest(method="resources/list"),
+    )
+    assert [str(resource.uri) for resource in listed.root.resources] == [uri]
+    contents = await bridge.read_resource(uri)
+    assert contents[0].content == '{"metric":"renewal_rate"}'
+    assert contents[0].mime_type == "application/json"
+    assert contents[0].meta == {"source_key": "definitions"}
+    session.read_resource.assert_awaited_once_with(uri)
+    assert bridge.calls == bridge.resource_reads == 1
+    with pytest.raises(ValueError, match="tool_call_budget_exhausted"):
+        await bridge.call("list_catalog", {})
+    assert session.call.await_count == 0
+    assert bridge.calls == 1
+
+
+async def test_allowlisted_resource_reads_require_a_callable_source_callback():
+    session = session_stub()
+    with pytest.raises(ValueError, match="session.read_resource"):
+        transport.TrialMCP(session, trial.Audit(), await session.specs(), 1,
+                           resource_uris=("orbitworks://source/metric-definitions",))
+
+
+async def test_http_mcp_resource_read_preserves_source_contents_and_rejects_wrong_uri():
+    uri = "orbitworks://source/metric-definitions"
+    payload = b"opaque source attachment"
+    session, audit = session_stub(), trial.Audit()
+    session.read_resource = AsyncMock(return_value={"contents": [
+        {"uri": uri, "text": '{"definition":"net renewal"}', "mimeType": "application/json",
+         "_meta": {"source": "orbitworks"}},
+        {"uri": uri, "blob": base64.b64encode(payload).decode(),
+         "mimeType": "application/octet-stream", "_meta": {"attachment": "dictionary"}},
+    ]})
+    bridge = transport.TrialMCP(session, audit, await session.specs(), max_calls=2,
+                                resource_uris=(uri,))
+
+    async with transport.serve_trial(bridge) as url:
+        async with streamable_http_client(url) as (read_stream, write_stream, _):
+            async with ClientSession(read_stream, write_stream) as client:
+                await client.initialize()
+                listed = await client.list_resources()
+                assert [str(resource.uri) for resource in listed.resources] == [uri]
+                result = await client.read_resource(uri)
+                assert result.contents[0].text == '{"definition":"net renewal"}'
+                assert result.contents[0].mimeType == "application/json"
+                assert result.contents[0].meta == {"source": "orbitworks"}
+                assert base64.b64decode(result.contents[1].blob) == payload
+                assert result.contents[1].mimeType == "application/octet-stream"
+                assert result.contents[1].meta == {"attachment": "dictionary"}
+                with pytest.raises(McpError, match="resource read failed"):
+                    await client.read_resource("orbitworks://source/private")
+
+    session.read_resource.assert_awaited_once_with(uri)
+    assert bridge.calls == 2  # The rejected URI attempt also consumes the shared budget.
+    assert bridge.resource_reads == 1
+    assert [event["kind"] for event in audit.events] == [
+        "resource.list", "resource.result", "resource.result",
+    ]
+    assert audit.events[-1]["result"]["error"] == "ValueError"
+
+
+@pytest.mark.parametrize("field,value", [
+    ("text", "OVERSIZED_TEXT_" + "x" * transport.MAX_RESOURCE_RESPONSE_BYTES),
+    ("blob", "OVERSIZED_BLOB_" + "!" * transport.MAX_RESOURCE_RESPONSE_BYTES),
+])
+async def test_oversized_resource_results_are_rejected_before_decode_or_audit_forwarding(field, value):
+    uri = "orbitworks://source/metric-definitions"
+    session, audit = session_stub(), trial.Audit()
+    session.read_resource = AsyncMock(return_value={"contents": [{"uri": uri, field: value}]})
+    bridge = transport.TrialMCP(session, audit, await session.specs(), max_calls=1,
+                                resource_uris=(uri,))
+
+    with pytest.raises(ValueError, match="resource read failed"):
+        await bridge.read_resource(uri)
+
+    session.read_resource.assert_awaited_once_with(uri)
+    assert bridge.calls == bridge.resource_read_attempts == 1
+    assert bridge.resource_reads == 0
+    assert len(audit.events) == 1
+    assert audit.events[0]["kind"] == "resource.result"
+    assert audit.events[0]["result"] == {
+        "error": "ValueError",
+        "message": f"resource response exceeds {transport.MAX_RESOURCE_RESPONSE_BYTES}-byte limit",
+    }
+    serialized_audit = trial.canonical(audit.events)
+    assert "OVERSIZED_" not in serialized_audit
+    assert len(serialized_audit.encode("utf-8")) < 5000
 
 
 @pytest.mark.parametrize("phase,finish", [("onboarding", "finish_setup"), ("monitoring", "submit_analysis")])
@@ -840,6 +959,78 @@ async def test_scoped_builtin_resource_discovery_is_explicit_and_counted_once(fa
     assert result["resource_discovery_calls"] == 1
     assert len([e for e in fake.audit.events if e["kind"] == "codex.resource_discovery"]) == 1
     fake.process.terminate.assert_not_called()
+
+
+@pytest.mark.parametrize("server", ["codex", "trial"])
+async def test_exact_allowlisted_resource_read_event_is_admitted_once(fake_episode, server):
+    uri = "orbitworks://source/metric-definitions"
+    fake_episode.session.submission = {}
+    fake_episode.session.read_resource = AsyncMock(return_value=types.ReadResourceResult(contents=[]))
+    item = {"type": "mcp_tool_call", "server": server, "tool": "read_mcp_resource",
+            "id": "resource-1", "arguments": {"server": "trial", "uri": uri}}
+    result = await fake_episode.run([
+        {"type": "item.started", "item": item}, {"type": "item.completed", "item": item},
+        {"type": "turn.completed", "usage": {"input_tokens": 10, "output_tokens": 2, "cached_input_tokens": 0}},
+    ], allow_trial_resource_discovery=True, resource_uris=(uri,))
+    assert result["foreign_tools"] == []
+    assert result["resource_read_event_attempts"] == 1
+    assert result["resource_read_calls"] == 0  # Event recognition does not fabricate a bridge read.
+    assert len([event for event in fake_episode.audit.events
+                if event["kind"] == "codex.resource_read"]) == 1
+    allowlist, = [event for event in fake_episode.audit.events
+                  if event["kind"] == "codex.resource_allowlist"]
+    assert allowlist["resource_uris"] == [uri]
+    fake_episode.process.terminate.assert_not_called()
+
+
+@pytest.mark.parametrize("change", [
+    {"server": "other"},
+    {"arguments": {"server": "codex", "uri": "orbitworks://source/metric-definitions"}},
+    {"arguments": {"server": "trial", "uri": "orbitworks://source/other"}},
+    {"arguments": {"server": "trial", "uri": "orbitworks://source/metric-definitions", "extra": 1}},
+    {"arguments": {"server": "trial", "uri": "file://private"}},
+    {"id": "x" * 201},
+])
+async def test_resource_read_event_requires_exact_isolated_server_uri_args_and_bounded_id(fake_episode, change):
+    uri = "orbitworks://source/metric-definitions"
+    fake_episode.session.read_resource = AsyncMock(return_value=types.ReadResourceResult(contents=[]))
+    item = {"type": "mcp_tool_call", "server": "codex", "tool": "read_mcp_resource",
+            "id": "resource-1", "arguments": {"server": "trial", "uri": uri}}
+    item.update(change)
+    result = await fake_episode.run([{"type": "item.started", "item": item}],
+        allow_trial_resource_discovery=True, resource_uris=(uri,))
+    assert result["status"] == "failed"
+    assert result["foreign_tools"] == ["resource_read_not_allowlisted"]
+    assert result["resource_read_event_attempts"] == 0
+    assert fake_episode.process.terminate.called
+
+
+async def test_resource_read_event_without_allowlist_or_registry_opt_in_is_rejected(fake_episode):
+    uri = "orbitworks://source/metric-definitions"
+    item = {"type": "mcp_tool_call", "server": "codex", "tool": "read_mcp_resource",
+            "id": "resource-1", "arguments": {"server": "trial", "uri": uri}}
+    result = await fake_episode.run([{"type": "item.started", "item": item}],
+                                   allow_trial_resource_discovery=True)
+    assert result["foreign_tools"] == ["resource_read_not_allowlisted"]
+    with pytest.raises(ValueError, match="registry isolation"):
+        await fake_episode.run([], resource_uris=(uri,))
+    fake_episode.spawn.assert_awaited_once()
+
+
+async def test_default_episode_result_shape_has_no_resource_accounting_fields(fake_episode):
+    result = await fake_episode.run([])
+    assert result["tool_calls"] == 0
+    assert "company_dispatches" not in result
+    assert "resource_read_calls" not in result
+    assert "resource_read_dispatches" not in result
+    assert "resource_read_event_attempts" not in result
+
+
+async def test_episode_resource_allowlist_requires_callback_before_spawning(fake_episode):
+    with pytest.raises(ValueError, match="session.read_resource"):
+        await fake_episode.run([], allow_trial_resource_discovery=True,
+                               resource_uris=("orbitworks://source/metric-definitions",))
+    fake_episode.spawn.assert_not_awaited()
 
 
 async def test_valid_resource_discovery_still_requires_explicit_protocol_opt_in(fake_episode):
