@@ -182,7 +182,8 @@ async def servers(study, root, audit, budget, treatment):
         yield source, native
 
 
-async def prepare(root, binary, codex, key_file, source_executable, source_checkout, url):
+async def prepare(root, binary, codex, key_file, source_executable, source_checkout, url,
+                  *, codex_identity_resolver=None):
     root, binary = Path(root).absolute(), Path(binary).absolute()
     identity = verify_binary(binary, ROOT)
     source_executable, source_checkout = Path(source_executable).absolute(), Path(source_checkout).absolute()
@@ -205,7 +206,7 @@ async def prepare(root, binary, codex, key_file, source_executable, source_check
              "source_executable": str(source_executable), "source_executable_sha256": _sha(source_executable),
              "source_environment": source_environment_identity(source_executable),
              "binary": identity, "installed_binary": str(installed), "key_file": str(key_file),
-             "codex": await pinned_codex(codex), "url": url, "arms": {},
+             "codex": await (codex_identity_resolver or pinned_codex)(codex), "url": url, "arms": {},
              "scope": "Scripted fresh native setup and two independent first-use analysts on synthetic Northstar in real local Superset; not published installation, customers, recurring efficacy or superiority."}
     env = _minimal_environment(home)
     env.update(CODEX_HOME=str(home/".codex"), PATH=str(Path(study["codex"]["path"]).parent)+os.pathsep+env["PATH"])
