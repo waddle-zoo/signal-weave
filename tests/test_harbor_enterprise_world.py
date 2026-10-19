@@ -63,6 +63,14 @@ async def default_runner(session, **kwargs):
     return episode()
 
 
+def test_saved_world_rejects_unannounced_person_model_changes(tmp_path):
+    world, _bridge, source, audit, _roles = build_world(tmp_path)
+    state = world.snapshot()
+    world.people["owner"].model = "gpt-6.1-sol"
+    with pytest.raises(ValueError, match="different inbox or person context"):
+        HarborWorld(source, world.workspace, world.inbox_root, world.people, "owner", audit, state=state)
+
+
 def build_world(tmp_path, *, owner_runner=None, recipient_runner=None, state=None,
                 native=None, callbacks=None, advance_callback=None, register_query_callback=None,
                 confirm_snapshot_callback=None, observation_context_callback=None,

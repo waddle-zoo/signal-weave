@@ -47,6 +47,23 @@ def successful_episode(message="I can clarify that policy.", *, tool_calls=0, us
 
 
 @pytest.mark.asyncio
+async def test_explicit_person_model_profile_is_forwarded_without_automatic_fallback(tmp_path):
+    observed = {}
+
+    async def runner(_session, **kwargs):
+        observed.update(kwargs)
+        return successful_episode()
+
+    person = make_person(tmp_path, runner, model="gpt-6.1-sol", effort="low")
+    assert (await person.reply(incoming_kind="owner_question", incoming_message="Clarify the policy?"))["status"] == "complete"
+    assert (observed["model"], observed["effort"]) == ("gpt-6.1-sol", "low")
+    with pytest.raises(ValueError, match="explicit bounded model"):
+        make_person(tmp_path, runner, model="invalid model name")
+    with pytest.raises(ValueError, match="supported reasoning effort"):
+        make_person(tmp_path, runner, effort="unbounded")
+
+
+@pytest.mark.asyncio
 async def test_reply_uses_only_role_brief_current_message_and_own_prior_conversation(tmp_path):
     observed = {}
     audit_events = []

@@ -248,6 +248,7 @@ def finalize(root: Path, roles: Path) -> dict:
     # No old paid attempt may be relabeled under the final protocol.
     study.setdefault("preparation_revisions", []).append(prior)
     study.update(method=method(), limits=LIMITS, roles=str(roles), roles_sha256=sha(roles),
+        people_profile=deck.get("people_profile", {"model": "gpt-6-luna", "effort": "xhigh"}),
         owner_protocol_sha256=sha(Path(study["owner_protocol"])),
         comparison_scope=(
             "Descriptive whole-company human outcomes, not a quiet-period or frontier-cost advantage. "
@@ -590,6 +591,7 @@ async def actor(root: Path, arm: str, phase: str, review: Path) -> dict:
                     _private_dir(inbox)
                 owner = key == "owner"
                 people[key] = CompanyPerson(**context, inbox_root=inbox, audit=audit,
+                    **study.get("people_profile", {}),
                     codex_executable=study["codex"]["path"],
                     expected_registry_sha256=study["registry_sha256"],
                     max_reply_calls=LIMITS["owner_reply_calls"] if owner else LIMITS["recipient_reply_calls"],

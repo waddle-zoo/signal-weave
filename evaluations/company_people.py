@@ -173,6 +173,7 @@ class CompanyPerson:
                  authority: str, inbox_root: str | os.PathLike[str], delivered_attachments=(),
                  audit: Any, episode_runner=None, codex_executable: str | None = None,
                  expected_registry_sha256: str | None = None,
+                 model: str = MODEL, effort: str = EFFORT,
                  max_reply_calls: int = DEFAULT_REPLY_CALLS,
                  max_seconds: int = DEFAULT_REPLY_SECONDS,
                  max_tool_calls: int = DEFAULT_TOOL_CALLS,
@@ -181,6 +182,10 @@ class CompanyPerson:
                         "business_knowledge": _brief(business_knowledge, "business_knowledge"),
                         "known_unknowns": _brief(known_unknowns, "known_unknowns"),
                         "authority": _brief(authority, "authority")}
+        if (not isinstance(model, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:/-]{0,119}", model)
+                or effort not in {"low", "medium", "high", "xhigh"}):
+            raise ValueError("Use an explicit bounded model name and supported reasoning effort")
+        self.model, self.effort = model, effort
         if (type(max_reply_calls) is not int or not 1 <= max_reply_calls <= MAX_REPLY_CALLS
                 or type(max_seconds) is not int or not 1 <= max_seconds <= MAX_REPLY_SECONDS
                 or type(max_tool_calls) is not int or not 0 <= max_tool_calls <= MAX_TOOL_CALLS
@@ -285,7 +290,7 @@ class CompanyPerson:
         try:
             async with asyncio.timeout(timeout):
                 episode = await runner(
-                    self.session, key="", model=MODEL, effort=EFFORT, budget=None,
+                    self.session, key="", model=self.model, effort=self.effort, budget=None,
                     audit=episode_audit, max_turns=1,
                     max_output_tokens=1200, timeout_seconds=timeout,
                     strict_single_turn_usage=True, enforce_wall_response_timeout=True,

@@ -197,7 +197,9 @@ class HarborWorld:
 
     def _context_fingerprints(self):
         return {
-            key: hashlib.sha256(json.dumps(person.context, ensure_ascii=False, sort_keys=True,
+            key: hashlib.sha256(json.dumps({"role_context": person.context,
+                                            "model": person.model, "effort": person.effort},
+                                           ensure_ascii=False, sort_keys=True,
                                             separators=(",", ":")).encode()).hexdigest()
             for key, person in self.people.items()
         }
