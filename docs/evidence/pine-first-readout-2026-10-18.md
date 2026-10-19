@@ -57,10 +57,37 @@ not appropriate to its historical review; source replacement was also outside
 that surface. A separate revision repair addresses this handoff. It does not
 change the original artifacts or upgrade this pair's result.
 
-The next qualification is to connect the actual retained query, review the same
-card and test later observations—including a recoverable cache defect—with
-live Jev. A correct first calculation cannot establish that its quality checks
-handle those later states or that the recurring human message is useful.
+## When the source changes
+
+A separate read-only qualification replayed the **unchanged saved SQL** across
+the three archived cutoffs. At September 28 it returns `comparison_valid=0`
+because the cached overall denominator is missing. Yet complete raw records,
+matching tier counts and population manifests support **2,772/3,420 = 81.05%**
+versus **2,550/2,850 = 89.47%**, an **8.42-point decline**. The baseline's own
+retained rule query also finds that decline. The treatment procedure would
+withhold the business decision if followed unchanged, despite recoverable
+evidence; a broken cached total is not the same as an unknowable comparison.
+
+This was checked independently and through the repository-venv MCP stdio
+helper with exact saved arguments, three rows per export and no truncation.
+It is source/procedure qualification, not a new agent or Jev outcome. At October
+5 the later archived cache revision reconciles again; that is not proof a
+person repaired it. SQL SHA-256 is
+`bdfa4430e4f8b514e99e8ec45419284213e5b6fcd8bff38290719ce5314d57a0`.
+
+The useful next step is to have the caller/data expert qualify the retained
+analysis, keeping business-comparison support separate from cache health,
+then connect and review the same card. Shadow checks with live Jev must examine
+the actual Dispatch update and distinct Data Operations repair request, not
+only the outcome label. This path is not yet established by this study.
+
+Operator registration also exposed an invalid generated descriptor: English
+definition text had been placed in the structured warehouse metric-definition
+field. Moving that text into the descriptor description is counted expert
+assistance, not successful unassisted onboarding. The CLI then rejected an
+explicit replacement manifest even through `connections update`; a separate
+repair makes that command honor its existing update option. Neither correction
+changes the original pair or validates the analysis for later weeks.
 
 ## Method and reproduction
 
