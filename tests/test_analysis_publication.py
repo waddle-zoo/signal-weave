@@ -190,23 +190,23 @@ async def test_stdio_reader_rejects_missing_or_unversioned_publication_fields(tm
     assert snapshot.error == "MCP read tool reported an error"
 
 
-@pytest.mark.parametrize("field,value", [
-    ("adapter", "other"),
-    ("resource", "report:other"),
-    ("source_key", "other"),
-    ("contract", {"tenant_id": "another-tenant", "authorized": True}),
-    ("contract", {"tenant_id": "local", "authorized": False}),
-    ("evidence", [{"source_key": "other", "statement": "misbound"}]),
+@pytest.mark.parametrize("field,value,mismatch", [
+    ("adapter", "other", "adapter"),
+    ("resource", "report:other", "resource"),
+    ("source_key", "other", "source_key, evidence[].source_key"),
+    ("contract", {"tenant_id": "another-tenant", "authorized": True}, "contract.tenant_id"),
+    ("contract", {"tenant_id": "local", "authorized": False}, "contract.authorized"),
+    ("evidence", [{"source_key": "other", "statement": "misbound"}], "evidence[].source_key"),
 ])
 async def test_existing_bridge_rejects_publication_identity_and_tenant_mismatch(
-    tmp_path, field, value,
+    tmp_path, field, value, mismatch,
 ):
     item = deepcopy(PUBLICATION)
     item[field] = value
     path = tmp_path / "current.json"
     path.write_text(json.dumps(item))
     snapshot = await _fetch(_registry(tmp_path, path))
-    assert snapshot.error == "MCP snapshot identity contract mismatch"
+    assert snapshot.error == f"MCP snapshot identity contract mismatch (fields: {mismatch})"
     assert snapshot.contract.tenant_id == "local"
     assert snapshot.evidence == []
 

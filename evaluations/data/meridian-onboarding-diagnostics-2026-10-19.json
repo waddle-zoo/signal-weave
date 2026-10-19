@@ -1,0 +1,76 @@
+{
+  "protocol": "enterprise-context-continuity-v1",
+  "scope": "One fictional company, one first-cutoff pair; planned later waves were not executed.",
+  "source": {
+    "kind": "Custom local read-only company MCP with typed query exports",
+    "accounts": 5000,
+    "discoverable_assets": 118,
+    "available_snapshots": 8,
+    "executed_source_cutoff": "2026-07-06T18:00:00Z",
+    "first_snapshot_source_events": 136330,
+    "last_snapshot_source_events": 155892,
+    "manifest_canonical_sha256": "a5b5ebdb9f3672d08e3e37d12c096981d394a947ae25c9e97c374c9572178dbf"
+  },
+  "native": {
+    "origin": "Locally built candidate; not a public-download or CI-origin claim",
+    "embedded_commit": "97a5daa103056963b5988921230da9688a241c42",
+    "binary_sha256": "a5dccb877c757f35a6f6f7d05e37afa7523f0ad6b6283f4128ea63db25a1f170",
+    "tools": 17,
+    "context_activation": "Actual signalweave context enable CLI"
+  },
+  "baseline": {
+    "model": "gpt-6-luna",
+    "effort": "xhigh",
+    "process_complete": true,
+    "business_status": "Useful provisional report; owner intent not completed",
+    "elapsed_seconds": 370.0601401659951,
+    "analyst_usage_known": true,
+    "analyst_uncached_input_tokens": 115663,
+    "analyst_output_tokens": 42633,
+    "colleague_replies": 3,
+    "colleague_uncached_input_tokens": 13535,
+    "colleague_output_tokens": 475,
+    "local_messages": 3,
+    "messages_are": "Clarification requests, not three completed reports",
+    "jev_requests": 0,
+    "raw_source_review": "Checked 7/30-day currency-separated figures match their stated half-open UTC intervals",
+    "communication_defect": "Runbook claims owner was asked about horizon; actual exchanges show no owner contact"
+  },
+  "signalweave": {
+    "model": "gpt-6-luna",
+    "effort": "xhigh",
+    "process_complete": false,
+    "business_status": "Two draft cards; no approved/evaluated recurring workflow",
+    "elapsed_seconds": 1208.1038474159868,
+    "censoring": "wall_episode_timeout at 1200 seconds",
+    "analyst_usage_known": false,
+    "analyst_uncached_input_tokens": null,
+    "analyst_output_tokens": null,
+    "colleague_replies": 6,
+    "local_messages": 2,
+    "messages_are": "Clarification requests, not completed recurring reports",
+    "jev_requests": 0,
+    "source_query_instruction_failures": 13,
+    "native_resource_identity_failures": 1,
+    "trial_inputs_unchanged_before_closeout": true
+  },
+  "review": {
+    "kind": "Independent internal data, PM and process reviews; not external peer review",
+    "source_integrity": "All eight compressed/uncompressed snapshots and raw aggregate facts independently checked",
+    "renewal_reference": "Raw-table populations for 14/30 days and inclusive/exclusive endpoints; never actor input",
+    "source_guard_finding": "One-million-step sample guard blocks an ordinary current-state aggregate despite approximately 26ms direct execution",
+    "withdrawal": "Original admission retained; future waves withdrawn, no retry/rescore in this root",
+    "superiority_proven": false,
+    "jev_decision_accuracy_tested": false
+  },
+  "retained_local_record_sha256": {
+    "study": "ac708f8512fda0b330fc8a0fc1f15a0f009079a56edaebcf66349658f2d1cef5",
+    "preflight": "8004600446aecdef01d0090bd72c5c7fa94bef3b5da38825763a8bdcb474e876",
+    "original_admission": "bd6a331bba323e25c8c3853b7f818912a7618af7248b7100ead6fe82702a55f1",
+    "baseline_terminal": "fa8d894de602f45faa41fa32f8e622ae3a6a890ba4976b2201c9ef7630b0f20a",
+    "signalweave_terminal": "958731d31ed830a26cef8fa6892bd619c8f92d1cbcdf66ad7452b62524b122ae",
+    "baseline_world": "540e16f2e71fe84d87c3566dd8d842c15a619f0c6693a99723eda860b1c7381f",
+    "signalweave_world": "51b24cb1de797717053fd8ba6ca0febe099c2f35d43b3d0cdc2f6126c68bc993"
+  },
+  "privacy": "Databases, homes, keys, binaries and raw transcripts remain untracked; this record contains no secrets or private paths."
+}

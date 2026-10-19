@@ -353,17 +353,35 @@ class MCPSourceAdapter:
                 return self._failure(source, descriptor, "MCP response exceeded the byte limit")
             payload = _pointer(_result_payload(result), entry.snapshot_pointer)
             snapshot = ResourceSnapshot.model_validate(payload)
+            identity_mismatches: list[str] = []
+            if snapshot.adapter != descriptor.adapter:
+                identity_mismatches.append("adapter")
+            if snapshot.resource != descriptor.resource:
+                identity_mismatches.append("resource")
+            if snapshot.source_key != entry.source_key:
+                identity_mismatches.append("source_key")
+            if "contract" not in snapshot.model_fields_set:
+                identity_mismatches.append("contract")
             if (
-                snapshot.adapter != descriptor.adapter or snapshot.resource != descriptor.resource
-                or snapshot.source_key != entry.source_key
-                or "contract" not in snapshot.model_fields_set
-                or "tenant_id" not in snapshot.contract.model_fields_set
+                "tenant_id" not in snapshot.contract.model_fields_set
                 or snapshot.contract.tenant_id != self.tenant_id
-                or not snapshot.contract.authorized
-                or any("source_key" not in item.model_fields_set or item.source_key != entry.source_key
-                       for item in [*snapshot.observations, *snapshot.evidence])
             ):
-                return self._failure(source, descriptor, "MCP snapshot identity contract mismatch")
+                identity_mismatches.append("contract.tenant_id")
+            if not snapshot.contract.authorized:
+                identity_mismatches.append("contract.authorized")
+            if any("source_key" not in item.model_fields_set or item.source_key != entry.source_key
+                   for item in snapshot.observations):
+                identity_mismatches.append("observations[].source_key")
+            if any("source_key" not in item.model_fields_set or item.source_key != entry.source_key
+                   for item in snapshot.evidence):
+                identity_mismatches.append("evidence[].source_key")
+            if identity_mismatches:
+                fields = ", ".join(dict.fromkeys(identity_mismatches))
+                return self._failure(
+                    source,
+                    descriptor,
+                    f"MCP snapshot identity contract mismatch (fields: {fields})",
+                )
             if snapshot.error is not None:
                 return self._failure(source, descriptor, "MCP snapshot reported an error")
             snapshot.source_key = source.key

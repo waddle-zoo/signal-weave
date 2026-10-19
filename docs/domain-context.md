@@ -107,10 +107,16 @@ scheduler or send notifications itself.
 ## Bind meaning to a recurring card
 
 Context review, card approval and workflow certification are distinct. After
-reviewing a definition, ask the agent to put the relevant business rule into the
-card's ordinary guidance and bind that exact context revision to the card. The
-binding itself does not rewrite policy, execute linked sources, or send note
-bodies into Jev. Your agent still interprets the context and explains the result.
+reviewing an entry, decide whether it is advisory context or a policy dependency.
+A reviewed advisory definition can be retrieved for future investigations without
+binding it to a card. Bind only when the owner wants a changed or expired meaning
+to defer that card's policy action. For a required dependency, put the concise
+operational rule in the card's ordinary guidance and bind the exact reviewed,
+tenant-shared revision. The pin records revision identity; it does not copy the
+note body, rewrite policy, execute linked sources or send note text into Jev. Your
+agent still interprets the context and explains the result. Binding increments
+the card version, clears its approval, and requires a fresh card review and
+approval; avoid binding advisory notes just to make them easier to find.
 
 For example:
 

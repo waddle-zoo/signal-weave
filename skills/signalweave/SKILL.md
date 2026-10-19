@@ -52,6 +52,25 @@ query source, compare it with your working analysis, then review the card.
 If the installed version lacks this path, explain the limitation instead of
 inventing a tool or silently changing the requested aggregation.
 
+This `queries` import path is for configured Superset/Preset connections, not a
+raw MCP connection. Raw MCP sources expose only the resources already bound in
+their reviewed manifest. If none represents the needed measure, give the useful
+current answer and hand off the source-registration step to the operator; do not
+suggest `queries import --source mcp`. The existing replacement-manifest command is:
+
+```sh
+signalweave connections update --source mcp --manifest /private/path/reviewed-sources.json
+```
+
+This switches the configured manifest path; it does not edit or merge manifest
+files, so include resources that should remain. It validates the manifest's tenant/schema without running the
+source tools. After the operator reconnects the agent, discover and inspect the
+registered resource before using it in a card.
+For a reader such as `export_query` that accepts identity arguments, keep
+`arguments.resource` equal to `descriptor.resource`, and `arguments.source_key`
+equal to the binding's `source_key`. The reader must return those same identities.
+Put underlying asset IDs in lineage or provenance, not in the `resource` argument.
+
 Keep policy inputs at the decision's grain: compact quantities, relevant
 exceptions and claim-specific checks with provenance. Fetch record-level detail
 separately for investigation and the human handoff unless those individual
@@ -101,6 +120,10 @@ Show the saved policy and source scope in ordinary language and call
 or changing the owner's policy just to clear review. Missing custom metric
 contracts remain unverified, not an automatic ban on an owner-reviewed shadow run;
 known incompatible windows and explicit required bindings still apply.
+Use `response_mode="compact"` for this normal review. Request `"full"` only when
+an audit or a specific unresolved blocker needs omitted detail; compact review
+still returns the current card summary and approval handoff, and does not waive
+any blocker or owner consent.
 
 Get explicit approval from the owner or authorized delegate for this exact saved
 policy and scope before `approve_insight_card`. If review returns an
@@ -244,11 +267,15 @@ Save reusable clarified meaning as a source-linked draft with a review date,
 then obtain owner-authorized review. Keep unresolved assumptions as open
 questions, not established definitions: review records agreement, not evidence
 for a missing technical fact. Confirm its exact audience before changing
-visibility. For a required dependency, write the business rule in card guidance
-and use `bind_insight_context` for the complete intended list of exact reviewed
-revisions; binding returns the card to draft for reapproval. A pin does not
-send note text to the decision provider. A tenant-visible card requires shared
-context; do not broaden a private note's audience just to make binding work.
+visibility. Then choose whether the meaning is advisory or policy-critical. For
+reusable advisory context, retrieve it when relevant; do not bind it merely to
+make it discoverable or reopen an existing card. Bind only when the owner wants a
+changed or expired definition to defer policy action. In that case, put the concise
+operational rule in card guidance and use `bind_insight_context` for the complete
+intended list of exact reviewed revisions. A pin stores revision identity, not
+the note body; binding returns the card to draft and requires review and approval
+again. A tenant-visible card requires shared context; do not broaden a private
+note's audience just to make binding work.
 Keep advisory hypotheses advisory.
 
 Use current dependency status or `inspect_insight_context` to identify changes;

@@ -169,7 +169,7 @@ async def test_hostile_identity_fails_closed(tmp_path, manifest, payload, source
     payload[field] = value
     adapter, = build(tmp_path, manifest, FakeTransport(payload))
     snapshot = await adapter.inspect(source)
-    assert snapshot.error == "MCP snapshot identity contract mismatch"
+    assert snapshot.error.startswith("MCP snapshot identity contract mismatch (fields: ")
     assert snapshot.contract.tenant_id == "tenant-a"
     assert snapshot.source_key == source.key
     assert snapshot.observations == snapshot.evidence == []
@@ -515,7 +515,8 @@ async def test_single_json_text_uses_same_pointer_and_identity_contract(tmp_path
     payload["contract"]["tenant_id"] = "foreign"
     fake.result.content = [types.TextContent(type="text", text=json.dumps(
         {"data": {"snapshot": payload}} if pointer else payload))]
-    assert (await adapter.inspect(source)).error == "MCP snapshot identity contract mismatch"
+    result = await adapter.inspect(source)
+    assert result.error == "MCP snapshot identity contract mismatch (fields: contract.tenant_id)"
 
 
 @pytest.mark.parametrize("kind", ["multiple", "prose", "fenced", "duplicate", "nonfinite", "exponent", "media", "empty"])
@@ -575,7 +576,9 @@ async def test_default_child_key_cannot_impersonate_explicit_binding(tmp_path, m
     payload["observations"][0].pop("source_key")
     payload["evidence"] = []
     adapter, = build(tmp_path, manifest, FakeTransport(payload))
-    assert (await adapter.inspect(source)).error == "MCP snapshot identity contract mismatch"
+    assert (await adapter.inspect(source)).error == (
+        "MCP snapshot identity contract mismatch (fields: observations[].source_key)"
+    )
 
 
 async def test_invalid_analytical_table_fails_closed(tmp_path, manifest, payload, source, comparison):
@@ -772,3 +775,19 @@ async def test_real_sdk_stdio_read_and_stderr_redaction(
         assert result.observations[0].source_key == source.key
     captured = capfd.readouterr()
     assert "test-only-sentinel" not in captured.out + captured.err + caplog.text
+
+async def test_identity_diagnostic_names_only_fields_not_payload_values(tmp_path, manifest, payload, source):
+    payload["resource"] = "private-resource-locator-sentinel"
+    payload["source_key"] = "private-source-binding-sentinel"
+    adapter, = build(tmp_path, manifest, FakeTransport(payload))
+
+    snapshot = await adapter.inspect(source)
+
+    assert snapshot.error == (
+        "MCP snapshot identity contract mismatch (fields: resource, source_key)"
+    )
+    serialized = snapshot.model_dump_json()
+    assert "private-resource-locator-sentinel" not in serialized
+    assert "private-source-binding-sentinel" not in serialized
+    assert snapshot.observations == snapshot.evidence == []
+    assert snapshot.metadata == {}
