@@ -1,0 +1,121 @@
+name: northstar-enterprise-lab
+
+x-superset-build: &superset-build
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: ${NORTHSTAR_SUPERSET_IMAGE:-signalweave-northstar-lab:local}
+
+services:
+  warehouse:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: enterprise_lake
+      POSTGRES_USER: enterprise
+      POSTGRES_PASSWORD: ${NORTHSTAR_WAREHOUSE_PASSWORD:?Set NORTHSTAR_WAREHOUSE_PASSWORD}
+    volumes:
+      - northstar_warehouse_data:/var/lib/postgresql/data
+      - ./warehouse/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U enterprise -d enterprise_lake"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  superset-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: superset
+      POSTGRES_USER: superset
+      POSTGRES_PASSWORD: ${NORTHSTAR_SUPERSET_DB_PASSWORD:?Set NORTHSTAR_SUPERSET_DB_PASSWORD}
+    volumes:
+      - northstar_superset_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U superset -d superset"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - northstar_redis_data:/data
+
+  superset-init:
+    <<: *superset-build
+    depends_on:
+      warehouse:
+        condition: service_healthy
+      superset-db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      SUPERSET_CONFIG_PATH: /app/superset-local/superset_config.py
+      SUPERSET_SECRET_KEY: ${NORTHSTAR_SUPERSET_SECRET_KEY:?Set NORTHSTAR_SUPERSET_SECRET_KEY}
+      SUPERSET_DB_PASSWORD: ${NORTHSTAR_SUPERSET_DB_PASSWORD:?Set NORTHSTAR_SUPERSET_DB_PASSWORD}
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: ${NORTHSTAR_SUPERSET_ADMIN_PASSWORD:?Set NORTHSTAR_SUPERSET_ADMIN_PASSWORD}
+      ADMIN_FIRST_NAME: Northstar
+      ADMIN_LAST_NAME: Admin
+      ADMIN_EMAIL: admin@northstar.local
+    volumes:
+      - ./superset:/app/superset-local:ro
+      - northstar_superset_home:/app/superset_home
+    entrypoint: ["/bin/bash", "-lc"]
+    command:
+      - >-
+        superset db upgrade &&
+        (superset fab create-admin
+        --username "$${ADMIN_USERNAME}"
+        --firstname "$${ADMIN_FIRST_NAME}"
+        --lastname "$${ADMIN_LAST_NAME}"
+        --email "$${ADMIN_EMAIL}"
+        --password "$${ADMIN_PASSWORD}" || true) &&
+        superset init
+    restart: "no"
+    healthcheck:
+      disable: true
+
+  superset:
+    <<: *superset-build
+    depends_on:
+      superset-init:
+        condition: service_completed_successfully
+    environment:
+      SUPERSET_CONFIG_PATH: /app/superset-local/superset_config.py
+      SUPERSET_SECRET_KEY: ${NORTHSTAR_SUPERSET_SECRET_KEY:?Set NORTHSTAR_SUPERSET_SECRET_KEY}
+      SUPERSET_DB_PASSWORD: ${NORTHSTAR_SUPERSET_DB_PASSWORD:?Set NORTHSTAR_SUPERSET_DB_PASSWORD}
+    volumes:
+      - ./superset:/app/superset-local:ro
+      - northstar_superset_home:/app/superset_home
+    ports:
+      - "127.0.0.1:${NORTHSTAR_SUPERSET_PORT:-18090}:8088"
+    command: ["gunicorn", "--bind", "0.0.0.0:8088", "--workers", "3", "--timeout", "120", "superset.app:create_app()"]
+
+  superset-seed:
+    <<: *superset-build
+    depends_on:
+      superset:
+        condition: service_started
+    environment:
+      SUPERSET_CONFIG_PATH: /app/superset-local/superset_config.py
+      SUPERSET_SECRET_KEY: ${NORTHSTAR_SUPERSET_SECRET_KEY:?Set NORTHSTAR_SUPERSET_SECRET_KEY}
+      SUPERSET_DB_PASSWORD: ${NORTHSTAR_SUPERSET_DB_PASSWORD:?Set NORTHSTAR_SUPERSET_DB_PASSWORD}
+      SUPERSET_BASE_URL: http://superset:8088
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: ${NORTHSTAR_SUPERSET_ADMIN_PASSWORD:?Set NORTHSTAR_SUPERSET_ADMIN_PASSWORD}
+      NORTHSTAR_WAREHOUSE_PASSWORD: ${NORTHSTAR_WAREHOUSE_PASSWORD:?Set NORTHSTAR_WAREHOUSE_PASSWORD}
+    volumes:
+      - ./superset:/app/superset-local:ro
+    entrypoint: ["/bin/bash", "-lc"]
+    command: ["python /app/superset-local/bootstrap.py"]
+    restart: "no"
+    healthcheck:
+      disable: true
+
+volumes:
+  northstar_warehouse_data:
+  northstar_superset_db_data:
+  northstar_superset_home:
+  northstar_redis_data:

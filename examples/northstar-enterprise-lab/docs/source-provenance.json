@@ -1,0 +1,51 @@
+{
+  "source_snapshot": "provided local Northstar synthetic lab snapshot (no Git commit metadata)",
+  "files": {
+    "scripts/generate_enterprise.py": {
+      "source_sha256": "d6e471608b17b714d32f1712a5167cb1883d8e0ed69c23b4c69b56095be9410a",
+      "packaged_sha256": "3317e1bab83efe81ac0b860a40b157485d4e40b6c5835098c9b43a5c56e35dfb",
+      "packaged": "Ruff-only import/spacing normalization and unused loop-variable rename; generated output hashes verified unchanged"
+    },
+    "superset/bootstrap.py": {
+      "source_sha256": "7a6f7b8a4b78526a758eaa4772a34519c9ed23029ecda01e6420c704a525e13c",
+      "packaged": "upstream idempotent seeding flow retained; credentials required from environment; one re-login/retry on expired access-token 401",
+      "packaged_sha256": "c465df950a58044e0aba3bfce9ca5e953601027e8910d6622c612e09dd6439b4"
+    },
+    "docs/generated_manifest.json": {
+      "source_sha256": "c05823220055716b267ad140ad6e65bd539764aa84af11918d8b58366d7bf1c4",
+      "packaged": "verbatim"
+    },
+    "superset/superset_config.py": {
+      "source_sha256": "2bfce1ec57a11e3042e0852e22e36619d7ee88718ac24aeb8c50befe4169e8a8",
+      "packaged": "database password and Superset secret key now required from environment"
+    },
+    "docker-compose.yml": {
+      "source_sha256": "273d6c3e3e4111d44cdc68d2686cfe5d9762de8c96bc1e9ab6171024bf7f773f",
+      "packaged": "adapted: unique default project and image tag, Compose-scoped network and volumes, loopback-only configurable port, no agent mounts, required runtime credentials, disabled inherited healthchecks for one-off init/seed jobs",
+      "packaged_sha256": "c683bf5c5d55aac16d48918de8696d6d6465b4e3d9db3d7d961340f4692831d9"
+    },
+    "Dockerfile": {
+      "source_sha256": "cc746b2bd656bf79746dd96ab94621e3ef76fcd496027efae2b5937344d8bf3d",
+      "packaged_sha256": "98525e139d37c11d527f3e4e1af83853d5d5b53bfe10d85195ca79df10188549",
+      "packaged": "base moved from apache/superset:latest to Docker Hub verified multi-platform index apache/superset:4.1.3@sha256:31d965435b462361d2b8207595eff28f54492778d0afd53768da5e763cc16ce7"
+    }
+  },
+  "local_image_inspection": {
+    "context": "desktop-linux",
+    "image": "northstar-superset:local",
+    "image_id": "sha256:c4507b97ca9c711db163afc4adffb035d86863c785b72e1e1a7ed33a0e6e628c",
+    "observed_superset_version_label": "4.1.3",
+    "observed_base_label": "3.10-slim-bookworm",
+    "repository_digests": [],
+    "apache_superset_latest_cached": false,
+    "limitations": "The local derived image exposed a Superset version label but no upstream digest; the public registry tag metadata was then queried read-only."
+  },
+  "verified_registry_base": {
+    "reference": "docker.io/apache/superset:4.1.3",
+    "index_digest": "sha256:31d965435b462361d2b8207595eff28f54492778d0afd53768da5e763cc16ce7",
+    "linux_amd64_digest": "sha256:bb0f14d08381a1cd99e6a4f6a41df1f447ea4ed537e1d1e8859b1b657d1f619e",
+    "linux_arm64_digest": "sha256:f8dffeff0ed6d625da7efb5c5f2e371b98d97283691b34d954aac0f3d5785f04",
+    "verified_on": "2026-10-19",
+    "verification": "Docker Hub public tag metadata; read-only, without image pull"
+  }
+}
