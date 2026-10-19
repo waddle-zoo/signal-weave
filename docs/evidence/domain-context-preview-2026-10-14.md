@@ -65,6 +65,16 @@ ignored `artifacts/native-63501fd-context-checks-v1.log` and
 `artifacts/native-63501fd-arm64-check-v1.log`. This verifies the tested packaging
 and lifecycle, not onboarding quality or the platform's comparative value.
 
+The subsequent branch-native [run 39174998916](https://github.com/waddle-zoo/signal-weave/actions/runs/39174998916)
+passed **all three platforms** after the example SQL portability repair; publication
+was skipped. Its downloaded Apple Silicon artifact embeds revision `f8b5764`
+and the same production fingerprint; executable SHA-256
+`12a6ebee16b0c1a5f78d721ca67e9a8fe4b988fbeaeb301a4fbfab1d658d57e4`.
+The new Courier preparation checked that actual executable's normal agent/context
+tools and exact source evidence against an independent source snapshot. These
+are zero-inference setup checks, not completed business-agent trials. The
+published rc3 download is still the earlier main release.
+
 ## Same-conversation agent report: completed process, wrong policy route
 
 The [closed record](../../evaluations/data/agent-report-handoff-v1-summary.json)
