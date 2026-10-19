@@ -40,7 +40,7 @@ from scripts.binary_provenance import ROOT, verify_binary
 from signalweave.mcp_server import AGENT_PROFILE_TOOLS
 from signalweave.mcp_source import MCPResource
 
-PROTOCOL = "pine-whole-enterprise-journey-v1"
+PROTOCOL = "pine-whole-enterprise-journey-v2"
 ORDER = ("baseline", "signalweave")
 LIMITS = {"actors": 2, "jev_requests": 6, "seconds_per_actor": 900,
           "mcp_calls_per_actor": 100, "workspace_calls_per_actor": 100,
@@ -125,8 +125,10 @@ class NativeConnection:
         self.binary, self.home, self.audit, self.proxy = binary, home, audit, proxy
         self.stack = None
         self.instructions = ""
+        self._commands = asyncio.Queue()
+        self._worker = None
 
-    async def restart(self):
+    async def _restart(self):
         if self.stack:
             await self.stack.aclose()
         self.stack = AsyncExitStack()
@@ -141,13 +143,69 @@ class NativeConnection:
         if {t.name for t in await self.server.list_tools()} != AGENT_PROFILE_TOOLS:
             raise ValueError("Expected exact normal native profile")
 
+    async def _own_session(self):
+        # stdio_client owns AnyIO cancel scopes. Enter/restart/exit them in ONE
+        # task, not the different HTTP request tasks invoking company tools.
+        try:
+            while True:
+                operation, arguments, reply = await self._commands.get()
+                try:
+                    if operation == "restart":
+                        result = await self._restart()
+                    elif operation == "close":
+                        result = None
+                        if self.stack:
+                            await self.stack.aclose()
+                            self.stack = None
+                    else:
+                        result = await getattr(self.server, operation)(*arguments)
+                except Exception as exc:
+                    if not reply.done():
+                        reply.set_exception(exc)
+                else:
+                    if not reply.done():
+                        reply.set_result(result)
+                if operation == "close":
+                    return
+        finally:
+            if self.stack:
+                await self.stack.aclose()
+                self.stack = None
+
+    async def _request(self, operation, *arguments):
+        if self._worker is None:
+            self._worker = asyncio.create_task(self._own_session())
+        if self._worker.done():
+            await self._worker
+            raise RuntimeError("Native session owner is closed")
+        reply = asyncio.get_running_loop().create_future()
+        await self._commands.put((operation, arguments, reply))
+        try:
+            await asyncio.wait((reply, self._worker), return_when=asyncio.FIRST_COMPLETED)
+        except asyncio.CancelledError:
+            reply.cancel()
+            raise
+        if reply.done():
+            return reply.result()
+        await self._worker
+        raise RuntimeError("Native session owner exited without a reply")
+
+    async def restart(self):
+        return await self._request("restart")
+
+    async def close(self):
+        if self._worker is not None:
+            if not self._worker.done():
+                await self._request("close")
+            await self._worker
+
     async def list_tools(self):
-        return await self.server.list_tools()
+        return await self._request("list_tools")
 
     async def call_tool(self, name, args):
         self.audit.emit("native.operation.start", name=name, arguments=args)
         try:
-            result = await self.server.call_tool(name, args)
+            result = await self._request("call_tool", name, args)
         except Exception as exc:
             self.audit.emit("native.operation.error", name=name, error_type=type(exc).__name__)
             raise
@@ -304,14 +362,14 @@ async def sessions(study, root, arm, audit, budget):
                 proxy = await stack.enter_async_context(_jev_proxy(audit, budget))
                 native = NativeConnection(Path(study["binary_path"]), root/arm/"person/.signalweave", audit, proxy)
                 await native.restart()
-                stack.push_async_callback(native.stack.aclose)
+                stack.push_async_callback(native.close)
             world = EnterpriseWorld(source, root, arm, native)
             try:
                 yield world, native
             finally:
                 world.record()
-                if native and native.stack:
-                    await native.stack.aclose()
+                if native:
+                    await native.close()
 
 
 def method():
@@ -322,14 +380,25 @@ def method():
     return {name: first._sha(ROOT/name) for name in files}
 
 
-async def prepare(root, archive, codex, key_file):
+async def prepare(root, archive, codex, key_file, *, treatment_only=False, prior_study=None):
     from evaluations.enterprise_native_setup import install_and_setup
     root = root.resolve()
     _private_dir(root)
     _private_file(root/"private-canary.txt", "private grader canary")
     cli = await first.pinned_codex(codex)
     study = {"protocol": PROTOCOL, "limits": LIMITS, "method": method(), "codex": cli,
-             "setup": {}, "arms": {}, "source_hashes": []}
+             "setup": {}, "arms": {}, "source_hashes": [],
+             "order": ["signalweave"] if treatment_only else list(ORDER),
+             "comparison": "forward treatment only; no new paired baseline" if treatment_only else "baseline first, one attempt each"}
+    if treatment_only:
+        if prior_study is None:
+            raise ValueError("Forward treatment needs its retained prior-study reference")
+        previous = prior_study.resolve()
+        records = {f"{arm}.json": json.loads((previous/f"{arm}.json").read_text()) for arm in ORDER}
+        study["prior_attempts"] = {"root": str(previous), "study_sha256": first._sha(previous/"study.json"),
+            "terminal_sha256": {name: first._sha(previous/name) for name in records},
+            "usage": {name: record["usage"] for name, record in records.items()},
+            "limitation": "Prior incomplete treatment and unknown cost remain; this is not a rescore or a new paired benefit estimate."}
     for index in range(len(company.CUTOFFS)):
         company.create_snapshot(root/f"snapshot-{index}.sqlite3", index)
         study["source_hashes"].append(first._sha(root/f"snapshot-{index}.sqlite3"))
@@ -376,13 +445,23 @@ async def preflight(root):
         assert {t.name for t in tools} == TOOLS
         _, snapshot = await native.call_tool("inspect_resource", {"adapter": company.ADAPTER, "resource": "metric:cached-delivery-sla"})
         assert snapshot["error"] is None
-    result = {"passed": True, "study_sha256": first._sha(root/"study.json"), "provider_requests": budget.used}
+        # Exercise the exact HTTP-handler/coordinator task boundary which failed
+        # after CLI registration in v1, with real stdio processes and no inference.
+        await asyncio.create_task(native.restart())
+        _, reconnected = await asyncio.create_task(native.call_tool("inspect_resource",
+            {"adapter": company.ADAPTER, "resource": "metric:cached-delivery-sla"}))
+        assert reconnected["error"] is None
+    result = {"passed": True, "study_sha256": first._sha(root/"study.json"),
+              "cross_task_restart_verified": True, "provider_requests": budget.used}
     save(root/"preflight.json", result)
     return result
 
 
 async def actor(root, arm, review):
     study = json.loads((root/"study.json").read_text())
+    order = study.get("order", list(ORDER))
+    if order not in (list(ORDER), ["signalweave"]):
+        raise ValueError("Unsupported actor order")
     admission = json.loads(review.read_text())
     preflight_result = json.loads((root/"preflight.json").read_text())
     if (admission.get("approved") is not True or not admission.get("reviewer")
@@ -400,13 +479,13 @@ async def actor(root, arm, review):
     if workspace_inventory(root/arm/"workspace") != study["arms"][arm]["inventory"]:
         raise ValueError("Actor starting workspace changed")
     prior = []
-    for candidate in ORDER:
+    for candidate in order:
         if (root/f"{candidate}.claimed").exists():
             if not (root/f"{candidate}.json").exists():
                 raise ValueError("Prior attempt unaccounted; no further actors")
             prior.append(json.loads((root/f"{candidate}.json").read_text()))
-    if len(prior) >= 2 or ORDER[len(prior)] != arm:
-        raise ValueError("Baseline first, one attempt per arm")
+    if len(prior) >= len(order) or order[len(prior)] != arm:
+        raise ValueError("Follow the frozen study order, one attempt per arm")
     if any(not p.get("usage", {}).get("known") for p in prior):
         raise ValueError("Prior usage unknown")
     for key, limit in (("input_tokens", "between_actor_input_stop"), ("uncached_input_tokens", "between_actor_uncached_stop")):
@@ -456,10 +535,13 @@ def main():
     parser.add_argument("--codex", default="/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex")
     parser.add_argument("--arm", choices=ORDER)
     parser.add_argument("--review", type=Path)
+    parser.add_argument("--treatment-only", action="store_true", help="Separate forward treatment check, not a new paired comparison")
+    parser.add_argument("--prior-study", type=Path, help="Retained terminal records for a forward treatment check")
     args = parser.parse_args()
     root = args.root.resolve()
     if args.mode == "prepare" and args.archive and args.key_file:
-        operation = prepare(root, args.archive.resolve(), args.codex, args.key_file.resolve())
+        operation = prepare(root, args.archive.resolve(), args.codex, args.key_file.resolve(),
+            treatment_only=args.treatment_only, prior_study=args.prior_study)
     elif args.mode == "preflight":
         operation = preflight(root)
     elif args.mode == "actor" and args.arm and args.review:

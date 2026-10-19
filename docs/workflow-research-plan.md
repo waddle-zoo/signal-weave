@@ -9,6 +9,16 @@ and [Redwood](evidence/redwood-workflow-2026-10-17.md), followed by
 larger sampling plan below. Keep earlier cohorts, including failures and
 environment-censored attempts, unchanged.
 
+**The current execution target is the complete fictional-enterprise journey.**
+Real customer recruitment is not a prerequisite for this work. Simulate the
+company and its people, execute the actual installation, connector and agent
+tools, and independently grade the delivered business work against hidden source
+facts. Follow setup, clarification, reviewed cards, repeated observations,
+investigation, local inbox delivery, replies and later reuse together. A first
+answer, correct policy enum or source-only check does not complete that journey.
+Keep actual-human usability studies separate; do not use their absence to defer
+the requested end-to-end simulations or label simulated employees as participants.
+
 Review disposition: adequate as a staged research roadmap, not an execution
 approval or a power assessment. A bounded review of the synthetic available-
 history projector found a daylight-saving fold ordering defect. Three regressions

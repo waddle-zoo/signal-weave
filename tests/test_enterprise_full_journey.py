@@ -1,4 +1,5 @@
 """The simulated people move a whole journey; they never supply its analysis."""
+import asyncio
 import json
 from unittest.mock import AsyncMock, Mock
 
@@ -98,3 +99,59 @@ def test_equal_opening_request_and_no_future_answers():
         assert future not in json.dumps((b, t))
     for hidden in ("snapshot-", "independent-review", "comparison_valid=0", "2772", "3420"):
         assert hidden not in json.dumps((b, t))
+
+
+async def test_native_restart_and_close_keep_scope_ownership_across_request_tasks(monkeypatch):
+    connection = trial.NativeConnection(None, None, Mock(), None)
+    owner = None
+    events = []
+
+    class ScopedStack:
+        async def aclose(self):
+            assert asyncio.current_task() is owner
+            events.append("close")
+
+    async def connect():
+        nonlocal owner
+        if owner is None:
+            owner = asyncio.current_task()
+        assert asyncio.current_task() is owner
+        if connection.stack:
+            await connection.stack.aclose()
+        connection.stack = ScopedStack()
+        connection.server = Mock()
+        connection.server.list_tools = AsyncMock(return_value=["normal tools"])
+        connection.server.call_tool = AsyncMock(return_value=([], {"actual": True}))
+        events.append("open")
+
+    monkeypatch.setattr(connection, "_restart", connect)
+    await connection.restart()
+    # A tool handler is a different task from the coordinator which opened it.
+    await asyncio.create_task(connection.restart())
+    assert await asyncio.create_task(connection.list_tools()) == ["normal tools"]
+    assert await asyncio.create_task(connection.call_tool("inspect", {})) == ([], {"actual": True})
+    await asyncio.create_task(connection.close())
+    await connection.close()
+    assert events == ["open", "close", "open", "close"]
+
+
+async def test_native_owner_propagates_operation_failure_and_can_restart(monkeypatch):
+    connection = trial.NativeConnection(None, None, Mock(), None)
+    attempts = 0
+
+    async def connect():
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise ValueError("source is unavailable")
+        connection.server = Mock()
+        connection.server.list_tools = AsyncMock(return_value=[])
+
+    monkeypatch.setattr(connection, "_restart", connect)
+    with pytest.raises(ValueError, match="source is unavailable"):
+        await connection.restart()
+    await asyncio.create_task(connection.restart())
+    assert await connection.list_tools() == []
+    await connection.close()
+    with pytest.raises(RuntimeError, match="closed"):
+        await connection.list_tools()
