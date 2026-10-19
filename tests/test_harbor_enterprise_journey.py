@@ -36,6 +36,23 @@ def test_verify_rejects_changed_method_before_reading_native_or_secrets(tmp_path
         journey.verify({"protocol": journey.PROTOCOL, "method": {"frozen": "old"}}, tmp_path)
 
 
+def test_actor_rejects_stale_prepared_manifest_before_claim(tmp_path, monkeypatch):
+    """Old setup output without key_file must not consume an actor attempt."""
+    root = tmp_path / "stale-study"
+    root.mkdir()
+    stale_study = {"protocol": journey.PROTOCOL, "method": journey.method()}
+    (root / "study.json").write_text(json.dumps(stale_study), encoding="utf-8")
+    monkeypatch.setattr(
+        journey, "verify_binary", lambda *args: pytest.fail("stale manifest reached binary verification")
+    )
+
+    with pytest.raises(ValueError, match="Prepared study is incomplete"):
+        asyncio.run(journey.actor(root, "baseline", "queue-onboarding", root / "review.json"))
+
+    assert not list(root.glob("*.claimed"))
+    assert not list(root.glob("actor-baseline-queue-onboarding*"))
+
+
 def test_method_identity_includes_source_and_shared_transport_not_generated_answers():
     identities = journey.method()
     assert "evaluations/available_history.py" in identities

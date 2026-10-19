@@ -215,6 +215,8 @@ async def prepare(root: Path, archive: Path, codex: str, key_file: Path, fixture
 def verify(study: dict, root: Path) -> None:
     if study["protocol"] != PROTOCOL or study["method"] != method():
         raise ValueError("Frozen study method changed")
+    if not isinstance(study.get("key_file"), str) or not Path(study["key_file"]).is_absolute():
+        raise ValueError("Prepared study is incomplete: rerun fresh preparation with an explicit private key-file path")
     if verify_binary(Path(study["binary_path"]), ROOT) != study["binary"]:
         raise ValueError("Native artifact changed")
     if sha(Path(study["codex"]["path"])) != study["codex"]["sha256"]:
@@ -563,16 +565,18 @@ async def actor(root: Path, arm: str, phase: str, review: Path) -> dict:
     previous_calls = admission(root, arm, phase, review, study)
     stem = f"actor-{arm}-{phase}"
     _private_file(root / f"{stem}.claimed", f"{PROTOCOL}: one attempted actor, no retries.\n")
-    secret = Path(study["key_file"]).read_text().strip()
-    audit = Audit(path=root / f"{stem}.jsonl", secrets=(secret,))
+    audit = Audit(path=root / f"{stem}.jsonl")
     budget = RequestBudget(0 if arm == "baseline" else max(0, LIMITS["provider_requests"] - previous_calls))
     started, world = time.monotonic(), None
     result = {"arm": arm, "phase": phase, "process_complete": False,
               "frontier_invocations": 0, "errors": [], "business_grade": None}
     world_path = root / arm / "world.json"
-    before_world = json.loads(world_path.read_text()) if world_path.exists() else None
-    prior_reply_count = len(before_world["person_replies"]) if before_world else 0
+    prior_reply_count = 0
     try:
+        if arm == "signalweave":
+            audit.secrets = (Path(study["key_file"]).read_text().strip(),)
+        before_world = json.loads(world_path.read_text()) if world_path.exists() else None
+        prior_reply_count = len(before_world["person_replies"]) if before_world else 0
         async with servers(study, root, arm, audit, budget) as (source, native):
             caller = Caller(study, root, arm, source, native, audit)
             inbox_root = root / arm / "inboxes"
