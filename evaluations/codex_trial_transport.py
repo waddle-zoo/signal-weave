@@ -485,6 +485,7 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
     error = None
     foreign_tools = []
     workspace_items = {}
+    workspace_budget_exhausted = False
     resource_discovery_ids = set()
     resource_discovery_attempt_ids = set()
     registry_isolation = None
@@ -521,7 +522,7 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
             def record_event(line):
                 nonlocal usage, error, final_message
                 nonlocal last_completed_item_is_nonblank_agent_message, pending_unidentified_items
-                nonlocal post_completion_item_activity
+                nonlocal post_completion_item_activity, workspace_budget_exhausted
                 event = json.loads(line)
                 audit.emit("codex.event", event=event)
                 if finish_on_final_message and usage_reports and event.get("type", "").startswith("item."):
@@ -560,7 +561,7 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                             and isinstance(identifier, str) and identifier):
                         workspace_items[identifier] = item["type"]
                         if len(workspace_items) > max_workspace_tool_calls:
-                            foreign_tools.append("workspace_tool_budget_exhausted")
+                            workspace_budget_exhausted = True
                     else:
                         foreign_tools.append(item["type"])
                 if item.get("type") == "agent_message" and isinstance(item.get("text"), str):
@@ -610,8 +611,10 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                             # depleted Jev budget must be recorded as treatment
                             # censoring; it must not kill the baseline agent (or a
                             # reviewer) and bias the paired cohort by run order.
-                            if foreign_tools or bridge.exhausted:
-                                error = "foreign_tool_used" if foreign_tools else "tool_call_budget_exhausted"
+                            if foreign_tools or workspace_budget_exhausted or bridge.exhausted:
+                                error = ("foreign_tool_used" if foreign_tools else
+                                         "workspace_tool_budget_exhausted" if workspace_budget_exhausted
+                                         else "tool_call_budget_exhausted")
                                 break
                         if error:
                             process.terminate()
@@ -642,8 +645,9 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                                         error = "tool_call_budget_exhausted"
                                     break
                                 record_event(line)
-                                if foreign_tools:
-                                    error = "foreign_tool_used"
+                                if foreign_tools or workspace_budget_exhausted:
+                                    error = ("foreign_tool_used" if foreign_tools else
+                                             "workspace_tool_budget_exhausted")
                                     process.terminate()
                                     break
                                 if bridge.exhausted:
@@ -722,8 +726,10 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
             error = error or "post_completion_item_activity"
         if pending_item_ids or pending_unidentified_items:
             error = error or "unfinished_item_activity"
-        if foreign_tools or bridge.exhausted:
-            error = error or ("foreign_tool_used" if foreign_tools else "tool_call_budget_exhausted")
+        if foreign_tools or workspace_budget_exhausted or bridge.exhausted:
+            error = error or ("foreign_tool_used" if foreign_tools else
+                              "workspace_tool_budget_exhausted" if workspace_budget_exhausted
+                              else "tool_call_budget_exhausted")
     if normalized_usage is not None:
         audit.emit("api.response", provider="openai", request_id=request_id,
                    transport="codex_cli", model=selected_model, effort=effort,
@@ -746,6 +752,7 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
         and exit_code == 0
         and not error
         and not foreign_tools
+        and not workspace_budget_exhausted
         and not bridge.exhausted
         and completion_usage_valid
     )
@@ -773,6 +780,7 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
         result["workspace"] = {"path": str(workspace), "permissions_profile": "signalweave-study",
             "tool_items": workspace_items, "tool_item_count": len(workspace_items),
             "tool_budget": max_workspace_tool_calls,
+            "budget_exhausted": workspace_budget_exhausted,
             "scope": "Real persistent caller files and sandboxed commands; not recipient delivery or business-quality proof."}
         if workspace_read_paths:
             result["workspace"]["read_only_paths"] = [os.path.realpath(path) for path in workspace_read_paths]

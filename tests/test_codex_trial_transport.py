@@ -374,7 +374,34 @@ async def test_workspace_does_not_admit_web_ambiguous_items_or_unbounded_work(
         {"type": "turn.completed", "usage": {"input_tokens": 10, "cached_input_tokens": 0, "output_tokens": 2}},
     ], **workspace_options(tmp_path), max_workspace_tool_calls=cap)
     assert result["status"] != "complete"
-    assert expected in result["foreign_tools"]
+    if expected == "workspace_tool_budget_exhausted":
+        assert result["error"] == expected
+        assert result["foreign_tools"] == []
+        assert result["workspace"]["budget_exhausted"] is True
+    else:
+        assert expected in result["foreign_tools"]
+
+
+@pytest.mark.parametrize("accounting_drain", [False, True])
+async def test_workspace_quota_is_not_foreign_tool_use_or_known_zero_usage(
+    fake_episode, tmp_path, accounting_drain,
+):
+    options = workspace_options(tmp_path)
+    options["accounting_drain"] = accounting_drain
+    result = await fake_episode.run([
+        {"type": "item.started", "item": {"type": "command_execution", "id": "first"}},
+        {"type": "item.completed", "item": {"type": "command_execution", "id": "first"}},
+        {"type": "item.started", "item": {"type": "file_change", "id": "second"}},
+    ], **options, max_workspace_tool_calls=1)
+    assert result["status"] == "failed"
+    assert result["error"] == "workspace_tool_budget_exhausted"
+    assert result["foreign_tools"] == []
+    assert result["workspace"]["tool_item_count"] == 2
+    assert result["workspace"]["tool_budget"] == 1
+    assert result["workspace"]["budget_exhausted"] is True
+    assert result["completion_usage_reports"] == []
+    assert any(event["kind"] == "api.error" and event["usage_known"] is False
+               for event in fake_episode.audit.events)
 
 
 async def test_workspace_requires_explicit_protocol_before_auditing_inference(fake_episode, tmp_path):

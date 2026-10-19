@@ -136,3 +136,55 @@ onboarding result, not a SignalWeave result or a completed comparison.
 A separate prospective, fresh treatment-only study is adaptive and unpaired.
 It must earn its own full functional result; it cannot supply a comparative
 accuracy, cost or efficacy headline for the failed v5 pair.
+
+### V6: useful recurrence, interrupted before the closeout
+
+The fresh, explicitly unpaired treatment completed both onboarding sessions.
+The agents authored the queries and cards; the owner clarified policy, read
+exact saved versions and consented before approval. Independent numerical and
+product reviews admitted recurrence. The weekly SQL matched the raw reference
+across all 28 snapshots, but that replay alone was not a recurring-work pass.
+
+The actual run checked **27 daily cutoffs through March 21**. It reused the
+February 23 onboarding handoff, then delivered 26 further daily updates and
+four weekly briefs in total: **58 local messages**. The agent carried the
+March 9 policy change into separate response and resolution worklists, tracked
+carryovers and exits, and corrected an owner-rejected card version. The fourth
+weekly brief preserved **38/110** visible resolutions that missed the clock,
+excluding 44 unresolved tickets from that denominator, while explaining the
+**24 missing tickets** and incomplete whole-cohort conclusion. Independent raw
+checks also matched 26 dated daily summaries and 52 response/resolution ID sets;
+these are dependent checks, not independent enterprise trials.
+
+These were useful short triage messages, not proof that attachments were used:
+recipients read messages and replied, but opened none of the delivered detail
+files. Later handoffs included up to eight attachments, including large
+technical JSON. That is practical presentation friction. No Data Operations
+contact or gap remediation was observed; source inspection and qualified
+reporting are different from resolving the gap.
+
+The harness then exhausted its **200 workspace-operation quota** while the
+agent was saving March 21 notes. Its historical `foreign_tool_used` error
+contained `workspace_tool_budget_exhausted`; this was not a foreign-tool
+violation or wall-time timeout. **March 22 and the final owner handoff did not
+run.** Outer analyst usage is unknown. The 33 live Jev requests across all
+three stages have known usage—291,771 input and 4,277 output tokens—but do not
+establish total cost or a saving.
+
+V6 remains an incomplete journey. A proposed future fresh-agent recovery must
+earn separate admission and preserve the actual company state; it
+cannot rewrite this result. Future full studies should model separate scheduled
+agent wakes, with persistent company state and bounded per-wake resources,
+rather than one month-long conversation. Neither change supplies missing
+quiet-day, comparative or real-customer evidence.
+
+### Separate candidate-install check
+
+The candidate installer was actually piped into a shell with a controlling terminal, using
+the current CI native archive in a new private home. Setup, hidden-key entry,
+Codex registration, the bundled skill, source-only health and two native MCP
+starts passed. The three HTTPS download URLs were locally substituted pinned
+files: this tests install/setup mechanics, **not the published release or CDN**.
+No provider judgment was requested. An earlier attempt's test manifest was
+incorrectly world-readable; the corrected case used owner-only read permission.
+That failed attempt is retained, not counted successful.
