@@ -74,6 +74,11 @@ as `readOnlyHint` are not authority. MCP cannot prove a tool lacks side effects.
 Protect the manifest like executable deployment configuration, and scope server
 credentials to the named tenant and approved reads.
 
+For a plain-English measurement definition, use the descriptor's `description`
+and contract `population`, `grain` and `scope`. The optional `metric_definitions`
+field takes structured warehouse compiler definitions, not strings; do not invent
+table/aggregation bindings just to register an ordinary evidence source.
+
 For stdio, replace the transport with:
 
 ```json
