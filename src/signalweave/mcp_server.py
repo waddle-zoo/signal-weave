@@ -2608,16 +2608,20 @@ def create_mcp(
         response_mode: ResponseMode = default_card_response_mode,
         ctx: Context | None = None,
     ) -> dict[str, Any]:
-        """Apply clarified business policy to the same card, returning it to draft.
+        """Revise a recurring brief or its evidence sources, returning it to draft.
 
         Only the authenticated card owner may revise it. Get the current card,
         then provide only changed fields; lists/maps replace the whole field.
         Allowed: title, what_to_watch, why_watch, watch_for, questions,
         numeric_conditions, evidence_requirements, decision_guidance,
-        follow_up_guidance, comparison_windows, delivery_methods, owner.
-        Empty lists/maps can clear optional fields. Source identities/parameters,
-        execution settings and context pins cannot be changed here. Existing
-        source requirements may gain exact keys needed by new numeric conditions.
+        follow_up_guidance, comparison_windows, delivery_methods, owner,
+        sources, max_source_age_hours. Sources replace the complete nonempty
+        list of exact SourceRefs; connect/inspect a new query before selecting it.
+        Omitted fields stay unchanged. Null clears the card's source-age limit;
+        it does not attest freshness or waive other evidence checks. Empty
+        lists/maps can clear optional policy fields. Other execution settings
+        and context pins cannot be changed here. Required numeric bindings are
+        retained on replacement sources; remove obsolete conditions explicitly.
         Every revision increments the version, clears approval, compiled plan
         and current review, and needs fresh review/approval. No source reads,
         inference, scheduling or delivery occurs. Recent correction history is
@@ -2635,7 +2639,7 @@ def create_mcp(
             raise ValueError("card version changed; get and review the current card before revising")
         allowed = {"title", "what_to_watch", "why_watch", "watch_for", "questions", "numeric_conditions",
                    "evidence_requirements", "decision_guidance", "follow_up_guidance", "comparison_windows",
-                   "delivery_methods", "owner"}
+                   "delivery_methods", "owner", "sources", "max_source_age_hours"}
         if not changes or set(changes) - allowed:
             raise ValueError("provide only nonempty changes to the documented business-policy fields")
         if (len(json.dumps(changes, ensure_ascii=False, allow_nan=False).encode()) > 32_000
@@ -2644,10 +2648,12 @@ def create_mcp(
         payload = {**card.model_dump(mode="json"), **changes,
                    "version": card.version + 1, "status": "draft", "approved_by": None,
                    "approved_at": None, "compiled_plan": None, "onboarding_review": None}
-        if "numeric_conditions" in changes:
+        if "sources" in changes and (not isinstance(changes["sources"], list) or not changes["sources"]):
+            raise ValueError("sources must replace the complete nonempty list of source references")
+        if "numeric_conditions" in changes or "sources" in changes:
             conditions = [NumericCondition.model_validate(item) for item in payload["numeric_conditions"]]
             payload["sources"] = [source.model_dump(mode="json") for source in bind_numeric_condition_requirements(
-                card.sources, conditions,
+                [SourceRef.model_validate(source) for source in payload["sources"]], conditions,
             )]
         correction = OnboardingCorrection(
             correction_id=f"correction-{uuid4().hex}", card_id=card.id, card_version=card.version + 1,

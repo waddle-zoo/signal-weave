@@ -92,11 +92,24 @@ clarification before unattended delivery. That does not approve a card, make
 an invalid comparison usable, or authorize a message.
 
 If you answer a question after a draft was saved, the agent can use
-`revise_insight_card` to apply your clarification to the same card. It keeps the
-source anchors, increments the version and returns it to draft; review and
+`revise_insight_card` to apply your clarification to the same card. It keeps
+omitted fields unchanged, increments the version and returns it to draft; review and
 approval must happen again. Old receipts remain history. Revision does not
 approve the card or activate automation. Check your connected tool list on older
 builds; without this operation a replacement draft must be reviewed explicitly.
+
+When the first answer needs a saved query rather than the original chart,
+connect and inspect that query, then revise `sources` with the complete desired
+source list on the same card. There is no need to duplicate the card or rewrite
+its business purpose. The new scope needs fresh review and owner confirmation;
+an old approval does not cover it. Context pins remain and must still be valid.
+Check that the replacement measure has the intended meaning, not just matching
+comparison-key names. A current context pin alone does not prove a new query
+uses that definition.
+The same revision can set `max_source_age_hours`, including explicit `null` to
+remove an inappropriate age limit for an agreed historical review. Omission
+preserves the current limit. Removing it does not make old evidence fresh or
+waive data quality, source authorization or comparison checks.
 
 Normal agent responses omit historical review/correction packets from the
 revision receipt while preserving active policy, exact source scope, version and
