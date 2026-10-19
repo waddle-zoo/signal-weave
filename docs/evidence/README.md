@@ -4,7 +4,9 @@ Start with the [evaluation index](../evaluations.md) for the current product-pat
 results and the useful historical Northstar studies. Reports separate setup,
 native decisions, final agent outcomes, and communication quality.
 
-Latest whole-company exercises: [Northstar, from fresh setup through seven
+Latest whole-company exercises: [OrbitWorks, six reviews, actual CS handoffs
+and separately recorded recoveries](orbitworks-whole-journey-2026-10-19.md),
+[Northstar, from fresh setup through seven
 weekly reviews](northstar-whole-journey-2026-10-19.md),
 [Pine Courier's three-week journey](pine-whole-journey-2026-10-19.md), and
 [Harbor's daily/weekly operation, interruptions and separate analyst
