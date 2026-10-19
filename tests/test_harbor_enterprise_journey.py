@@ -83,6 +83,7 @@ def _role_deck(effective_at="2027-01-01T00:00:00Z", message="The support commitm
     }
     return {
         "people": people,
+        "limits": dict(journey.LIMITS),
         "planned_change": {"effective_at": effective_at, "message": message},
     }
 
@@ -597,6 +598,12 @@ def test_admission_requires_approved_frozen_role_deck_and_normalized_people_keys
     deck["people"].pop("data-operations")
     roles.write_text(json.dumps(deck), encoding="utf-8")
     with pytest.raises(ValueError, match="five named fictional employees"):
+        journey.finalize(root, roles)
+
+    stale_deck = _role_deck()
+    stale_deck["limits"]["owner_reply_calls"] = 12
+    roles.write_text(json.dumps(stale_deck), encoding="utf-8")
+    with pytest.raises(ValueError, match="Role deck limits must match"):
         journey.finalize(root, roles)
 
     roles.write_text(json.dumps(_role_deck()), encoding="utf-8")

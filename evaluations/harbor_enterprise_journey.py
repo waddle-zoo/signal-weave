@@ -250,6 +250,8 @@ def finalize(root: Path, roles: Path) -> dict:
     for role in deck["people"].values():
         if set(role) != {"role_brief", "business_knowledge", "known_unknowns", "authority"}:
             raise ValueError("Each role must supply its four ordinary-language context fields")
+    if deck.get("limits") != LIMITS:
+        raise ValueError("Role deck limits must match the current prospective execution limits")
     study = json.loads((root / "study.json").read_text())
     prior = {"study_sha256": sha(root / "study.json"), "method": study["method"],
              "owner_protocol_sha256": study["owner_protocol_sha256"], "inference_calls": 0}
@@ -461,6 +463,9 @@ COMMON = (
     "ONLY to these local simulated employees. No real Slack, scheduling, customer contact or "
     "invented cause, harm, assignment, repair or consultation. Return supported partial findings "
     "instead of a blanket refusal. Dates and population changes alone are not causal evidence. "
+    "Match evidence requirements to the claim: a bounded finding need not establish a complete "
+    "population, and partial coverage does not establish a whole-population result. Prefer "
+    "compact policy facts with provenance; retrieve diagnostic detail when useful. "
     "Use the actual tool schemas and existing saved-response files; do not repeat queries merely "
     "to persist them. Keep runtime/audit plumbing in technical notes, not business messages."
 )
@@ -532,7 +537,10 @@ def task(arm, phase, cutoff):
             "as newly discovered work. finish_day advances after a reviewed cutoff; quiet "
             "checks advance without a forced digest. Apply owner meaning changes to the "
             "retained procedure/cards/context after review, not to old receipts. Continue "
-            "until engagement_complete, then leave a concise handoff with actual limitations."
+            "until engagement_complete, then send the owner a concise final handoff with "
+            "current findings, unresolved work, workflow status and reachable supporting "
+            "files. Retain the technical procedure separately, then finish with a short "
+            "operator summary and actual limitations."
         )
     return {"instructions": instructions, "prompt": prompt}
 

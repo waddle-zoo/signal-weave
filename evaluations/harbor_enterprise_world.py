@@ -23,7 +23,6 @@ from typing import Any
 from evaluations.codex_workspace import validate_workspace
 from evaluations.company_people import (
     MAX_ATTACHMENT_BYTES,
-    MAX_ATTACHMENTS,
     MAX_CONTEXT_CHARS,
     CompanyPerson,
 )
@@ -204,7 +203,14 @@ class HarborWorld:
     def _context_fingerprints(self):
         return {
             key: hashlib.sha256(json.dumps({"role_context": person.context,
-                                            "model": person.model, "effort": person.effort},
+                                            "model": person.model, "effort": person.effort,
+                                            "limits": {
+                                                "replies": person.max_reply_calls,
+                                                "seconds": person.max_seconds,
+                                                "tools": person.max_tool_calls,
+                                                "call_timeout": person.call_timeout,
+                                                "attachments": person.max_attachments,
+                                            }},
                                            ensure_ascii=False, sort_keys=True,
                                             separators=(",", ":")).encode()).hexdigest()
             for key, person in self.people.items()
@@ -470,7 +476,7 @@ class HarborWorld:
                 raise ValueError("previously delivered card snapshot ledger does not match its bytes")
             return deepcopy(recorded)
 
-        if len(person.session.manifest) >= MAX_ATTACHMENTS:
+        if len(person.session.manifest) >= person.max_attachments:
             raise ValueError("owner attachment delivery limit prevents exact card snapshot review")
 
         try:
@@ -505,7 +511,7 @@ class HarborWorld:
             path = _workspace_file(self.workspace, ref)
             if path.stat().st_size > MAX_ATTACHMENT_BYTES:
                 raise ValueError("recipient attachments must fit the CompanyPerson read limit")
-        if len(recipient.session.manifest) + len(files) > MAX_ATTACHMENTS:
+        if len(recipient.session.manifest) + len(files) > recipient.max_attachments:
             raise ValueError("recipient cumulative attachment limit would be exceeded")
 
         observation_context = None

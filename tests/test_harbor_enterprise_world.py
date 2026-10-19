@@ -96,7 +96,7 @@ def test_saved_world_rejects_unannounced_person_model_changes(tmp_path):
 def build_world(tmp_path, *, owner_runner=None, recipient_runner=None, state=None,
                 native=None, callbacks=None, advance_callback=None, register_query_callback=None,
                 confirm_snapshot_callback=None, observation_context_callback=None,
-                max_tool_calls=256, max_messages=64):
+                max_tool_calls=256, max_messages=64, max_attachments=96):
     workspace = tmp_path / "workspace"
     workspace.mkdir(mode=0o700)
     inbox_root = tmp_path / "inboxes"
@@ -117,6 +117,7 @@ def build_world(tmp_path, *, owner_runner=None, recipient_runner=None, state=Non
             inbox_root=inbox,
             audit=role_audits[key],
             episode_runner=runner or default_runner,
+            max_attachments=max_attachments,
         )
     source = FakeMCP([tool("list_assets"), tool("query_readonly")])
     world_audit = Audit()
@@ -689,3 +690,76 @@ async def test_world_caps_are_finite_and_budget_failure_is_audited(tmp_path):
     with pytest.raises(ValueError, match="finite"):
         HarborWorld(world.source, world.workspace, world.inbox_root, world.people, "owner", audit,
                     max_tool_calls=10_000)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("allowance,delivered_days", [(96, 16), (192, 28)])
+async def test_month_of_multi_file_deliveries_uses_configured_quota_across_restart(
+    tmp_path, allowance, delivered_days
+):
+    world, bridge, source, audit, _roles = build_world(
+        tmp_path, max_attachments=allowance
+    )
+    names = [f"evidence-{index}.csv" for index in range(6)]
+    for day in range(delivered_days):
+        for index, name in enumerate(names):
+            (world.workspace / name).write_text(f"day,section\n{day},{index}\n")
+        result = await bridge.call("send_message", {
+            "to": "recipient", "body": "A bounded local review package.",
+            "workspace_files": names, "source_refs": [],
+        })
+        assert result["delivered"] is True
+        if day == 15:
+            saved = world.snapshot()
+            people = {key: CompanyPerson(
+                **person.context, inbox_root=person.session.inbox,
+                audit=Audit(), episode_runner=default_runner,
+                max_attachments=allowance,
+            ) for key, person in world.people.items()}
+            world = HarborWorld(source, world.workspace, world.inbox_root,
+                                people, "owner", audit, state=saved)
+            bridge = HarborEnterpriseBridge(world)
+
+    recipient = world.people["recipient"]
+    assert len(recipient.session.manifest) == delivered_days * 6
+    assert recipient.reply_calls == 0
+    assert recipient.attachment_read_ledger == []
+    for name, (size, digest) in recipient.session.manifest.items():
+        raw = (recipient.session.inbox / name).read_bytes()
+        assert len(raw) == size
+        assert hashlib.sha256(raw).hexdigest() == digest
+    if allowance == 96:
+        with pytest.raises(ValueError, match="cumulative attachment limit"):
+            await bridge.call("send_message", {
+                "to": "recipient", "body": "One more package.",
+                "workspace_files": names, "source_refs": [],
+            })
+        assert len(world.state["messages"]) == 16
+
+
+def test_owner_snapshot_delivery_uses_configured_quota_and_preserves_limit(tmp_path):
+    world, _bridge, _source, _audit, _roles = build_world(tmp_path, max_attachments=97)
+    owner = world.people["owner"]
+    for version in range(97):
+        raw = json.dumps({"version": version, "definition": "An exact saved snapshot."}).encode()
+        delivery = world._deliver_snapshot_attachment(
+            owner, f"review-{version}.json", raw, hashlib.sha256(raw).hexdigest()
+        )
+        assert delivery["bytes"] == len(raw)
+    assert len(owner.session.manifest) == 97
+    with pytest.raises(ValueError, match="owner attachment delivery limit"):
+        world._deliver_snapshot_attachment(owner, "over-limit.json", b"{}",
+                                           hashlib.sha256(b"{}").hexdigest())
+    assert not (owner.session.inbox / "over-limit.json").exists()
+    assert owner.reply_calls == 0
+
+
+@pytest.mark.parametrize("field", ["max_attachments", "max_reply_calls", "max_tool_calls"])
+def test_world_restore_rejects_silent_changes_to_employee_capacity(tmp_path, field):
+    world, _bridge, source, audit, _roles = build_world(tmp_path)
+    saved = world.snapshot()
+    person = world.people["owner"]
+    setattr(person, field, getattr(person, field) + 1)
+    with pytest.raises(ValueError, match="different inbox or person context"):
+        HarborWorld(source, world.workspace, world.inbox_root,
+                    world.people, "owner", audit, state=saved)
