@@ -294,6 +294,41 @@ def test_doctor_reuses_mcp_manifest_validation_offline(home, monkeypatch):
     assert any("valid MCP source manifest" in line for line in messages)
 
 
+@pytest.mark.parametrize("tenant", ["local", "another-tenant"])
+def test_explicit_mcp_connection_update_replaces_manifest_path_only(home, tmp_path, monkeypatch, tenant):
+    def manifest_file(name, resource):
+        payload = {"version": 1, "connections": [{
+            "name": "internal", "tenant_id": "local", "read_only": True,
+            "transport": {"type": "stdio", "command": ["/never/execute/this"]},
+            "resources": [{"source_key": "measure", "tool": "read_snapshot", "descriptor": {
+                "adapter": "internal", "resource": resource, "kind": "metric", "title": "Reviewed measure",
+                "contract": {"tenant_id": "local"},
+            }}],
+        }]}
+        if tenant != "local" and name == "replacement.json":
+            payload["connections"][0]["tenant_id"] = tenant
+            payload["connections"][0]["resources"][0]["descriptor"]["contract"]["tenant_id"] = tenant
+        return private_file(tmp_path / name, json.dumps(payload))
+
+    original, replacement = manifest_file("original.json", "first"), manifest_file("replacement.json", "second")
+    setup.setup_local(home, source="mcp", manifest=original, agent="codex", non_interactive=True)
+    database = private_file(home / "state" / "signalweave.db", "existing-card-state")
+    saved = {p: p.read_bytes() for p in (original, replacement, database, home / "typesafe.key")}
+    config_before = (home / "config.toml").read_bytes()
+    monkeypatch.setattr(socket, "socket", lambda *a, **k: pytest.fail("offline edit contacted network"))
+    if tenant != "local":
+        with pytest.raises(setup.SetupError, match="match the local tenant"):
+            setup.setup_local(home, source="mcp", manifest=replacement, agent="codex", non_interactive=True, update=True)
+        assert (home / "config.toml").read_bytes() == config_before
+    else:
+        with pytest.raises(setup.SetupError, match="replace"):
+            setup.setup_local(home, source="mcp", manifest=replacement, agent="codex", non_interactive=True)
+        assert (home / "config.toml").read_bytes() == config_before
+        setup.setup_local(home, source="mcp", manifest=replacement, agent="codex", non_interactive=True, update=True)
+        assert setup.read_config(home)[1]["SIGNALWEAVE_MCP_SOURCES_FILE"] == str(replacement)
+    assert all(p.read_bytes() == content for p, content in saved.items())
+
+
 def test_agent_snippets_round_trip_spaces_quotes_and_unicode(tmp_path, monkeypatch):
     root = tmp_path / 'local "雪" home'
     executable = str(tmp_path / 'virtual env "雪"' / "bin" / "python")

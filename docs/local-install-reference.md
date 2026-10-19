@@ -310,7 +310,12 @@ are resolved relative to the local home. Keep source secrets private too.
 For Trino, use `signalweave connections add --source trino` with a private
 normalized catalog JSON file; see [metric query cards](metric-query-cards.md).
 For the MCP source bridge, use `signalweave connections add --source mcp
---manifest /private/path/sources.json`. In advanced environment-only deployments,
+--manifest /private/path/sources.json`.
+Use `connections update --source mcp --manifest /private/path/reviewed-sources.json`
+to select a replacement manifest deliberately. This validates the replacement's
+tenant and schema without running its source tools; it does not merge manifests
+or approve cards. Include any existing resources you intend to keep.
+In advanced environment-only deployments,
 set `SIGNALWEAVE_MCP_SOURCES_FILE` to a deployment-owned JSON manifest; see
 [MCP source bridge](mcp-source-bridge.md). `doctor`
 reuses the bridge's manifest schema validation without launching a source MCP

@@ -815,7 +815,7 @@ def setup_local(
             else:
                 previous = Path(values["SIGNALWEAVE_MCP_SOURCES_FILE"]).expanduser()
                 if (previous if previous.is_absolute() else root / previous).absolute() != path:
-                    raise SetupError("Setup will not replace an existing MCP manifest")
+                    add("SIGNALWEAVE_MCP_SOURCES_FILE", str(path))
         for prefix in ("SUPERSET", "PRESET"):
             if values.get(f"{prefix}_URL"):
                 add(f"{prefix}_TENANT_ID", tenant_id)
