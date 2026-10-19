@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import json
 import math
 import os
@@ -1743,6 +1744,120 @@ class JevJudger:
                 result[key] = state[key]
         return result
 
+    @staticmethod
+    def _factor_judgment_evidence(
+        state: Mapping[str, Any],
+    ) -> dict[str, Any] | None:
+        """Factor exact common evidence-envelope metadata for an over-budget request.
+
+        Rows remain ordered. Reconstruct each row by copying ``common`` and
+        applying its ``overrides``; overrides replace inherited values,
+        including null. Keys absent from both stay absent. Nested values and
+        array order are literal. Only repeated ``origin``, ``provenance``,
+        ``source_key``, and ``source_url`` can be inherited; decision-bearing
+        values and row identities remain inline. This changes only the request
+        representation, never the retained result.
+        """
+        evidence = state.get("evidence")
+        if type(evidence) is not list or not evidence or len(evidence) > 50_000:
+            return None
+
+        visited = 0
+
+        def is_json_value(value: Any, depth: int = 0) -> bool:
+            nonlocal visited
+            visited += 1
+            if visited > 200_000 or depth > 64:
+                return False
+            if value is None or type(value) in (str, bool, int):
+                return True
+            if type(value) is float:
+                return math.isfinite(value)
+            if type(value) is list:
+                return all(is_json_value(item, depth + 1) for item in value)
+            if type(value) is dict:
+                return all(
+                    type(key) is str and is_json_value(item, depth + 1)
+                    for key, item in value.items()
+                )
+            return False
+
+        def encoded(value: Any) -> bytes:
+            return json.dumps(
+                value,
+                ensure_ascii=False,
+                allow_nan=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+
+        try:
+            if (any(type(row) is not dict for row in evidence)
+                    or not is_json_value(evidence)):
+                return None
+            original_bytes = encoded(evidence)
+            if len(original_bytes) > DEFAULT_MAX_JEV_PAYLOAD_BYTES:
+                return None
+
+            rows: list[dict[str, Any]] = evidence
+            common: dict[str, Any] = {}
+            common_metadata_fields = {
+                "origin",
+                "provenance",
+                "source_key",
+                "source_url",
+            }
+            first = rows[0]
+            for key, value in first.items():
+                if key not in common_metadata_fields:
+                    continue
+                value_bytes = encoded(value)
+                if all(
+                    key in row and encoded(row[key]) == value_bytes
+                    for row in rows[1:]
+                ):
+                    common[key] = copy.deepcopy(value)
+
+            packed_evidence = {
+                "encoding": "signalweave.lossless_common_fields.v1",
+                "contract": (
+                    "Rows remain ordered. common contains only repeated evidence "
+                    "envelope metadata: origin, provenance, source_key, source_url. "
+                    "Business values, statements, subject IDs, and labels stay "
+                    "inline in each row. "
+                    "Reconstruct each row by copying common "
+                    "then applying that row's overrides; an override replaces the "
+                    "inherited value, including null. A key absent from both stays "
+                    "absent. Nested values and array order are literal."
+                ),
+                "common": common,
+                "rows": [
+                    {
+                        "overrides": {
+                            key: copy.deepcopy(value)
+                            for key, value in row.items()
+                            if key not in common
+                        }
+                    }
+                    for row in rows
+                ],
+            }
+            restored = []
+            for row in packed_evidence["rows"]:
+                restored_row = copy.deepcopy(common)
+                restored_row.update(copy.deepcopy(row["overrides"]))
+                restored.append(restored_row)
+            if encoded(restored) != original_bytes:
+                return None
+            if len(encoded(packed_evidence)) >= len(original_bytes):
+                return None
+        except (OverflowError, RecursionError, TypeError, ValueError):
+            return None
+
+        candidate = dict(state)
+        candidate["evidence"] = packed_evidence
+        return candidate
+
     async def _judge_evidence_roles(
         self,
         state: Mapping[str, Any],
@@ -2242,10 +2357,25 @@ class JevJudger:
                 }
             question_batches = [questions]
         elif split_evidence:
-            # Keep the complete owner policy and normalized facts identical in
-            # every request; only independent typed questions are partitioned.
-            judgment_state = self._compact_judgment_state(state, card, observations)
-            question_batches = self._judgment_question_batches(judgment_state, full_questions)
+            # Preserve the established compact request whenever it already
+            # fits. Only introduce the new representation under continuing
+            # budget pressure.
+            compact_state = self._compact_judgment_state(state, card, observations)
+            if not self._request_over_budget(compact_state, full_questions):
+                judgment_state = compact_state
+                question_batches = [full_questions]
+            else:
+                factored_state = self._factor_judgment_evidence(judgment_state)
+                if (factored_state is not None
+                        and not self._request_over_budget(factored_state, full_questions)):
+                    judgment_state = factored_state
+                    question_batches = [full_questions]
+                else:
+                    factored_compact = self._factor_judgment_evidence(compact_state)
+                    judgment_state = factored_compact or compact_state
+                    question_batches = self._judgment_question_batches(
+                        judgment_state, full_questions
+                    )
         else:
             # Preserve the efficient single decision request for ordinary
             # cards. Per-observation role judgments are not part of the

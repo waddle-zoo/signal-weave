@@ -14,6 +14,7 @@ from typing import Any
 
 MAX_CONTEXT_CHARS, MAX_CONVERSATION_MESSAGES, MAX_CONVERSATION_CHARS = 8_000, 64, 64_000
 MAX_ATTACHMENTS, MAX_ATTACHMENT_BYTES = 96, 256_000
+MAX_ATTACHMENT_LIMIT = 512
 # Pinned live episodes reserve five bridge calls for registry discovery. The
 # 192-call queue cap covers 32 such replies, 28 one-file reads, and one reply
 # with two extra metadata/history calls (190 total). If every reply instead
@@ -180,7 +181,8 @@ class CompanyPerson:
                  max_reply_calls: int = DEFAULT_REPLY_CALLS,
                  max_seconds: int = DEFAULT_REPLY_SECONDS,
                  max_tool_calls: int = DEFAULT_TOOL_CALLS,
-                 call_timeout: int = DEFAULT_CALL_TIMEOUT):
+                 call_timeout: int = DEFAULT_CALL_TIMEOUT,
+                 max_attachments: int = MAX_ATTACHMENTS):
         self.context = {"role_brief": _brief(role_brief, "role_brief"),
                         "business_knowledge": _brief(business_knowledge, "business_knowledge"),
                         "known_unknowns": _brief(known_unknowns, "known_unknowns"),
@@ -194,6 +196,8 @@ class CompanyPerson:
                 or type(max_tool_calls) is not int or not 0 <= max_tool_calls <= MAX_TOOL_CALLS
                 or type(call_timeout) is not int or not 1 <= call_timeout <= MAX_CALL_TIMEOUT):
             raise ValueError("reply, time, and tool caps must be positive and within the hard limits")
+        if type(max_attachments) is not int or not 0 <= max_attachments <= MAX_ATTACHMENT_LIMIT:
+            raise ValueError(f"max_attachments must be an integer between 0 and {MAX_ATTACHMENT_LIMIT}")
         if codex_executable is not None and (not isinstance(codex_executable, str) or not codex_executable):
             raise ValueError("codex_executable must identify the caller-provided Codex CLI")
         if (expected_registry_sha256 is not None
@@ -203,8 +207,10 @@ class CompanyPerson:
         if isinstance(delivered_attachments, (str, bytes)) or not isinstance(delivered_attachments, Sequence):
             raise ValueError("delivered_attachments must be an explicit sequence of inbox-relative paths")
         names = [_relative_attachment(name) for name in delivered_attachments]
-        if len(names) > MAX_ATTACHMENTS or len(set(names)) != len(names):
-            raise ValueError("delivered attachment list must be unique and within the count limit")
+        if len(set(names)) != len(names):
+            raise ValueError("delivered attachment list must be unique")
+        if len(names) > max_attachments:
+            raise ValueError("initial delivered attachment count exceeds max_attachments")
         root = Path(inbox_root).expanduser().absolute()
         info = root.lstat()
         if not stat.S_ISDIR(info.st_mode) or root.resolve(strict=True) != root or info.st_uid != os.geteuid():
@@ -231,6 +237,7 @@ class CompanyPerson:
         self.expected_registry_sha256 = expected_registry_sha256
         self.max_reply_calls, self.max_seconds = max_reply_calls, max_seconds
         self.max_tool_calls, self.call_timeout = max_tool_calls, call_timeout
+        self.max_attachments = max_attachments
         self.reply_calls = self.tool_calls = 0
         self.elapsed_seconds = 0.0
         self.stopped = False
@@ -243,7 +250,7 @@ class CompanyPerson:
         names = [_relative_attachment(path) for path in paths]
         if len(set(names)) != len(names) or any(name in self.session.manifest for name in names):
             raise ValueError("new deliveries must be unique and not previously delivered")
-        if len(self.session.manifest) + len(names) > MAX_ATTACHMENTS:
+        if len(self.session.manifest) + len(names) > self.max_attachments:
             raise ValueError("cumulative delivered attachment limit exceeded")
 
         pending: dict[str, tuple[int, str]] = {}
@@ -373,9 +380,12 @@ class CompanyPerson:
 
     def _failure(self, error: str, *, seconds: float = 0.0, inference_calls: int = 0,
                  attachment_reads: Sequence[dict[str, Any]] = ()) -> dict[str, Any]:
+        not_attempted = inference_calls == 0
+        usage = ({"input_tokens": 0, "output_tokens": 0, "cached_input_tokens": 0,
+                  "input_tokens_details": {"cached_tokens": 0}} if not_attempted else None)
         record = {"actor_kind": "simulated_company_person", "status": "failed", "error": error,
-                  "final_message": "", "episode": None, "known_usage": False,
-                  "usage_status": "unknown" if inference_calls else "not_attempted", "usage": None,
+                  "final_message": "", "episode": None, "known_usage": not_attempted,
+                  "usage_status": "not_attempted" if not_attempted else "unknown", "usage": usage,
                   "tool_calls": None, "inference_calls": inference_calls, "seconds": seconds,
                   "attachment_reads": list(attachment_reads)}
         self.records.append(record)

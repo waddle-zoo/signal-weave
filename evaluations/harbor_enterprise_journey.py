@@ -63,9 +63,15 @@ METHOD_FILES = (
     "evaluations/raw_superset_onboarding.py", "evaluations/harbor_workflow_journey.py",
 )
 PHASES = ("queue-onboarding", "weekly-onboarding", "recurring")
-LIMITS = {"provider_requests": 48, "owner_reply_calls": 12, "recipient_reply_calls": 32,
-    "owner_seconds": 600, "recipient_seconds": 900,
-    "owner_tools": 80, "recipient_tools": 192,
+# Prospective capacity, not a change to closed v3/v4 attempts: two workflows
+# allow 12 clarification/review replies, four technical-revision replies, two
+# dated-policy-change replies, two handover replies and four reserve replies.
+# 24 replies with five registry reads plus up to three attachment reads fit
+# 192 tools. 28 daily handoffs with up to six attachments need 168 deliveries;
+# 192 allows additional onboarding/weekly files without constraining the format.
+LIMITS = {"provider_requests": 48, "owner_reply_calls": 24, "recipient_reply_calls": 32,
+    "owner_seconds": 900, "recipient_seconds": 900,
+    "owner_tools": 192, "recipient_tools": 192, "person_attachments": 192,
     "stage_seconds": {"queue-onboarding": 1800, "weekly-onboarding": 1800, "recurring": 2400},
     "stage_mcp_calls": {"queue-onboarding": 90, "weekly-onboarding": 90, "recurring": 320},
     "stage_workspace_calls": 200, "between_stage_uncached_input_stop": 2_000_000}
@@ -374,6 +380,11 @@ class Caller:
 
         if self.state["procedure"] is None:
             return {"needs_setup": True, "reason": "Register your own recurring procedure first."}
+        # A new tool invocation requests a new evaluation, including after an
+        # agent has revised a card at this same historical cutoff. Keep one
+        # identity within the invocation, not across every future call using
+        # the same procedure. Low-level retries can still replay that identity.
+        invocation_id = uuid.uuid4().hex
         checked = []
         while not self.state["complete"]:
             day = self.state["day"]
@@ -411,7 +422,7 @@ class Caller:
                 continue
             record = await check_once("T" if self.native else "B", monitors, workspace=self.workspace,
                 source=self.source, native=self.native,
-                run_id=f"{self.arm}:procedure-{len(self.state['procedure_revisions'])}",
+                run_id=f"{self.arm}:procedure-{len(self.state['procedure_revisions'])}:{invocation_id}",
                 codex_executable=self.study["codex"]["path"],
                 python_executable=str(ROOT / ".venv/bin/python"),
                 public_dependency_paths=[path for path in public_paths(self.workspace)
@@ -601,7 +612,8 @@ async def actor(root: Path, arm: str, phase: str, review: Path) -> dict:
                     expected_registry_sha256=study["registry_sha256"],
                     max_reply_calls=LIMITS["owner_reply_calls"] if owner else LIMITS["recipient_reply_calls"],
                     max_seconds=LIMITS["owner_seconds"] if owner else LIMITS["recipient_seconds"],
-                    max_tool_calls=LIMITS["owner_tools"] if owner else LIMITS["recipient_tools"])
+                    max_tool_calls=LIMITS["owner_tools"] if owner else LIMITS["recipient_tools"],
+                    max_attachments=LIMITS["person_attachments"])
             callbacks = {"register_recurring_procedure": {
                 "description": "Register your workspace-authored procedure JSON (monitors with monitor_id/cadence plus card_id for native or sql/helper_path for baseline). This does not write SQL or policy or judge correctness.",
                 "parameters": {"type": "object", "properties": {"procedure_file": {"type": "string"}},

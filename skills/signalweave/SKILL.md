@@ -52,11 +52,23 @@ query source, compare it with your working analysis, then review the card.
 If the installed version lacks this path, explain the limitation instead of
 inventing a tool or silently changing the requested aggregation.
 
+Keep policy inputs at the decision's grain: compact quantities, relevant
+exceptions and claim-specific checks with provenance. Fetch record-level detail
+separately for investigation and the human handoff unless those individual
+records are themselves necessary for the policy. Do not turn every diagnostic
+row into a required recurring input.
+
 When the user wants recurrence, check `list_insight_cards` for an existing fit.
 Preserve the agreed question, why it matters, exact sources, comparison period,
 meaningful-change rules, exceptions, quiet behavior and intended recipients.
 Keep required evidence distinct from optional diagnostic context. Routine reports
 and exception-only alerts are different requests.
+
+Identify which missing facts could change each action. A supported individual
+finding need not establish a complete population; zero findings, rates and
+rankings may need different coverage. Absence of a visible event is an as-of
+observation, not proof that it never occurred. Preserve checks that could
+invalidate the finding without adding an unrelated completeness prerequisite.
 
 Use `onboard_insight_card` to save a draft. Put ordered policy and exceptions in
 `decision_guidance`; `watch_for` and `questions` are optional analytical prompts,

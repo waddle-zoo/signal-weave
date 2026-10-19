@@ -91,6 +91,12 @@ rules. It can show supported current findings while noting what still needs
 clarification before unattended delivery. That does not approve a card, make
 an invalid comparison usable, or authorize a message.
 
+Keep the saved policy evidence compact and at the right grain. A check can use
+aggregate quantities and relevant exceptions while the agent fetches detailed
+records for its investigation. Missing coverage may limit a whole-population
+claim without erasing a supported finding about known records. The agent must
+check which uncertainty could actually change your intended action.
+
 If you answer a question after a draft was saved, the agent can use
 `revise_insight_card` to apply your clarification to the same card. It keeps
 omitted fields unchanged, increments the version and returns it to draft; review and

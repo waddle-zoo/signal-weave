@@ -1,0 +1,358 @@
+{
+  "schema_version": 1,
+  "study": "Harbor whole-enterprise journey v4",
+  "date": "2026-10-19",
+  "source_commit": "04f4145",
+  "status": "closed_partial_not_completed_month",
+  "unit": "One known fictional company; dependent daily states, not independent enterprise trials.",
+  "frozen_study_sha256": "743554952743558b1fcf838786d6ca9d1da5a52629cd7fdaf1c9b9caddc49b9f",
+  "source_manifest_sha256": "11e3751d52420e6e7d3f7364b2ef06821957cca5c9c810bfcf1b565f834e58ab",
+  "role_deck": {
+    "path": "evaluations/data/harbor-enterprise-company-roles-v4.json",
+    "sha256": "a07ccfea2ef9fff537d02db5c614baf4658c107cf442aa1645168859f274c258"
+  },
+  "protocol": {
+    "path": "evaluations/protocols/harbor-enterprise-journey-v4.md",
+    "sha256": "efe71a62c00965b3e9e9e14a9537665f36bfa1679b986022195e3a7041c8e0b1"
+  },
+  "configuration": {
+    "analyst": "gpt-6-luna",
+    "analyst_effort": "xhigh",
+    "simulated_people": "gpt-6.1-sol",
+    "people_effort": "low",
+    "order": "baseline first",
+    "native_build_commit": "159004f4d8fce0963ec8abb4e692bee08568f062",
+    "native_source_fingerprint": "d281fab9425ca0b91e2532efd3e3a552c831a3e0049d8a5f3acdbaebc6e2fd53",
+    "native_binary_sha256": "4a05164519ab449dc6a3da9aea6b127a5da90cfebf235f36120cb189163c6c8d",
+    "native_version": "0.2.0rc3",
+    "published_build": false
+  },
+  "phases": [
+    {
+      "arm": "baseline",
+      "phase": "queue-onboarding",
+      "process_complete": true,
+      "elapsed_seconds": 250.1702989579935,
+      "analyst_usage": {
+        "input_tokens": 692572,
+        "cached_input_tokens": 622848,
+        "uncached_input_tokens": 69724,
+        "output_tokens": 27678,
+        "responses": 1
+      },
+      "provider_requests": 0,
+      "provider_usage": {
+        "known": true,
+        "attempts": 0,
+        "usage": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        }
+      },
+      "person_replies": 3,
+      "person_not_attempted": 0,
+      "person_unknown_attempted": 0,
+      "simulated_person_input_tokens": 33721,
+      "simulated_person_cached_input_tokens": 23040,
+      "simulated_person_output_tokens": 326,
+      "message_count_cumulative": 2,
+      "inputs_unchanged": true,
+      "record_path": "artifacts/harbor-enterprise-whole-journey-v4/actor-baseline-queue-onboarding.json",
+      "record_sha256": "3aac7c3c9e3df1dad9bc2f3708ae57d3e2533eea568388d6d364aff9ec1e80f4"
+    },
+    {
+      "arm": "baseline",
+      "phase": "weekly-onboarding",
+      "process_complete": true,
+      "elapsed_seconds": 290.92945787499775,
+      "analyst_usage": {
+        "input_tokens": 1470967,
+        "cached_input_tokens": 1384448,
+        "uncached_input_tokens": 86519,
+        "output_tokens": 35656,
+        "responses": 1
+      },
+      "provider_requests": 0,
+      "provider_usage": {
+        "known": true,
+        "attempts": 0,
+        "usage": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        }
+      },
+      "person_replies": 2,
+      "person_not_attempted": 0,
+      "person_unknown_attempted": 0,
+      "simulated_person_input_tokens": 23851,
+      "simulated_person_cached_input_tokens": 15360,
+      "simulated_person_output_tokens": 286,
+      "message_count_cumulative": 3,
+      "inputs_unchanged": true,
+      "record_path": "artifacts/harbor-enterprise-whole-journey-v4/actor-baseline-weekly-onboarding.json",
+      "record_sha256": "5016e06244b6c05feafa165418d5c871934a8e1a3fd00973fef0a51cad7ceef8"
+    },
+    {
+      "arm": "baseline",
+      "phase": "recurring",
+      "process_complete": true,
+      "elapsed_seconds": 1537.2265465410019,
+      "analyst_usage": {
+        "input_tokens": 30359551,
+        "cached_input_tokens": 29931136,
+        "uncached_input_tokens": 428415,
+        "output_tokens": 113280,
+        "responses": 1
+      },
+      "provider_requests": 0,
+      "provider_usage": {
+        "known": true,
+        "attempts": 0,
+        "usage": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        }
+      },
+      "person_replies": 70,
+      "person_not_attempted": 0,
+      "person_unknown_attempted": 0,
+      "simulated_person_input_tokens": 1113295,
+      "simulated_person_cached_input_tokens": 529920,
+      "simulated_person_output_tokens": 6318,
+      "message_count_cumulative": 68,
+      "inputs_unchanged": true,
+      "record_path": "artifacts/harbor-enterprise-whole-journey-v4/actor-baseline-recurring.json",
+      "record_sha256": "f3fdd7f829ce3b19013daf2cef63cdbbb684a9cdadfb1234d332dfc84437ff16"
+    },
+    {
+      "arm": "signalweave",
+      "phase": "queue-onboarding",
+      "process_complete": true,
+      "elapsed_seconds": 755.4424585000015,
+      "analyst_usage": {
+        "input_tokens": 6324256,
+        "cached_input_tokens": 6107392,
+        "uncached_input_tokens": 216864,
+        "output_tokens": 84220,
+        "responses": 1
+      },
+      "provider_requests": 1,
+      "provider_usage": {
+        "known": true,
+        "attempts": 1,
+        "usage": {
+          "input_tokens": 11472,
+          "output_tokens": 167
+        }
+      },
+      "person_replies": 4,
+      "person_not_attempted": 0,
+      "person_unknown_attempted": 0,
+      "simulated_person_input_tokens": 128683,
+      "simulated_person_cached_input_tokens": 90368,
+      "simulated_person_output_tokens": 750,
+      "message_count_cumulative": 2,
+      "inputs_unchanged": true,
+      "record_path": "artifacts/harbor-enterprise-whole-journey-v4/actor-signalweave-queue-onboarding.json",
+      "record_sha256": "7424a119d0c36d9ff540ea7dfca93926c7925edfe84957289e4f42b2b5eb4f11"
+    },
+    {
+      "arm": "signalweave",
+      "phase": "weekly-onboarding",
+      "process_complete": true,
+      "elapsed_seconds": 557.2032971249937,
+      "analyst_usage": {
+        "input_tokens": 6476523,
+        "cached_input_tokens": 6243584,
+        "uncached_input_tokens": 232939,
+        "output_tokens": 62546,
+        "responses": 1
+      },
+      "provider_requests": 1,
+      "provider_usage": {
+        "known": true,
+        "attempts": 1,
+        "usage": {
+          "input_tokens": 9098,
+          "output_tokens": 205
+        }
+      },
+      "person_replies": 3,
+      "person_not_attempted": 0,
+      "person_unknown_attempted": 0,
+      "simulated_person_input_tokens": 102748,
+      "simulated_person_cached_input_tokens": 70656,
+      "simulated_person_output_tokens": 597,
+      "message_count_cumulative": 3,
+      "inputs_unchanged": true,
+      "record_path": "artifacts/harbor-enterprise-whole-journey-v4/actor-signalweave-weekly-onboarding.json",
+      "record_sha256": "b93a22e93b10e1342ccaf455ccaf0b1d1c43674508128aa0ccbb58e58b728bf5"
+    },
+    {
+      "arm": "signalweave",
+      "phase": "recurring",
+      "process_complete": true,
+      "elapsed_seconds": 1701.9771327499984,
+      "analyst_usage": {
+        "input_tokens": 30512152,
+        "cached_input_tokens": 29934848,
+        "uncached_input_tokens": 577304,
+        "output_tokens": 134831,
+        "responses": 1
+      },
+      "provider_requests": 34,
+      "provider_usage": {
+        "known": true,
+        "attempts": 34,
+        "usage": {
+          "input_tokens": 401891,
+          "output_tokens": 3666
+        }
+      },
+      "person_replies": 42,
+      "person_not_attempted": 1,
+      "person_unknown_attempted": 0,
+      "simulated_person_input_tokens": 649736,
+      "simulated_person_cached_input_tokens": 396544,
+      "simulated_person_output_tokens": 4413,
+      "message_count_cumulative": 36,
+      "inputs_unchanged": true,
+      "record_path": "artifacts/harbor-enterprise-whole-journey-v4/actor-signalweave-recurring.json",
+      "record_sha256": "0f4fd7d0d23a249288e1d0d34e366faa2e93a91284385ea87bf282b387316243"
+    }
+  ],
+  "outcomes": {
+    "baseline": {
+      "daily_source_cutoffs": 28,
+      "daily_query_sets_correct": 28,
+      "daily_handoff_dates": 26,
+      "missed_handoff_dates": [
+        "2026-03-04",
+        "2026-03-05"
+      ],
+      "weekly_briefs": 4,
+      "weekly_numeric_results_correct": 4,
+      "delivered_messages": 68,
+      "delivered_attachment_copies": 234,
+      "recorded_attachment_opens": 0,
+      "final_coverage_status": "historical 0/24 not clearly refreshed; final source 15/24",
+      "recipient_attachment_quota_hit": true
+    },
+    "signalweave": {
+      "daily_analysis_and_handoff_dates": 15,
+      "source_supported_daily_packages": 15,
+      "final_native_daily_decision_dates": 14,
+      "manual_daily_handoff_dates": [
+        "2026-03-09"
+      ],
+      "weekly_briefs": 3,
+      "weekly_numeric_results_correct": 3,
+      "delivered_messages": 36,
+      "delivered_attachment_copies": 62,
+      "recorded_recipient_attachment_opens": 0,
+      "remaining_unrun_daily_cutoffs": 13,
+      "recurring_caller_complete": false,
+      "stop": "Simulated owner reply cap before v8 exact-version consent; no inference attempted for capped reply.",
+      "last_owner_consented_daily_version": 7,
+      "new_daily_card_version_8": "draft",
+      "final_owner_inbox_handoff": false
+    },
+    "reviews": {
+      "kind": "arm-aware independent internal agent reviews",
+      "not_external_peer_review": true,
+      "numeric_fact_checks": "independent immutable raw SQLite tables; no generator/production calculation reuse",
+      "whole_journey_grade": "not established",
+      "quiet_day_suppression": "not tested: all 28 daily snapshots contain qualifying work",
+      "cost_or_noise_superiority": "not established"
+    }
+  },
+  "limitations": [
+    "Scripted operator fresh setup and typed IT source bridge, not a naive-human usability study.",
+    "Actual local inbox copies and simulated reader replies, not Slack or real employees.",
+    "Baseline retained SQL, code, state, source tools and notes. Treatment also received native card tools and the bundled workflow skill.",
+    "Baseline recipient attachment cap and treatment owner reply cap censored different parts of the paths.",
+    "Outcome enums, artifact hashes, copied files and transcript completion are not proof of human usefulness or business completion.",
+    "Aggregate input includes reused cached context. Simulated-person usage is research expense, not measured real-human production cost.",
+    "No invoice-based dollar costs or causal efficiency estimate."
+  ],
+  "prior_attempts": [
+    {
+      "attempt": "v1",
+      "status": "pre-inference preparation failure",
+      "inference_calls": 0
+    },
+    {
+      "attempt": "v2",
+      "status": "partial baseline onboarding; simulated employee capacity failure",
+      "unknown_attempted_employee_usage": true
+    },
+    {
+      "attempt": "v3",
+      "status": "baseline business work completed but observer recovery retains process_complete=false; treatment queue onboarding timeout, no treatment recurrence",
+      "treatment_analyst_usage": "unknown",
+      "recovery_did_not_rescore_process": true
+    }
+  ],
+  "post_run_repair_controls": {
+    "business_journey_or_independent_enterprise_cases": false,
+    "broad_factoring_rejected": {
+      "requests": 14,
+      "input_tokens": 33656,
+      "output_tokens": 922,
+      "paired_encoding_cases": 6,
+      "labels_matched": 6,
+      "counterexample": "Shared long business note: ignore confidence 0.97 full versus 0.76 factored; stricter confidence gates differ."
+    },
+    "metadata_only_development_control": {
+      "requests": 18,
+      "input_tokens": 44309,
+      "output_tokens": 1090,
+      "resolved_model": "jev-1.13.0",
+      "paired_encoding_cases": 8,
+      "labels_matched": 8,
+      "gates_0_7_0_8_0_9_matched": 8,
+      "gates_0_95_matched": 7,
+      "counterexample": "Quiet case: ignore confidence 1.0 full versus 0.91 factored; the 0.95 gate differs.",
+      "not_exact_final_branch_order": true
+    },
+    "final_source_retained_overflow_regressions": {
+      "requests": 2,
+      "input_tokens": 20652,
+      "output_tokens": 410,
+      "source_fingerprint": "ac6dbfa22dc5fc264c930aa183716a798041dc554e14619f975070696d427192",
+      "native_executable_test": false,
+      "cases": [
+        {
+          "old_packet_sha256": "ac6829ff2bce7102135552f9fbf0c8916ea1406b05a3eb475e269fe821e11e97",
+          "outcome": "notify",
+          "confidence": 0.92,
+          "evidence_count": 30,
+          "returned_evidence_exact": true
+        },
+        {
+          "old_packet_sha256": "be84aaa4a82c426ea23e655982db81d35b75cbd9b8fc2816a13685c09d173277",
+          "outcome": "notify",
+          "confidence": 0.99,
+          "evidence_count": 31,
+          "returned_evidence_exact": true
+        }
+      ],
+      "pre_import_launch_failure": "Missing probe PYTHONPATH; zero provider calls, corrected before this two-call check."
+    },
+    "known_provider_requests_total": 34,
+    "known_provider_input_tokens_total": 98617,
+    "known_provider_output_tokens_total": 2422,
+    "preserved_behavior": "Ordinary and legacy-compact requests that already fit are unchanged. Factoring is limited to remaining budget pressure; provider limits and confidence gates are not raised or bypassed.",
+    "inference_or_probability_equivalence_proven": false,
+    "whole_journey_repaired_or_rescored": false,
+    "final_source_verification": {
+      "passed": 5097,
+      "skipped": 13,
+      "seconds": 429.07,
+      "ruff": "passed",
+      "scoped_code_review": "GO for limited diff, not whole-product efficacy",
+      "interrupted_older_verification_is_not_final_proof": true
+    }
+  },
+  "follow_up": "Prospective runner/packaging/agent-guidance changes require fresh native verification and whole journeys. No stopped result is rescored."
+}

@@ -10,6 +10,7 @@ from evaluations.company_people import (
     DEFAULT_TOOL_CALLS,
     EFFORT,
     INSTRUCTIONS,
+    MAX_ATTACHMENT_LIMIT,
     MAX_ATTACHMENTS,
     MAX_CONVERSATION_CHARS,
     MAX_CONVERSATION_MESSAGES,
@@ -249,6 +250,70 @@ def test_cumulative_attachment_deliveries_cover_twenty_eight_days_without_person
         person.deliver_attachments(too_many)
 
 
+def test_attachment_allowance_is_explicit_and_bounded(tmp_path):
+    inbox = tmp_path / "inbox"
+    inbox.mkdir()
+
+    async def unused_runner(session, **kwargs):
+        pytest.fail("attachment allowance validation must not invoke a person reply")
+
+    default_person = make_person(tmp_path, unused_runner, inbox_root=inbox)
+    assert default_person.max_attachments == MAX_ATTACHMENTS == 96
+    assert MAX_ATTACHMENT_LIMIT == 512
+    for invalid in (True, -1, MAX_ATTACHMENT_LIMIT + 1, 1.5):
+        with pytest.raises(ValueError, match="max_attachments must be an integer"):
+            make_person(tmp_path, unused_runner, inbox_root=inbox, max_attachments=invalid)
+
+    (inbox / "one.txt").write_text("one", encoding="utf-8")
+    (inbox / "two.txt").write_text("two", encoding="utf-8")
+    with pytest.raises(ValueError, match="initial delivered attachment count exceeds max_attachments"):
+        make_person(tmp_path, unused_runner, inbox_root=inbox, max_attachments=1,
+                    delivered_attachments=["one.txt", "two.txt"])
+
+
+@pytest.mark.asyncio
+async def test_explicit_168_file_allowance_keeps_hash_checks_and_never_opens_or_calls_model(tmp_path):
+    inbox = tmp_path / "inbox"
+    inbox.mkdir()
+
+    async def unused_runner(session, **kwargs):
+        pytest.fail("delivering or validating files must not invoke a person reply")
+
+    person = make_person(tmp_path, unused_runner, inbox_root=inbox, max_attachments=28 * 6)
+    delivered = []
+    expected = {}
+    for day in range(28):
+        batch = []
+        day_dir = inbox / f"day-{day + 1:02}"
+        day_dir.mkdir()
+        for slot in range(6):
+            name = f"day-{day + 1:02}/evidence-{slot + 1}.txt"
+            content = f"day={day + 1}; evidence={slot + 1}\n".encode()
+            (day_dir / f"evidence-{slot + 1}.txt").write_bytes(content)
+            expected[name] = content
+            batch.append(name)
+        delivered.extend(person.deliver_attachments(batch))
+
+    assert person.max_attachments == 168
+    assert len(delivered) == len(person.session.manifest) == len(person.attachment_delivery_ledger) == 168
+    assert all(item["sha256"] == hashlib.sha256(expected[item["attachment"]]).hexdigest()
+               and item["bytes"] == len(expected[item["attachment"]]) for item in delivered)
+    assert person.reply_calls == 0 and person.records == []
+    assert person.attachment_read_ledger == []  # delivery does not open files for the recipient
+
+    # The larger allowance does not weaken post-delivery integrity checks.
+    tampered = "day-01/evidence-1.txt"
+    (inbox / tampered).write_text("changed after delivery", encoding="utf-8")
+    with pytest.raises(ValueError, match="attachment changed after delivery"):
+        await person.session.call("read_delivered_attachment", {"attachment": tampered})
+
+    (inbox / "overflow.txt").write_text("not delivered", encoding="utf-8")
+    with pytest.raises(ValueError, match="cumulative delivered attachment limit"):
+        person.deliver_attachments(["overflow.txt"])
+    assert len(person.session.manifest) == len(person.attachment_delivery_ledger) == 168
+    assert person.reply_calls == 0 and person.records == []
+
+
 @pytest.mark.asyncio
 async def test_reply_text_is_not_parsed_as_approval_and_usage_failure_stops_reuse(tmp_path):
     calls = 0
@@ -311,7 +376,12 @@ async def test_reply_cap_and_exhausted_time_return_recorded_failures(tmp_path):
 
     person = make_person(tmp_path, runner, max_reply_calls=1)
     assert (await person.reply(incoming_kind="owner_question", incoming_message="First?"))["status"] == "complete"
-    assert (await person.reply(incoming_kind="owner_question", incoming_message="Second?"))["error"] == "person_reply_call_cap"
+    capped = await person.reply(incoming_kind="owner_question", incoming_message="Second?")
+    assert capped["error"] == "person_reply_call_cap"
+    assert capped["known_usage"] is True and capped["usage_status"] == "not_attempted"
+    assert capped["inference_calls"] == 0
+    assert capped["usage"] == {"input_tokens": 0, "output_tokens": 0, "cached_input_tokens": 0,
+                                "input_tokens_details": {"cached_tokens": 0}}
     assert calls == 1
 
     defaulted = make_person(tmp_path, runner)
@@ -326,6 +396,9 @@ async def test_reply_cap_and_exhausted_time_return_recorded_failures(tmp_path):
     timed.elapsed_seconds = 1
     failure = await timed.reply(incoming_kind="owner_question", incoming_message="Timed out?")
     assert failure["error"] == "person_time_cap" and failure["episode"] is None
+    assert failure["known_usage"] is True and failure["usage_status"] == "not_attempted"
+    assert failure["usage"] == {"input_tokens": 0, "output_tokens": 0, "cached_input_tokens": 0,
+                                 "input_tokens_details": {"cached_tokens": 0}}
     assert calls == 1
 
 
@@ -414,6 +487,7 @@ async def test_invocation_timeout_is_retained_and_never_retried(tmp_path):
 
     assert result["status"] == "failed" and result["error"] == "person_reply_timeout"
     assert result["inference_calls"] == 1 and result["known_usage"] is False
+    assert result["usage_status"] == "unknown" and result["usage"] is None
     assert stopped["error"] == "person_stopped_after_prior_failure"
     assert calls == 1 and len(person.records) == 2
 

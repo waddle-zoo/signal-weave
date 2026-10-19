@@ -252,7 +252,9 @@ async def check_once(
     B reads each monitor's own SQL, writes the actual structured source result
     as JSON, then executes that monitor's retained agent helper only through
     ``codex sandbox``. T evaluates each approved card with a distinct key.
-    Errors are retained per monitor so later observations still run.
+    Errors are retained per monitor so later observations still run. ``run_id``
+    identifies one immutable evaluation request: reuse it for exact retries,
+    not a changed card/version/context or a newly requested check at a cutoff.
     """
     frozen = _validate_monitors(arm, monitors)
     if arm == "B" and source is None:

@@ -204,6 +204,20 @@ async def test_treatment_calls_each_native_card_with_distinct_run_key_and_retain
 
 
 @pytest.mark.asyncio
+async def test_explicit_same_request_retries_keep_the_key_but_new_runs_do_not(tmp_path):
+    workspace = private_workspace(tmp_path / "workspace")
+    native = FakeFacade([{"result": {"outcome": "notify"}} for _ in range(3)])
+    monitors = [caller.Monitor("support", "same-cutoff", card_id="approved-card")]
+    for identity in ("immutable-request", "immutable-request", "new-approved-version-run"):
+        await caller.check_once(
+            "T", monitors, workspace=workspace, native=native, run_id=identity
+        )
+    keys = [arguments["idempotency_key"] for _name, arguments in native.calls]
+    assert keys[0] == keys[1]
+    assert keys[2] != keys[0]
+
+
+@pytest.mark.asyncio
 async def test_unsupported_helper_outcome_is_an_error_and_later_monitors_still_run(
     tmp_path, monkeypatch
 ):

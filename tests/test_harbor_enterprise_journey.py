@@ -420,6 +420,31 @@ def test_weekly_only_procedure_handles_empty_days_through_final_cutoff(tmp_path,
     }
 
 
+def test_new_same_cutoff_invocation_does_not_reuse_a_prior_evaluation_identity(
+    tmp_path, monkeypatch
+):
+    from evaluations import enterprise_policy_caller
+
+    caller, _audit, _roles_path = _make_caller(tmp_path)
+    asyncio.run(_register_baseline(caller, [("daily-queue", "daily")]))
+    _patch_fake_check(monkeypatch, lambda *_args: "notify")
+    fake_check = enterprise_policy_caller.check_once
+    identities = []
+
+    async def recording_check(*args, **kwargs):
+        identities.append(kwargs["run_id"])
+        return await fake_check(*args, **kwargs)
+
+    monkeypatch.setattr(enterprise_policy_caller, "check_once", recording_check)
+    first = asyncio.run(caller.run_until_review({}))
+    second = asyncio.run(caller.run_until_review({}))
+
+    assert first["source_cutoff"] == second["source_cutoff"]
+    assert caller.state["day"] == 0
+    assert len(caller.state["procedure_revisions"]) == 1
+    assert len(identities) == len(set(identities)) == 2
+
+
 def test_final_cutoff_is_checked_before_engagement_completes(tmp_path, monkeypatch):
     cutoffs = _cutoffs(9)
     caller, _audit, _roles_path = _make_caller(tmp_path, cutoffs=cutoffs)
