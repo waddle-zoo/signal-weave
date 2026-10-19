@@ -181,9 +181,13 @@ a route mismatch: explain it to the operator rather than silently changing the
 configured outcome or sending a misleading message.
 
 An investigation should explain what is established, what is still a hypothesis
-and what evidence would distinguish the alternatives. Do not invent a cause,
-customer harm or assignee. Report useful partial findings instead of a blanket
-refusal. When following an earlier issue, inspect the affected group's current
+and what evidence would distinguish the alternatives. Recommend a concrete next
+step for a supplied owner or team when justified; distinguish that recommendation
+from an accepted assignment. Do not invent causes, customer harm or completed
+actions. A corrected source row establishes the correction, not who
+made it or what caused it. Apply that distinction to the operator handoff too.
+Report useful partial findings instead of a blanket refusal. When following an
+earlier issue, inspect the affected group's current
 status through authorized tools when possible; a lower aggregate alone does not
 explain what happened to those records or why.
 

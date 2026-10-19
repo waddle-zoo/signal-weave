@@ -4,6 +4,11 @@ Start with the [evaluation index](../evaluations.md) for the current product-pat
 results and the useful historical Northstar studies. Reports separate setup,
 native decisions, final agent outcomes, and communication quality.
 
+Latest whole-company exercise: [Pine Courier, from installation through three
+weekly reviews](pine-whole-journey-2026-10-19.md). It includes the actual delivered
+messages, capable baseline, complete effort accounting and remaining human-handoff
+gaps, rather than substituting a policy score for the journey.
+
 New experiment transcripts and generated exports belong under ignored
 `artifacts/`, not in this documentation directory. Keep a concise protocol,
 results summary, reproduction command, source/skill identities, and an honest

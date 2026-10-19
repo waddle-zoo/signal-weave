@@ -7,18 +7,25 @@ from pathlib import Path
 
 import pytest
 
+from evaluations.pine_courier_history import create_snapshot
 from evaluations.pine_journey_grading import CUTOFFS, grade_pine_world
 
-ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "artifacts/pine-history-independent-review-v1/inputs"
+
+@pytest.fixture(scope="module")
+def source_archive(tmp_path_factory):
+    archive = tmp_path_factory.mktemp("public-pine-snapshots")
+    for i in range(3):
+        # Reconstruct the public fixture on a clean checkout. The independent
+        # grader still checks archived hashes and recomputes raw/event counts;
+        # it never imports this generator or reads its expected decisions.
+        create_snapshot(archive / f"snapshot-{i}.sqlite3", i)
+    return archive
 
 
 @pytest.fixture
-def world_file(tmp_path):
-    if not all((ARCHIVE / f"{i}.sqlite3").is_file() for i in range(3)):
-        pytest.skip("independent Pine snapshot archive is not present")
+def world_file(tmp_path, source_archive):
     for i in range(3):
-        shutil.copyfile(ARCHIVE / f"{i}.sqlite3", tmp_path / f"snapshot-{i}.sqlite3")
+        shutil.copyfile(source_archive / f"snapshot-{i}.sqlite3", tmp_path / f"snapshot-{i}.sqlite3")
 
     messages, reads = [], []
     for index, cutoff in enumerate(CUTOFFS):

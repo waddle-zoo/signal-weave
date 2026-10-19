@@ -4,6 +4,15 @@ Feature branch: `feat/domain-context-memory`, based on main `e8842ac`.
 
 ## Current acceptance ledger
 
+The [Pine whole-company journey](evidence/pine-whole-journey-2026-10-19.md) now
+executes fresh native setup through an agent-authored approved card, three
+live-Jev observations, investigation, local inbox delivery and feedback. The
+main business findings are independently supported; communication/evidence-access
+gaps and higher overall treatment effort remain. This does not close the
+cross-company value or shared-domain-context gates below. Complete fictional
+enterprise journeys are the current target; actual customer recruitment is not
+a prerequisite for running and grading them.
+
 The next cross-company study follows the
 [human and agent workflow research plan](workflow-research-plan.md). Its proposed
 large-scale counts are not executed results. The first
