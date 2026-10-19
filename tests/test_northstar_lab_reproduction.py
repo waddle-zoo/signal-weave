@@ -139,6 +139,18 @@ def test_superset_config_url_encodes_database_password(monkeypatch: pytest.Monke
 
 def test_seed_reauthenticates_once_after_expired_access_token(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ADMIN_PASSWORD", "test-admin-password")
+
+    class FakeSession:
+        def __init__(self) -> None:
+            self.headers: dict[str, str] = {}
+
+        def request(self, *_args: object, **_kwargs: object) -> None:
+            raise AssertionError("test must replace the HTTP request method")
+
+    class FakeRequests:
+        Session = FakeSession
+
+    monkeypatch.setitem(sys.modules, "requests", FakeRequests)
     seeder = runpy.run_path(str(LAB_ROOT / "superset" / "bootstrap.py"))
     session = seeder["SESSION"]
     session.headers["Authorization"] = "Bearer expired-token"
