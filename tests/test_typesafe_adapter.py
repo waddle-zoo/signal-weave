@@ -500,6 +500,93 @@ async def test_jev_existing_compact_request_is_unchanged_when_it_fits(monkeypatc
 
 
 @pytest.mark.asyncio
+async def test_jev_overbudget_compact_wire_preserves_booleans_and_dedupes_numbers(monkeypatch):
+    FakeClient.calls = []
+    monkeypatch.setattr(typesafe_sdk, "AsyncTypeSafeClient", FakeClient)
+    monkeypatch.setattr(typesafe_sdk, "Noul", FakeNoul)
+    card = _factoring_test_card()
+    observation = Observation(
+        source_key="source-a",
+        subject_id="record-1",
+        subject_label="Record 1",
+        metric="flag",
+        current=1.0,
+        baseline=0.0,
+        dimensions={
+            "nested_list": [1.0, 2.0],
+            "nested_object": {"flag": 0.0, "count": 2.0},
+            "equivalent_numbers": [1.0, 2.0],
+        },
+        attributes={"equivalent_attribute": 1.0},
+    )
+    evidence = [
+        Evidence(
+            source_key="source-a",
+            subject_id="record-1",
+            subject_label="Record 1",
+            statement="The normalized source row includes typed flags.",
+            values={
+                "metric": "flag",
+                "current": True,
+                "baseline": False,
+                "nested_list": [True, 2.0],
+                "nested_object": {"flag": False, "count": 2.0},
+                "equivalent_numbers": [1, 2.0],
+                "equivalent_attribute": 1,
+            },
+        ).model_dump(mode="json")
+    ]
+    source = {
+        "source_key": "source-a",
+        "adapter": "fixture",
+        "resource": "table:records",
+        "title": "Records",
+        "metadata": {
+            "catalog_note": "m" * 30_000,
+            "typed_flag": True,
+            "typed_false": False,
+            "same_number": 1,
+        },
+        "contract": {"typed_flag": 1, "typed_false": 0, "same_number": 1.0},
+    }
+    state = _factoring_test_state(card, evidence, sources=[source])
+    judger = JevJudger(
+        api_key="offline-test", max_payload_bytes=25_000, max_input_tokens=12_000
+    )
+
+    result = await judger.judge(state, card, base_plan(card), [observation])
+
+    assert len(FakeClient.calls) == 1
+    request = FakeClient.calls[0]
+    full_state = judger._lossless_judgment_state(state, card, [observation])
+    assert judger._request_over_budget(full_state, request["questions"])
+    assert not judger._request_over_budget(request["state"], request["questions"])
+    assert request["state"] == judger._compact_judgment_state(
+        state, card, [observation]
+    )
+    assert request["state"]["evidence"][0]["values"] == {
+        "current": True,
+        "baseline": False,
+        "nested_list": [True, 2.0],
+        "nested_object": {"flag": False, "count": 2.0},
+    }
+    compact_source = request["state"]["sources"][0]
+    assert compact_source["metadata"]["typed_flag"] is True
+    assert compact_source["metadata"]["typed_false"] is False
+    assert "same_number" not in compact_source["metadata"]
+    assert [item.model_dump(mode="json") for item in result.evidence] == evidence
+
+
+def test_jev_json_evidence_equality_is_bounded_and_conservative():
+    assert not JevJudger._json_values_equal_for_deduplication(
+        [0] * 4_096, [0] * 4_096
+    )
+    assert not JevJudger._json_values_equal_for_deduplication(
+        {"value": (True,)}, {"value": (1,)}
+    )
+
+
+@pytest.mark.asyncio
 async def test_jev_compact_projection_factors_evidence_before_question_batching(monkeypatch):
     FakeClient.calls = []
     monkeypatch.setattr(typesafe_sdk, "AsyncTypeSafeClient", FakeClient)

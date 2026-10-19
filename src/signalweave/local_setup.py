@@ -126,9 +126,14 @@ def _private_path(path: Path, *, directory: bool = False) -> None:
     if not valid_type:
         raise SetupError("Local files and directories must not be symlinks or special files")
     if os.name == "posix":
-        if info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) & 0o077:
+        kind = "directory" if directory else "file"
+        if info.st_uid != os.getuid():
+            raise SetupError(f"Local {kind} must be owned by the current user")
+        if stat.S_IMODE(info.st_mode) & 0o077:
             mode = "0700" if directory else "0600"
-            raise SetupError(f"Local files must be owned by the current user; use chmod {mode}")
+            raise SetupError(
+                f"Local {kind} must be private (mode {mode}; no group or other access)"
+            )
 
 
 def _private_directory(path: Path) -> None:
@@ -801,6 +806,7 @@ def setup_local(
         if source == "mcp":
             selected = manifest or values.get("SIGNALWEAVE_MCP_SOURCES_FILE")
             if not selected and not non_interactive:
+                print("Use a private manifest file readable by your account; on POSIX, mode 0400 or 0600 is appropriate.")
                 selected = _ask("Reviewed MCP manifest path (normalized read-only sources only)")
             if not selected:
                 raise SetupError("A reviewed MCP manifest is required")

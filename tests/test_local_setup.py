@@ -107,13 +107,86 @@ def test_init_never_falls_back_to_echoing_stdin(tmp_path, monkeypatch):
 
 
 @pytest.mark.skipif(os.name != "posix", reason="POSIX permission bits")
-@pytest.mark.parametrize("target", ["home", "state", "config.toml", "typesafe.key"])
-def test_group_or_world_access_is_rejected(home, target):
+@pytest.mark.parametrize(("target", "required_mode"), [
+    ("home", "0700"), ("state", "0700"), ("config.toml", "0600"), ("typesafe.key", "0600"),
+])
+def test_group_or_world_access_is_rejected(home, target, required_mode):
     path = home if target == "home" else home / target
     path.chmod(0o755 if path.is_dir() else 0o644)
-    with pytest.raises(setup.SetupError, match="chmod"):
+    with pytest.raises(setup.SetupError, match=rf"private.*{required_mode}.*group or other access"):
         with setup.local_environment(home):
             setup.validate_key_configuration()
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX ownership and permission bits")
+def test_wrong_file_owner_has_separate_error_without_chmod_remedy(tmp_path, monkeypatch):
+    path = private_file(tmp_path / "owner-key", "preserve this key")
+    original = path.read_bytes(), stat.S_IMODE(path.stat().st_mode)
+    monkeypatch.setattr(setup.os, "getuid", lambda: path.stat().st_uid + 1)
+
+    with pytest.raises(setup.SetupError, match="owned by the current user") as error:
+        setup._private_path(path)
+
+    assert "chmod" not in str(error.value)
+    assert (path.read_bytes(), stat.S_IMODE(path.stat().st_mode)) == original
+
+
+def _valid_local_mcp_manifest(path):
+    payload = {"version": 1, "connections": [{
+        "name": "internal", "tenant_id": "local", "read_only": True,
+        "transport": {"type": "stdio", "command": ["/never/execute/this"]},
+        "resources": [{"source_key": "revenue", "tool": "read_snapshot", "descriptor": {
+            "adapter": "internal", "resource": "revenue", "kind": "metric", "title": "Revenue",
+            "contract": {"tenant_id": "local"},
+        }}],
+    }]}
+    return private_file(path, json.dumps(payload))
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX permission bits")
+@pytest.mark.parametrize("mode", [0o400, 0o600])
+def test_owner_readable_private_mcp_manifest_is_accepted(home, tmp_path, mode):
+    manifest = _valid_local_mcp_manifest(tmp_path / "sources.json")
+    manifest.chmod(mode)
+    original = manifest.read_bytes()
+
+    setup.setup_local(home, source="mcp", manifest=manifest,
+                      agent="codex", non_interactive=True)
+
+    assert setup.read_config(home)[1]["SIGNALWEAVE_MCP_SOURCES_FILE"] == str(manifest)
+    assert manifest.read_bytes() == original
+    assert stat.S_IMODE(manifest.stat().st_mode) == mode
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX permission bits")
+def test_group_readable_mcp_manifest_is_rejected_without_mutation(home, tmp_path):
+    manifest = _valid_local_mcp_manifest(tmp_path / "public-sources.json")
+    manifest.chmod(0o444)
+    original = manifest.read_bytes(), stat.S_IMODE(manifest.stat().st_mode)
+    config = (home / "config.toml").read_bytes()
+
+    with pytest.raises(setup.SetupError, match=r"private.*0600.*group or other access"):
+        setup.setup_local(home, source="mcp", manifest=manifest,
+                          agent="codex", non_interactive=True)
+
+    assert (manifest.read_bytes(), stat.S_IMODE(manifest.stat().st_mode)) == original
+    assert (home / "config.toml").read_bytes() == config
+
+
+def test_manifest_prompt_explains_private_readable_file_and_keeps_pty_matcher(home, tmp_path,
+                                                                              monkeypatch, capsys):
+    manifest = _valid_local_mcp_manifest(tmp_path / "sources.json")
+    prompts = []
+
+    def answer(prompt):
+        prompts.append(prompt)
+        return str(manifest)
+
+    monkeypatch.setattr("builtins.input", answer)
+    setup.setup_local(home, source="mcp", agent="codex")
+
+    assert "private manifest file readable by your account" in capsys.readouterr().out
+    assert prompts == ["Reviewed MCP manifest path (normalized read-only sources only): "]
 
 
 @pytest.mark.skipif(os.name != "posix", reason="POSIX permission bits")

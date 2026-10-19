@@ -209,7 +209,11 @@ explain what happened to those records or why.
 Separate the human summary from supporting detail when the recipient can open
 that detail through the caller's files or delivery tools. Lead with the finding,
 scale, intended reviewer and next step; link the full record list rather than
-dumping it into the alert. Verify recipient access: a receipt ID, private trace
+dumping it into the alert. Default to one useful brief or worklist link, not a
+bundle of technical attachments. Keep raw JSON, receipts and traces in operator
+files unless the reader requests them or a particular claim needs them. Preserve
+the source references, as-of time and material coverage limits with the finding.
+Verify recipient access: a receipt ID, private trace
 or transient export label is not automatically a usable link. If the handoff
 requires identifiers and no accessible detail path exists, include the necessary
 identifiers inline and state the limitation rather than claiming an attachment.

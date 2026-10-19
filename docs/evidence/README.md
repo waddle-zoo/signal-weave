@@ -5,8 +5,10 @@ results and the useful historical Northstar studies. Reports separate setup,
 native decisions, final agent outcomes, and communication quality.
 
 Latest whole-company exercises: [Northstar, from fresh setup through seven
-weekly reviews](northstar-whole-journey-2026-10-19.md) and
-[Pine Courier's three-week journey](pine-whole-journey-2026-10-19.md). They include
+weekly reviews](northstar-whole-journey-2026-10-19.md),
+[Pine Courier's three-week journey](pine-whole-journey-2026-10-19.md), and
+[Harbor's daily/weekly operation, interruptions and separate analyst
+recovery](harbor-whole-journey-2026-10-19.md). They include
 actual delivered messages, capable baselines, effort accounting and remaining
 human-handoff gaps, rather than substituting policy scores for the journey.
 

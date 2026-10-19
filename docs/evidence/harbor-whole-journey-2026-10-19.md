@@ -171,12 +171,35 @@ run.** Outer analyst usage is unknown. The 33 live Jev requests across all
 three stages have known usage—291,771 input and 4,277 output tokens—but do not
 establish total cost or a saving.
 
-V6 remains an incomplete journey. A proposed future fresh-agent recovery must
-earn separate admission and preserve the actual company state; it
-cannot rewrite this result. Future full studies should model separate scheduled
+V6 remains an incomplete journey. A separately admitted fresh-agent recovery
+preserved the actual company state; it cannot rewrite this result.
+Future full studies should model separate scheduled
 agent wakes, with persistent company state and bounded per-wake resources,
 rather than one month-long conversation. Neither change supplies missing
 quiet-day, comparative or real-customer evidence.
+
+### Separate recovery: the saved work survived an analyst handover
+
+A fresh analyst received the actual retained files, cards, inboxes and company
+state, without the previous analyst transcript or researcher-written analytical
+repairs. It rechecked March 21, ran March 22 and sent the final owner handoff
+in **320 seconds**, using **two live Jev requests**. The original V6 state
+remained byte-for-byte unchanged. This is a recovery test, not an uninterrupted
+month or an independent company replication.
+
+The final operational handoff distinguished **10 first-response candidates**
+from **118 resolution follow-ups**, with additions, carryovers and eight
+source-resolved exits. It qualified incomplete coverage instead of claiming
+an all-clear or a cause. Internal product review found the handoff useful and
+consistent with the captured source results. The owner received the closeout;
+no scheduling, repair or policy change was claimed.
+
+Presentation still needs work: the owner received 11 attachments, including
+duplicate-named weekly briefs and technical JSON. Recipients acknowledged the
+messages but opened no attachments. That does not establish evidence uptake,
+gap resolution or user satisfaction. Recovery usage is known separately;
+the original interrupted episode's unknown usage stays unknown. This result
+does not demonstrate comparative cost or accuracy benefits.
 
 ### Separate candidate-install check
 
@@ -188,3 +211,6 @@ files: this tests install/setup mechanics, **not the published release or CDN**.
 No provider judgment was requested. An earlier attempt's test manifest was
 incorrectly world-readable; the corrected case used owner-only read permission.
 That failed attempt is retained, not counted successful.
+Interactive uninstall then removed only the disposable executable. Local state,
+the Codex entry and the skill remained intact; reinstalling the same candidate
+restored the command and two MCP starts without repeating setup.

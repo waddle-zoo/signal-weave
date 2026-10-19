@@ -1474,7 +1474,8 @@ class JevJudger:
             optional_metadata = {
                 key: item
                 for key, item in metadata.items()
-                if key not in contract_values or item != contract_values[key]
+                if key not in contract_values
+                or not JevJudger._json_values_equal_for_deduplication(item, contract_values[key])
             }
             payload["metadata"] = compact_json_value(
                 JevJudger._ordered_json_value(optional_metadata),
@@ -1536,7 +1537,10 @@ class JevJudger:
                     payload["values"] = {
                         key: value
                         for key, value in values.items()
-                        if key not in canonical_values or value != canonical_values[key]
+                        if key not in canonical_values
+                        or not JevJudger._json_values_equal_for_deduplication(
+                            value, canonical_values[key]
+                        )
                     }
                     if payload.get("provenance") == canonical.get("attributes", {}).get(
                         "record_ids"
@@ -1546,6 +1550,59 @@ class JevJudger:
                         payload.pop("source_url")
             selected.append(payload)
         return selected
+
+    @staticmethod
+    def _json_values_equal_for_deduplication(left: Any, right: Any) -> bool:
+        """Compare bounded JSON values without equating booleans to numbers."""
+        pending = [(left, right)]
+        remaining_nodes = 4_096
+        while pending:
+            remaining_nodes -= 1
+            if remaining_nodes < 0:
+                return False
+            left_value, right_value = pending.pop()
+
+            if type(left_value) is bool or type(right_value) is bool:
+                if type(left_value) is not bool or type(right_value) is not bool:
+                    return False
+                if left_value != right_value:
+                    return False
+                continue
+
+            if isinstance(left_value, Mapping) or isinstance(right_value, Mapping):
+                if not isinstance(left_value, Mapping) or not isinstance(right_value, Mapping):
+                    return False
+                if len(left_value) != len(right_value):
+                    return False
+                if len(left_value) > remaining_nodes - len(pending):
+                    return False
+                if any(type(key) is not str for key in left_value) or any(
+                    type(key) is not str for key in right_value
+                ):
+                    return False
+                if left_value.keys() != right_value.keys():
+                    return False
+                pending.extend((left_value[key], right_value[key]) for key in left_value)
+                continue
+
+            if type(left_value) is list or type(right_value) is list:
+                if (type(left_value) is not list or type(right_value) is not list
+                        or len(left_value) != len(right_value)
+                        or len(left_value) > remaining_nodes - len(pending)):
+                    return False
+                pending.extend(zip(left_value, right_value, strict=True))
+                continue
+
+            if type(left_value) in (int, float) and type(right_value) in (int, float):
+                if left_value != right_value:
+                    return False
+                continue
+
+            if (type(left_value) is not type(right_value)
+                    or type(left_value) not in (str, type(None))
+                    or left_value != right_value):
+                return False
+        return True
 
     @staticmethod
     def _judgment_analysis_payload(value: Any) -> list[dict[str, Any]]:

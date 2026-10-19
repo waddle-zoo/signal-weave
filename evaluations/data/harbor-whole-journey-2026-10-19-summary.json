@@ -499,6 +499,36 @@
       "A separate operational-recovery study must preserve this interrupted result and cannot turn it into an uninterrupted-month pass."
     ]
   },
+  "separate_operational_recovery": {
+    "status": "completed_final_day_and_owner_handoff",
+    "study_sha256": "d39f520e12725f846a4e19e95dddd1b924762c042553060c7e174cd228d162f2",
+    "preflight_sha256": "e6ccae1d4cd83661fee5092b32613f5eecf048da14d7319c6b9648c656c365f3",
+    "terminal_sha256": "20d985f3146710b342b70bf9f4b495fbfe84c165b2e7e4b9afe0b3295d8d6a08",
+    "independent_raw_review_sha256": "4fdcabc4d0752897d81a880477c51235bec1316c8f012897f42d4f5f1001ebca",
+    "original_parent_unchanged": true,
+    "original_parent_tree_sha256": "d55ce805a05ec03db8efc9dfd7aa6984f23239f5a79c5bbabbc25cad62a65e02",
+    "process_complete": true,
+    "elapsed_seconds": 319.97380066700134,
+    "analyst_usage_known": true,
+    "analyst_uncached_input_tokens": 153419,
+    "analyst_output_tokens": 24944,
+    "provider_requests": 2,
+    "provider_input_tokens": 19775,
+    "provider_output_tokens": 322,
+    "prior_day_rechecked": "2026-03-21T06:00:00Z",
+    "new_cutoff_completed": "2026-03-22T06:00:00Z",
+    "final_response_candidates": 10,
+    "final_resolution_followups": 118,
+    "source_resolved_prior_list_exits": 8,
+    "new_messages": 3,
+    "new_message_recipients": ["duty-manager", "queue-lead", "owner"],
+    "recipient_attachment_opens": 0,
+    "owner_attachment_count": 11,
+    "internal_pm_grade": "Useful qualified handoff; evidence uptake, data repair and satisfaction not demonstrated.",
+    "original_v6_rescored": false,
+    "comparative_benefit_established": false,
+    "scope": "Adaptive fresh-analyst recovery from actual retained state, not a completed uninterrupted month, independent company or paired comparison. Original outer usage remains unknown."
+  },
   "separate_candidate_installer_smoke": {
     "status": "passed_after_explicit_fixture_permission_correction",
     "result_sha256": "b97e5731ead97ead0e0da6dc525af99b2bc5b9a0f41a7f78077516a8b9815ab5",
@@ -514,7 +544,9 @@
     "prior_failed_setup_retained": true,
     "fixture_correction": "Read-only test manifest was incorrectly 0444. Corrected to owner-readable-only 0400; no product privacy gate was weakened.",
     "earlier_pre_prompt_failure_cause": "Unresolved: that attempt discarded its redacted transcript. Its failure is retained separately.",
-    "uninstall_checked_in_this_case": false
+    "uninstall_checked_in_this_case": true,
+    "uninstall_reinstall_record_sha256": "d0c58a5d02d594afbeadb25055d03b4185e68baef5afea5b20a8cdee02c6d33e",
+    "uninstall_scope": "Interactive removal of only the disposable test executable; local state, Codex registration and skill retained. Same candidate reinstalled without setup and two MCP starts passed."
   },
   "follow_up": "Prospective runner/packaging/agent-guidance changes require fresh native verification and whole journeys. No stopped result is rescored."
 }
