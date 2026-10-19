@@ -3,6 +3,7 @@
 import hashlib
 import json
 import shutil
+import sqlite3
 from pathlib import Path
 
 import pytest
@@ -15,10 +16,13 @@ from evaluations.pine_journey_grading import CUTOFFS, grade_pine_world
 def source_archive(tmp_path_factory):
     archive = tmp_path_factory.mktemp("public-pine-snapshots")
     for i in range(3):
-        # Reconstruct the public fixture on a clean checkout. The independent
-        # grader still checks archived hashes and recomputes raw/event counts;
-        # it never imports this generator or reads its expected decisions.
+        # Reconstruct the public fixture on a clean checkout, then record its
+        # byte identities before grading. The grader independently recomputes
+        # raw/event counts; it never imports this generator or its labels.
         create_snapshot(archive / f"snapshot-{i}.sqlite3", i)
+    (archive / "source-hashes.json").write_text(json.dumps([
+        hashlib.sha256((archive / f"snapshot-{i}.sqlite3").read_bytes()).hexdigest() for i in range(3)
+    ]))
     return archive
 
 
@@ -26,6 +30,7 @@ def source_archive(tmp_path_factory):
 def world_file(tmp_path, source_archive):
     for i in range(3):
         shutil.copyfile(source_archive / f"snapshot-{i}.sqlite3", tmp_path / f"snapshot-{i}.sqlite3")
+    shutil.copyfile(source_archive / "source-hashes.json", tmp_path / "source-hashes.json")
 
     messages, reads = [], []
     for index, cutoff in enumerate(CUTOFFS):
@@ -72,9 +77,14 @@ def write_world(path, artifact):
     path.write_text(json.dumps(artifact), encoding="utf-8")
 
 
+def grade(path):
+    return grade_pine_world(path, expected_source_hashes=tuple(json.loads(
+        (path.parent / "source-hashes.json").read_text())))
+
+
 def test_raw_truth_and_structural_journey_cover_all_three_cutoffs(world_file):
-    result = grade_pine_world(world_file)
-    assert result["structural_status"] == "pass"
+    result = grade(world_file)
+    assert result["structural_status"] == "pass", result["issues"]
     assert [row["delta_pp"] for row in result["source_reference"]] == pytest.approx(
         [0.0, -8.421052631579, 6.315789473684])
     middle = result["source_reference"][1]
@@ -93,7 +103,7 @@ def test_data_operations_delivery_is_required_for_known_cache_gap(world_file):
     artifact = read_world(world_file)
     artifact["messages"] = [m for m in artifact["messages"] if m["to"] != "data-operations"]
     write_world(world_file, artifact)
-    result = grade_pine_world(world_file)
+    result = grade(world_file)
     assert result["structural_status"] == "fail"
     assert any("Data Operations" in item for item in result["issues"])
 
@@ -102,7 +112,7 @@ def test_attachment_hash_and_access_are_checked(world_file):
     artifact = read_world(world_file)
     attachment = artifact["messages"][0]["attachments"][0]
     (world_file.parent / attachment["path"]).write_text("changed evidence", encoding="utf-8")
-    result = grade_pine_world(world_file)
+    result = grade(world_file)
     assert result["structural_status"] == "fail"
     assert any("attachment hash mismatch" in item for item in result["issues"])
 
@@ -113,7 +123,7 @@ def test_confirmation_and_reply_linkage_are_structural_not_prose_scored(world_fi
     artifact["feedback_reads"][0]["replies"][0]["reply_to"] = "not-a-message"
     artifact["messages"][0]["body"] = "A deliberately unverified numeric assertion: 100%."
     write_world(world_file, artifact)
-    result = grade_pine_world(world_file)
+    result = grade(world_file)
     assert result["structural_status"] == "fail"
     assert any("confirmation" in item for item in result["issues"])
     assert any("feedback reply" in item for item in result["issues"])
@@ -121,8 +131,29 @@ def test_confirmation_and_reply_linkage_are_structural_not_prose_scored(world_fi
 
 
 def test_raw_scan_handles_full_13200_parcel_snapshot(world_file):
-    result = grade_pine_world(world_file)
+    result = grade(world_file)
     last = result["source_reference"][2]
     assert last["event_counts"]["registered"] == 13200
     assert last["manifest_rows_checked"] > 0
     assert last["current_all"]["eligible"] == 3990
+
+
+def test_source_bytes_remain_bound_to_declared_manifest_not_local_regeneration(world_file):
+    snapshot = world_file.parent / "snapshot-0.sqlite3"
+    with sqlite3.connect(snapshot) as db:
+        db.execute("PRAGMA user_version=17")
+    rejected = grade(world_file)
+    assert rejected["structural_status"] == "fail"
+    assert any("snapshot bytes differ" in issue for issue in rejected["issues"])
+    # Identical business tables with a changed SQLite header need a separately
+    # declared source identity, not the old study's archive hashes.
+    hashes = json.loads((world_file.parent / "source-hashes.json").read_text())
+    hashes[0] = hashlib.sha256(snapshot.read_bytes()).hexdigest()
+    accepted = grade_pine_world(world_file, expected_source_hashes=tuple(hashes))
+    assert accepted["structural_status"] == "pass", accepted["issues"]
+    assert accepted["source_reference"][0]["current_all"]["eligible"] == 2850
+
+
+def test_declared_source_manifest_cannot_be_incomplete(world_file):
+    with pytest.raises(ValueError, match="exactly three"):
+        grade_pine_world(world_file, expected_source_hashes=("0" * 64,))

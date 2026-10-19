@@ -11,6 +11,9 @@ recorded in each message's attachment objects. World input keys follow
 enterprise_full_journey.py: messages, owner_conversations, operator_actions,
 feedback_reads, current_day, complete. No generator, projector, source adapter,
 production metric, actor label, provider, or network is imported or called.
+Defaults bind the executed study's archived bytes. Separately materialized
+sources must supply their own pre-recorded ``expected_source_hashes``; byte
+identity is not assumed across SQLite builds. All semantic checks still run.
 """
 
 from __future__ import annotations
@@ -114,9 +117,10 @@ def _events(db: sqlite3.Connection, cutoff: str) -> dict[str, Any]:
             "cancelled": counts["cancellation"], "delivered": counts["delivery"]}
 
 
-def _source(path: Path, index: int) -> dict[str, Any]:
+def _source(path: Path, index: int, *, expected_sha256: str | None = None) -> dict[str, Any]:
     digest = _sha(path)
-    if digest != SOURCE_SHA256[index]:
+    expected = SOURCE_SHA256[index] if expected_sha256 is None else expected_sha256
+    if digest != expected:
         raise ValueError("snapshot bytes differ from the archived independent source")
     db = _open_readonly(path)
     try:
@@ -211,8 +215,15 @@ def _attachment_check(world: dict[str, Any], root: Path, issues: list[str]) -> d
     return {"checked": checked, "missing_or_invalid": missing}
 
 
-def grade_pine_world(world_path: str | Path) -> dict[str, Any]:
+def grade_pine_world(world_path: str | Path, *, expected_source_hashes: tuple[str, ...] | None = None) -> dict[str, Any]:
     """Grade one saved ``world-{arm}.json`` without reading/guessing prose meaning."""
+    # The executed study defaults to its immutable archived bytes. A separately
+    # generated source (e.g. a different SQLite build) must explicitly supply
+    # its own pre-recorded manifest; never recompute expected hashes here.
+    hashes = SOURCE_SHA256 if expected_source_hashes is None else expected_source_hashes
+    if (len(hashes) != 3 or any(not isinstance(value, str) or len(value) != 64
+            or any(char not in "0123456789abcdef" for char in value) for value in hashes)):
+        raise ValueError("Declare exactly three lowercase SHA-256 source hashes")
     world_path = Path(world_path)
     world = json.loads(world_path.read_text(encoding="utf-8"))
     root = world_path.parent.resolve()
@@ -220,7 +231,7 @@ def grade_pine_world(world_path: str | Path) -> dict[str, Any]:
     sources = []
     for i in range(3):
         try:
-            sources.append(_source(root / f"snapshot-{i}.sqlite3", i))
+            sources.append(_source(root / f"snapshot-{i}.sqlite3", i, expected_sha256=hashes[i]))
         except Exception as exc:
             issues.append(f"snapshot-{i} source check failed: {exc}")
     source_by_cutoff = {s["clock"]["as_of_utc"]: s for s in sources}
