@@ -21,7 +21,12 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from evaluations.codex_workspace import validate_workspace
-from evaluations.company_people import MAX_ATTACHMENT_BYTES, MAX_ATTACHMENTS, CompanyPerson
+from evaluations.company_people import (
+    MAX_ATTACHMENT_BYTES,
+    MAX_ATTACHMENTS,
+    MAX_CONTEXT_CHARS,
+    CompanyPerson,
+)
 from evaluations.harbor_workflow_actor import WorkspaceSourceActor, _tool_spec
 
 DEFAULT_TOOL_CALLS, MAX_TOOL_CALLS = 256, 512
@@ -30,6 +35,7 @@ DEFAULT_PERSON_REPLIES, MAX_PERSON_REPLIES = 96, 128
 DEFAULT_SECONDS, MAX_SECONDS = 7_200, 14_400
 MAX_CALL_SECONDS = 240
 MAX_TEXT_CHARS = 8_000
+MAX_CARD_SNAPSHOT_BYTES = MAX_ATTACHMENT_BYTES
 _STATE_VERSION = 1
 _CALLBACK_NAME = re.compile(r"[a-z][a-z0-9_]{0,63}\Z")
 
@@ -376,13 +382,113 @@ class HarborWorld:
                 "attachment_reads": deepcopy(record["attachment_reads"])}
 
     async def _confirm_snapshot(self, args):
+        question = args.get("question")
+        if not isinstance(question, str) or not question.strip() or len(question) > MAX_CONTEXT_CHARS:
+            raise ValueError(f"confirm_snapshot question must be non-empty text up to {MAX_CONTEXT_CHARS} characters")
+
         card = await _awaitable(self.confirm_snapshot_callback(args["card_id"]))
-        encoded = json.dumps(card, ensure_ascii=False, allow_nan=False, sort_keys=True)
-        message = f"{args['question']}\n\nExact saved native card returned by the caller:\n{encoded}"
+        if not isinstance(card, Mapping):
+            raise ValueError("saved native card snapshot must be a JSON object")
+        try:
+            snapshot = _json_copy(dict(card))
+            encoded = json.dumps(snapshot, ensure_ascii=False, allow_nan=False, sort_keys=True)
+            encoded_bytes = encoded.encode("utf-8")
+        except (TypeError, ValueError, UnicodeEncodeError) as error:
+            raise ValueError("saved native card snapshot must be a finite UTF-8 JSON object") from error
+        if len(encoded_bytes) > MAX_CARD_SNAPSHOT_BYTES:
+            raise ValueError(
+                f"saved native card snapshot exceeds the {MAX_CARD_SNAPSHOT_BYTES}-byte review limit"
+            )
+
+        snapshot_sha256 = hashlib.sha256(encoded_bytes).hexdigest()
+        inline_message = f"{question}\n\nExact saved native card returned by the caller:\n{encoded}"
+        delivery = None
+        if len(inline_message) <= MAX_CONTEXT_CHARS:
+            message = inline_message
+            review_mode = "inline"
+        else:
+            attachment_name = f"native-card-snapshot-{snapshot_sha256}.json"
+            message = (
+                f"{question}\n\nThe exact saved native card snapshot is delivered as "
+                f"{attachment_name} ({len(encoded_bytes)} UTF-8 bytes; SHA-256 "
+                f"{snapshot_sha256}). Please use read_delivered_attachment to inspect this exact "
+                "JSON file before stating whether you consent. This review does not approve or "
+                "change native status."
+            )
+            if len(message) > MAX_CONTEXT_CHARS:
+                raise ValueError(
+                    "confirm_snapshot question leaves no room for bounded exact-snapshot review instructions"
+                )
+            delivery = self._deliver_snapshot_attachment(
+                self.people[self.owner_key], attachment_name, encoded_bytes, snapshot_sha256
+            )
+            review_mode = "attachment"
+
         reply = await self._ask_person(self.owner_key, "owner_question", message)
-        event = {"card_id": args["card_id"], "displayed_native_card": card, "reply": reply}
+        attachment_reads = deepcopy(reply["attachment_reads"])
+        event = {
+            "card_id": args["card_id"],
+            "displayed_native_card": snapshot,
+            "snapshot_sha256": snapshot_sha256,
+            "snapshot_bytes": len(encoded_bytes),
+            "snapshot_review_mode": review_mode,
+            "snapshot_attachment": delivery,
+            "reply": reply,
+            "attachment_reads": attachment_reads,
+        }
         self.state["operations"].append({"tool": "confirm_snapshot", **event})
+        self._emit(
+            "owner_snapshot_review",
+            card_id=args["card_id"],
+            snapshot_sha256=snapshot_sha256,
+            snapshot_bytes=len(encoded_bytes),
+            review_mode=review_mode,
+            attachment=delivery,
+            attachment_reads=attachment_reads,
+            reply_status=reply["status"],
+        )
         return event
+
+    @staticmethod
+    def _deliver_snapshot_attachment(person: CompanyPerson, name: str, content: bytes,
+                                     sha256: str) -> dict:
+        """Deliver a write-once, hash-addressed snapshot through CompanyPerson's ledger."""
+        inbox = person.session.inbox
+        target = inbox / name
+        expected = {"attachment": name, "bytes": len(content), "sha256": sha256}
+
+        if name in person.session.manifest:
+            try:
+                existing = person.session._read_bytes(name)
+            except (OSError, ValueError) as error:
+                raise ValueError("previously delivered card snapshot is no longer readable") from error
+            if existing != content:
+                raise ValueError("previously delivered card snapshot differs from its content hash")
+            recorded = next((item for item in person.attachment_delivery_ledger
+                             if item.get("attachment") == name), None)
+            if recorded != expected:
+                raise ValueError("previously delivered card snapshot ledger does not match its bytes")
+            return deepcopy(recorded)
+
+        if len(person.session.manifest) >= MAX_ATTACHMENTS:
+            raise ValueError("owner attachment delivery limit prevents exact card snapshot review")
+
+        try:
+            with target.open("xb") as stream:
+                stream.write(content)
+                os.fchmod(stream.fileno(), 0o400)
+        except FileExistsError:
+            try:
+                existing = person.session._read_bytes(name, initial=True)
+            except (OSError, ValueError) as error:
+                raise ValueError("existing card snapshot path is not a safe regular file") from error
+            if existing != content:
+                raise ValueError("existing card snapshot path contains different bytes") from None
+
+        deliveries = person.deliver_attachments([name])
+        if len(deliveries) != 1 or deliveries[0] != expected:
+            raise ValueError("CompanyPerson delivery ledger did not retain the exact card snapshot")
+        return deepcopy(deliveries[0])
 
     async def _send_message(self, args):
         if len(self.state["messages"]) >= self.max_messages:

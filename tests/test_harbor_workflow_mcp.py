@@ -14,9 +14,39 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 from evaluations.harbor_history import make_history, materialize_snapshot, weekly_cutoffs
-from evaluations.harbor_history_mcp import SOURCE_ID, list_assets
+from evaluations.harbor_history_mcp import SOURCE_ID, inspect_asset, list_assets
 from evaluations.harbor_history_preflight import build_manifest
 from evaluations.harbor_workflow_sources import build_workflow_manifest
+
+
+def _assert_ticket_field_definitions(inspection):
+    asset = inspection["asset"]
+    definitions = asset["field_definitions"]
+    assert asset["name"] == "tickets"
+    assert definitions["definition_set"] == "harbor_ticket_fields"
+    assert definitions["version"] == "1.0"
+    fields = definitions["fields"]
+    assert set(fields) == {"priority", "status", "first_response_at_utc"}
+    assert fields["priority"]["values"] == {
+        "0": "Not flagged in this company's priority-1 work population.",
+        "1": "Flagged in this company's priority-1 work population.",
+    }
+    assert "weekly_ticket_clocks" in fields["priority"]["meaning"]
+    assert "not a universal severity" in fields["priority"]["meaning"]
+    assert fields["status"]["values"] == {
+        "open": "No resolution is present in the reconstructed state at the cutoff.",
+        "resolved": "A resolution is present in the reconstructed state at the cutoff.",
+    }
+    assert "source snapshot cutoff" in fields["status"]["meaning"]
+    assert "visible" in fields["first_response_at_utc"]["meaning"]
+    assert "does not establish that a response never occurred" in fields[
+        "first_response_at_utc"
+    ]["null_semantics"]
+
+    encoded = json.dumps(definitions).lower()
+    assert not any(term in encoded for term in (
+        "ticket_id", "expected_outcome", "threshold", "select ", "count(",
+    ))
 
 
 @pytest.mark.asyncio
@@ -25,6 +55,8 @@ async def test_workflow_stdio_catalog_and_raw_tools_share_the_snapshot(tmp_path)
     cutoff = weekly_cutoffs(history)[1]
     database = materialize_snapshot(history, cutoff, tmp_path / "workflow.sqlite3")
     as_of = cutoff.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    _assert_ticket_field_definitions(inspect_asset(database, "tickets"))
+    assert "field_definitions" not in json.dumps(list_assets(database))
     manifest = build_workflow_manifest(database, Path(sys.executable))
     connection, = manifest["connections"]
     baseline = build_manifest(database, Path(sys.executable))
@@ -86,6 +118,12 @@ async def test_workflow_stdio_catalog_and_raw_tools_share_the_snapshot(tmp_path)
                 "decision_guidance", "expected_outcome", "future_data",
             ))
 
+            inspection_result = await session.call_tool("inspect_asset", {
+                "asset_name": "tickets",
+            })
+            assert inspection_result.isError is False
+            _assert_ticket_field_definitions(inspection_result.structuredContent)
+
             raw_result = await session.call_tool("query_readonly", {
                 "sql": "SELECT as_of_utc FROM source_snapshot WHERE snapshot_id=1",
                 "row_limit": 10,
@@ -98,3 +136,28 @@ async def test_workflow_stdio_catalog_and_raw_tools_share_the_snapshot(tmp_path)
             assert raw["columns"] == ["as_of_utc"]
             assert raw["rows"] == [[as_of]]
             assert raw["truncated"] is False
+
+
+@pytest.mark.asyncio
+async def test_source_stdio_inspection_exposes_versioned_ticket_definitions(tmp_path):
+    history = make_history()
+    cutoff = weekly_cutoffs(history)[1]
+    database = materialize_snapshot(history, cutoff, tmp_path / "source.sqlite3")
+    server_parameters = StdioServerParameters(
+        command=sys.executable,
+        args=["-m", "evaluations.harbor_history_mcp", str(database)],
+        env=os.environ.copy(),
+    )
+
+    async with stdio_client(server_parameters) as (read_stream, write_stream):
+        async with ClientSession(read_stream, write_stream) as session:
+            await session.initialize()
+            catalog = await session.call_tool("list_assets", {})
+            assert catalog.isError is False
+            assert "harbor_ticket_fields" not in json.dumps(catalog.structuredContent)
+
+            inspected = await session.call_tool("inspect_asset", {
+                "asset_name": "tickets",
+            })
+            assert inspected.isError is False
+            _assert_ticket_field_definitions(inspected.structuredContent)

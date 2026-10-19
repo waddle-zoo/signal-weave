@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Any
 
@@ -18,6 +19,40 @@ _DESCRIPTIONS = {
     "ticket_events": "Latest available event revisions; includes orphan response/resolution facts without hidden creation attributes.",
     "calendar_partitions": "Expected tier/region cohorts for fully ended UTC weeks, even when their source manifest is unavailable.",
     "expected_partitions": "Only the partition manifests already available at this cutoff; absent does not mean zero.",
+}
+_TICKET_FIELD_DEFINITIONS = {
+    "definition_set": "harbor_ticket_fields",
+    "version": "1.0",
+    "fields": {
+        "priority": {
+            "meaning": (
+                "Company work-population flag used by the source-owned "
+                "weekly_ticket_clocks view; it is not a universal severity "
+                "or urgency classification."
+            ),
+            "values": {
+                "0": "Not flagged in this company's priority-1 work population.",
+                "1": "Flagged in this company's priority-1 work population.",
+            },
+        },
+        "status": {
+            "meaning": "Reconstructed ticket resolution state at the source snapshot cutoff.",
+            "values": {
+                "open": "No resolution is present in the reconstructed state at the cutoff.",
+                "resolved": "A resolution is present in the reconstructed state at the cutoff.",
+            },
+        },
+        "first_response_at_utc": {
+            "meaning": (
+                "Source event timestamp for the first response visible in the "
+                "reconstructed ticket state at the source snapshot cutoff."
+            ),
+            "null_semantics": (
+                "No first-response event is visible in this snapshot; this "
+                "does not establish that a response never occurred."
+            ),
+        },
+    },
 }
 
 
@@ -48,7 +83,10 @@ def list_assets(database):
 
 
 def inspect_asset(database, asset_name):
-    return _decorate(database, raw.inspect_asset(database, asset_name))
+    value = _decorate(database, raw.inspect_asset(database, asset_name))
+    if value["asset"]["name"] == "tickets":
+        value["asset"]["field_definitions"] = deepcopy(_TICKET_FIELD_DEFINITIONS)
+    return value
 
 
 def query_readonly(database, sql, row_limit=raw.DEFAULT_ROW_LIMIT):

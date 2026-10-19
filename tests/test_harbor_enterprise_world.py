@@ -9,7 +9,11 @@ from types import SimpleNamespace
 import pytest
 
 from evaluations.company_people import CompanyPerson
-from evaluations.harbor_enterprise_world import HarborEnterpriseBridge, HarborWorld
+from evaluations.harbor_enterprise_world import (
+    MAX_CARD_SNAPSHOT_BYTES,
+    HarborEnterpriseBridge,
+    HarborWorld,
+)
 
 USAGE = {"input_tokens": 31, "output_tokens": 9, "cached_input_tokens": 4}
 
@@ -45,6 +49,24 @@ def tool(name, schema=None):
         "type": "object", "properties": {"value": {"type": "string"}},
         "required": ["value"], "additionalProperties": False,
     })
+
+
+def native_card_snapshot(target_bytes):
+    card = {
+        "id": "card-exact-native-snapshot",
+        "version": 7,
+        "status": "approved",
+        "source_scope": {"adapter": "harbor_history", "resource": "query:open-tickets"},
+        "provenance": {"source_ref": "source:queue", "result_ref": "result:2026-10-19"},
+        "padding": "",
+    }
+    encoded = json.dumps(card, ensure_ascii=False, allow_nan=False, sort_keys=True).encode("utf-8")
+    if target_bytes is not None:
+        assert target_bytes >= len(encoded)
+        card["padding"] = "x" * (target_bytes - len(encoded))
+        assert len(json.dumps(card, ensure_ascii=False, allow_nan=False,
+                              sort_keys=True).encode("utf-8")) == target_bytes
+    return card
 
 
 def episode(message="I reviewed the request.", *, tool_calls=0, usage=USAGE):
@@ -183,6 +205,11 @@ async def test_owner_sees_exact_saved_card_and_natural_reply_never_approves(tmp_
     assert first["final_message"] == "That proposed threshold conflicts with our stated policy; I don't consent to it."
     assert set(rejected["reply"]) == set(consented["reply"]) == set(first)
     assert rejected["displayed_native_card"] == card and consented["displayed_native_card"] == card
+    assert rejected["snapshot_review_mode"] == consented["snapshot_review_mode"] == "inline"
+    assert rejected["snapshot_sha256"] == consented["snapshot_sha256"] == hashlib.sha256(
+        json.dumps(card, ensure_ascii=False, allow_nan=False, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    assert not world.people["owner"].session.manifest
     assert "Exact saved native card returned by the caller:" in prompts[1]["incoming"]["message"]
     assert json.dumps(card, ensure_ascii=False, sort_keys=True) in prompts[1]["incoming"]["message"]
     assert prompts[1]["incoming"]["message"].endswith(json.dumps(card, ensure_ascii=False, sort_keys=True))
@@ -197,6 +224,197 @@ async def test_owner_sees_exact_saved_card_and_natural_reply_never_approves(tmp_
     world_reply_event = next(event for event in world.audit.events if event["kind"] == "company_person.reply")
     assert world_reply_event["person_record"] == world.state["person_replies"][0]
     assert world_reply_event["person_record"]["episode"]["private_cli_raw_metadata"]
+
+
+@pytest.mark.asyncio
+async def test_large_snapshot_is_exactly_delivered_logged_and_restored_without_autoapproval(tmp_path):
+    cards = [native_card_snapshot(12_000), native_card_snapshot(12_100)]
+    cards[1]["version"] = 8
+    expected_bytes = [
+        json.dumps(card, ensure_ascii=False, allow_nan=False, sort_keys=True).encode("utf-8")
+        for card in cards
+    ]
+    reviewed = []
+    current_card = {"value": cards[0]}
+
+    async def owner_runner(session, **kwargs):
+        prompt = kwargs["prompt_override"]
+        assert "Please use read_delivered_attachment to inspect this exact JSON file" in prompt["incoming"]["message"]
+        attachment_names = (await session.specs())[0]["parameters"]["properties"]["attachment"]["enum"]
+        attachment_name = next(name for name in attachment_names if name.endswith(
+            hashlib.sha256(expected_bytes[len(reviewed)]).hexdigest() + ".json"))
+        read = await session.call("read_delivered_attachment", {"attachment": attachment_name})
+        assert read["text"].encode("utf-8") == expected_bytes[len(reviewed)]
+        reviewed.append((attachment_name, read))
+        return episode("I inspected the exact snapshot and do not consent to this proposal.")
+
+    native = FakeMCP([tool("get_insight_card"), tool("approve_insight_card")])
+
+    async def confirm(card_id):
+        native.results["get_insight_card"] = current_card["value"]
+        return (await native.call_tool("get_insight_card", {"card_id": card_id}))[1]
+
+    world, bridge, _, audit, _ = build_world(
+        tmp_path, owner_runner=owner_runner, native=native, confirm_snapshot_callback=confirm)
+    first = await bridge.call("confirm_snapshot", {
+        "card_id": "card-exact-native-snapshot", "question": "Please review the exact saved card."})
+
+    assert first["snapshot_review_mode"] == "attachment"
+    assert first["snapshot_bytes"] == len(expected_bytes[0])
+    first_hash = hashlib.sha256(expected_bytes[0]).hexdigest()
+    first_name = f"native-card-snapshot-{first_hash}.json"
+    first_path = world.people["owner"].session.inbox / first_name
+    assert first["snapshot_sha256"] == first_hash
+    assert first["snapshot_attachment"] == {
+        "attachment": first_name, "bytes": len(expected_bytes[0]), "sha256": first_hash}
+    assert first_path.read_bytes() == expected_bytes[0]
+    assert first_path.stat().st_mode & 0o222 == 0
+    assert first["reply"]["final_message"].endswith("do not consent to this proposal.")
+    assert first["reply"]["attachment_reads"] == [{
+        "attachment": first_name, "bytes": len(expected_bytes[0]), "sha256": first_hash}]
+    first_operation = world.state["operations"][-1]
+    assert first_operation["displayed_native_card"] == cards[0]
+    assert first_operation["snapshot_sha256"] == first_hash
+    assert first_operation["attachment_reads"] == first["reply"]["attachment_reads"]
+    review_audit = next(event for event in audit.events if event["kind"] == "owner_snapshot_review")
+    assert review_audit["snapshot_sha256"] == first_hash
+    assert review_audit["attachment"] == first["snapshot_attachment"]
+    assert review_audit["attachment_reads"] == first["reply"]["attachment_reads"]
+    assert reviewed[0][1]["sha256"] == first_hash
+
+    saved = world.snapshot()
+    inbox_root = world.inbox_root
+    restored_people = {}
+    for key in ("owner", "recipient"):
+        person = world.people[key]
+        restored_people[key] = CompanyPerson(
+            role_brief=person.context["role_brief"],
+            business_knowledge=person.context["business_knowledge"],
+            known_unknowns=person.context["known_unknowns"],
+            authority=person.context["authority"],
+            inbox_root=inbox_root / key,
+            audit=Audit(),
+            episode_runner=owner_runner if key == "owner" else default_runner,
+        )
+    restored = HarborWorld(
+        world.source, world.workspace, inbox_root, restored_people, "owner", Audit(),
+        native=native, confirm_snapshot_callback=confirm, state=saved,
+    )
+    restored_owner = restored.people["owner"]
+    assert first_name in restored_owner.session.manifest
+    assert restored_owner.attachment_delivery_ledger == [first["snapshot_attachment"]]
+    assert restored_owner.attachment_read_ledger == [first["reply"]["attachment_reads"][0]]
+
+    current_card["value"] = cards[1]
+    second = await HarborEnterpriseBridge(restored).call("confirm_snapshot", {
+        "card_id": "card-exact-native-snapshot", "question": "Please review the changed saved card."})
+    second_hash = hashlib.sha256(expected_bytes[1]).hexdigest()
+    second_name = f"native-card-snapshot-{second_hash}.json"
+    assert second_hash != first_hash
+    assert second["snapshot_attachment"]["attachment"] == second_name
+    assert second["snapshot_attachment"]["sha256"] == second_hash
+    assert (restored_owner.session.inbox / first_name).read_bytes() == expected_bytes[0]
+    assert (restored_owner.session.inbox / second_name).read_bytes() == expected_bytes[1]
+    assert len(restored_owner.attachment_delivery_ledger) == 2
+    assert second["reply"]["attachment_reads"] == [{
+        "attachment": second_name, "bytes": len(expected_bytes[1]), "sha256": second_hash}]
+    assert reviewed[1][1]["sha256"] == second_hash
+    assert native.calls == [
+        ("get_insight_card", {"card_id": "card-exact-native-snapshot"}),
+        ("get_insight_card", {"card_id": "card-exact-native-snapshot"}),
+    ]
+    assert not any(name == "approve_insight_card" for name, _ in native.calls)
+
+
+@pytest.mark.asyncio
+async def test_snapshot_at_attachment_limit_is_reviewable_without_truncation(tmp_path):
+    card = native_card_snapshot(MAX_CARD_SNAPSHOT_BYTES)
+    expected = json.dumps(card, ensure_ascii=False, allow_nan=False, sort_keys=True).encode("utf-8")
+    assert len(expected) == MAX_CARD_SNAPSHOT_BYTES
+    native = FakeMCP([tool("get_insight_card"), tool("approve_insight_card")])
+    native.results["get_insight_card"] = card
+    reviewed = []
+
+    async def owner_runner(session, **kwargs):
+        attachment_name = (await session.specs())[0]["parameters"]["properties"]["attachment"]["enum"][0]
+        result = await session.call("read_delivered_attachment", {"attachment": attachment_name})
+        reviewed.append(result)
+        return episode("I reviewed the complete attachment and do not consent.")
+
+    async def confirm(card_id):
+        return (await native.call_tool("get_insight_card", {"card_id": card_id}))[1]
+
+    world, bridge, _, _, _ = build_world(
+        tmp_path, owner_runner=owner_runner, native=native, confirm_snapshot_callback=confirm)
+    result = await bridge.call("confirm_snapshot", {
+        "card_id": card["id"], "question": "Please inspect the exact saved snapshot."})
+
+    assert result["snapshot_bytes"] == MAX_CARD_SNAPSHOT_BYTES
+    assert reviewed[0]["text"].encode("utf-8") == expected
+    assert reviewed[0]["sha256"] == result["snapshot_sha256"]
+    assert result["reply"]["attachment_reads"] == [{
+        "attachment": reviewed[0]["attachment"],
+        "bytes": MAX_CARD_SNAPSHOT_BYTES,
+        "sha256": result["snapshot_sha256"],
+    }]
+    assert native.calls == [("get_insight_card", {"card_id": card["id"]})]
+
+
+@pytest.mark.asyncio
+async def test_oversized_snapshot_and_unbounded_review_prompt_fail_before_delivery(tmp_path):
+    oversized = native_card_snapshot(MAX_CARD_SNAPSHOT_BYTES + 1)
+    native = FakeMCP([tool("get_insight_card"), tool("approve_insight_card")])
+    native.results["get_insight_card"] = oversized
+    callback_calls = []
+
+    async def confirm(card_id):
+        callback_calls.append(card_id)
+        return (await native.call_tool("get_insight_card", {"card_id": card_id}))[1]
+
+    world, bridge, _, audit, _ = build_world(
+        tmp_path, native=native, confirm_snapshot_callback=confirm)
+    with pytest.raises(ValueError, match=f"exceeds the {MAX_CARD_SNAPSHOT_BYTES}-byte review limit"):
+        await bridge.call("confirm_snapshot", {
+            "card_id": oversized["id"], "question": "Review this exact snapshot."})
+
+    assert callback_calls == [oversized["id"]]
+    assert world.people["owner"].session.manifest == {}
+    assert list(world.people["owner"].session.inbox.iterdir()) == []
+    assert world.state["person_replies"] == []
+    assert not any(event["kind"] == "owner_snapshot_review" for event in audit.events)
+    assert native.calls == [("get_insight_card", {"card_id": oversized["id"]})]
+    assert not any(name == "approve_insight_card" for name, _ in native.calls)
+
+
+@pytest.mark.asyncio
+async def test_snapshot_question_bounds_fail_without_fetching_or_delivering(tmp_path):
+    callback_calls = []
+
+    async def confirm(card_id):
+        callback_calls.append(card_id)
+        return {"id": card_id, "version": 1}
+
+    world, bridge, _, _, _ = build_world(tmp_path, confirm_snapshot_callback=confirm)
+    with pytest.raises(ValueError, match="question must be non-empty text"):
+        await bridge.call("confirm_snapshot", {"card_id": "card-small", "question": "q" * 8_001})
+
+    assert callback_calls == []
+    assert world.people["owner"].session.manifest == {}
+    assert world.state["person_replies"] == []
+
+    # A valid question can still leave too little room for the attachment instructions.
+    card = native_card_snapshot(12_000)
+
+    async def confirm_large(_card_id):
+        return card
+
+    world.confirm_snapshot_callback = confirm_large
+    with pytest.raises(ValueError, match="leaves no room for bounded exact-snapshot review instructions"):
+        await HarborEnterpriseBridge(world).call("confirm_snapshot", {
+            "card_id": card["id"], "question": "q" * (MAX_CARD_SNAPSHOT_BYTES // 32)})
+    assert world.people["owner"].session.manifest == {}
+    assert list(world.people["owner"].session.inbox.iterdir()) == []
+    assert world.state["person_replies"] == []
 
 
 @pytest.mark.asyncio
