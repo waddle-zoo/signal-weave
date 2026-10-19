@@ -151,3 +151,61 @@ all-chart coverage, correct business aggregation or novice-human usability.
 Dashboard inspection also fetched other charts and produced failed fallback
 GETs; the selected chart's successful read does not certify the whole dashboard.
 The existing replica was reused; a fresh Superset image build was not tested.
+
+### Current native: fresh-agent onboarding through delivery
+
+The `97a5daa` native candidate subsequently completed a separate three-week
+journey with model-simulated company colleagues. The
+[current execution record](../../evaluations/data/northstar-current-native-journey-2026-10-19-summary.json)
+keeps this forward treatment separate from its retained baseline and failed
+predecessor. It is not a new paired comparison.
+
+The fresh installation used the real setup wizard, Codex registration, bundled
+skill and live source health check. The analyst began without SQL or a card,
+clarified the operational flag and investigation rule with the owner, authored
+three query sources, and imported them through the actual CLI. The owner opened
+the complete 15,761-byte saved-card attachment and explicitly authorized
+evaluation of its exact policy and source scope. The analyst corrected one
+incompatible approval argument itself; no researcher repaired its work.
+
+Three fresh analyst sessions reused approved card v1 for the first three cohorts
+in the table above. Live Jev returned `ignore`, `investigate`, `ignore`. Jev
+applied the saved policy to the bounded summary source; the frontier agent
+performed discovery, SQL, calculations, investigation and writing. Three weekly
+Dispatch digests included source references, detailed reports and flagged-record
+worklists. These were actual simulated-inbox deliveries, not generated messages
+that were merely inspected by a test assertion.
+
+Feedback then raised a different question: had the earlier carrier leads been
+resolved? The agent asked the owner what resolution meant, inspected shipment
+and support fields, and consulted Data Operations. It found no documented
+shipment-linked disposition in the available evidence. Its two follow-up
+messages kept resolution **unknown**, rather than treating a lower flag rate or
+delivery status as proof of a fix. Five messages and eight attachment copies
+were delivered in total; delivery is not evidence that recipients opened them.
+The final handoff preserved the rule, source queries, receipts, feedback and
+unresolved question. No external send or schedule was created.
+
+Internal source, product and process reviewers found no material numerical,
+source, consent or causal-claim defect in the delivered work. Product review
+judged the digests and audience-specific follow-ups useful, with a slightly
+operator-heavy but usable handoff. All eight attachment copies matched their
+recorded hashes; no recipient opens were recorded. The owner's separate exact-card
+read was verified. These are internal reviews, not external peer review.
+
+The complete treatment took 772.62 seconds and used 396,665 uncached frontier
+input / 79,625 output tokens across three Luna analyst episodes and ten Sol
+colleague replies, with known usage and no terminal errors. Its three
+Jev requests used 14,551 input / 374 output tokens. The retained baseline also
+delivered correct weekly findings, taking 388.24 seconds and 211,065 uncached
+frontier input tokens. This run does not establish a speed, cost or accuracy win.
+
+The preceding treatment's three useful fallback reports remain recorded:
+640.84 seconds, 252,516 uncached frontier input tokens and zero Jev calls. Its
+saved card alone exceeded the simulated owner's 8,000-character message limit,
+so approval never reached that owner. The forward helper delivered the whole
+card as a hash-verified attachment instead; it neither truncated policy nor
+manufactured consent. The earlier reconnect timeout was not reproduced in six
+zero-model transport controls. This is a scoped, finalized-history workflow
+exercise—not novice usability, a public-download test, all-chart coverage or
+enterprise-wide superiority.

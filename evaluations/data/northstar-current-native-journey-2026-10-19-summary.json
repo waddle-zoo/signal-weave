@@ -1,0 +1,222 @@
+{
+  "record_kind": "internally reviewed whole-journey execution evidence",
+  "scope": {
+    "study": "T-only forward journey; three retrospective finalized promised-date cohorts ending 2026-08-03, 2026-08-10, and 2026-08-17",
+    "comparison": "Not a new paired B/T run or efficacy estimate. The historical B is a preserved byte-identical reference; the earlier zero-JeV T is a separate retained run.",
+    "setting": "Fictional Northstar company and synthetic local data. Native setup used a scripted PTY flow; company colleagues were model-generated replies, not canned replies. This is not novice usability or customer evidence.",
+    "delivery": "Messages were delivered/read in the study's local simulated inbox; no external sending or scheduling.",
+    "grade_status": "Bounded internal source, product and process reviews complete; not external peer review or a statistical efficacy study."
+  },
+  "internal_review": {
+    "source_and_math": {"reviewer": "Epicurus", "finding": "No material numerical, source, date-bound, routing or causal-claim defect found in the delivered work; review used retained executed results and selected source rows, not a full-database audit."},
+    "human_journey": {"reviewer": "Parfit", "finding": "Useful weekly digests, responsive audience-specific follow-up, and a useful slightly operator-heavy handoff. All eight evidence-file copies matched; recipient attachment opens were not recorded."},
+    "process_integrity": {"reviewer": "Hooke", "finding": "Exact owner read and consent preceded approval; same v1 scope reused. Initial approval-argument conflict was corrected by the actor, with no researcher repair or consent bypass."},
+    "scope": "Three dependent observations from one fictional company. Functional onboarding, reuse and human-facing delivery were demonstrated here; general enterprise readiness, customer adoption and superiority were not established."
+  },
+  "provenance": {
+    "study_sha256": "82b1bda814a0e489c4d0714139e6fdea81343457108725e269896c767348dc2c",
+    "preflight_sha256": "d9f36a6b9dc46af09b8d91bd08191faac48fcdaf95c209338350150cc186c29f",
+    "terminal_sha256": "12ffb8eb548da0d98f0ebe033414a3a46f8d8c5eff296b899a17935206b3081c",
+    "native_candidate": {
+      "version": "0.2.0rc3",
+      "git_commit": "97a5daa103056963b5988921230da9688a241c42",
+      "source_sha256": "5a4d087b394a457dee0e0c46107870e8a8bcbf61cb16acc81c9908cd161f0b6d",
+      "binary_sha256": "a5dccb877c757f35a6f6f7d05e37afa7523f0ad6b6283f4128ea63db25a1f170",
+      "archive_sha256": "3226991b76359383721327de972f8cc71a41bdf39133c6a5103ffbde5710e7d7",
+      "origin": "Locally built archive; checksum verified; not a CI/CDN artifact."
+    },
+    "source": {
+      "source_revision": "4e0a856a1d45b8f2799e6926dac41fbc64307191",
+      "source_executable_sha256": "bb6129307a27efeef73c9a445c73248293b2ff5beb6091240968b6b2dfa58630",
+      "time_semantics": "Retrospective finalized warehouse cohorts, not as-known-at-the-time snapshots."
+    }
+  },
+  "forward_treatment": {
+    "process_complete": true,
+    "elapsed_seconds": 772.616,
+    "frontier_usage": {
+      "known": true,
+      "usage_scope": "The aggregate below covers all 13 Frontier responses; it is not attributable to one model.",
+      "analyst": {"model": "gpt-6-luna", "effort": "xhigh", "episodes": 3},
+      "company_colleagues": {"model": "gpt-6.1-sol", "effort": "low", "model_replies": 10, "canned_replies": false},
+      "responses": 13,
+      "input_tokens": 4826617,
+      "cached_input_tokens": 4429952,
+      "uncached_input_tokens": 396665,
+      "output_tokens": 79625
+    },
+    "jev_usage": {
+      "known": true,
+      "requests": 3,
+      "input_tokens": 14551,
+      "output_tokens": 374
+    },
+    "card": {
+      "id": "card-weekly-northstar-shipment-damage-review-e9e42fff",
+      "title": "Weekly Northstar shipment damage review",
+      "version": 1,
+      "close_status": "approved"
+    },
+    "owner_review": {
+      "saved_snapshot_sha256": "3f2b66d3ca88ae5c08ef780dda3627d472dac4e10c98f4ee4255018af19e1527",
+      "snapshot_bytes": 15761,
+      "exact_attachment_read_verified": true,
+      "read_attachment_sha256": "3f2b66d3ca88ae5c08ef780dda3627d472dac4e10c98f4ee4255018af19e1527",
+      "consent_reply": "Yes. I read the complete delivered attachment and authorize the analyst to call `approve_insight_card` for card `card-weekly-northstar-shipment-damage-review-e9e42fff`, saved version 1, with its exact saved policy and selected `weekly_damage_summary` source scope: the selected and immediately previous seven-day promised_date cohorts from finalized historical `silver.fct_delivery`.\n\nThis authorizes evaluation only, with no scheduling or sending. My consent does not itself change the card’s approval status."
+    },
+    "approval_attempts": [
+      {"period_end": "2026-08-03", "attempt": 1, "result": "failed", "error_type": "RuntimeError"},
+      {"period_end": "2026-08-03", "attempt": 2, "result": "succeeded", "card_id": "card-weekly-northstar-shipment-damage-review-e9e42fff", "version": 1}
+    ],
+    "approval_failure_interpretation": "The first call combined use_current_source_selection_review=true with source_selection_fingerprint; the tool rejected it (Do not pass source_selection_fingerprint when use_current_source_selection_review=true). The actor retried with only the boolean removed, retaining the fingerprint and same saved v1 scope; approval succeeded."
+  },
+  "weekly_card_evaluations": [
+    {
+      "period_end_exclusive": "2026-08-03",
+      "card_id": "card-weekly-northstar-shipment-damage-review-e9e42fff",
+      "card_version": 1,
+      "outcome": "ignore",
+      "mode": "shadow",
+      "status": "delivery_disabled",
+      "receipt_id": "receipt-338f0b3627d54fa0b99d13d87d347a30",
+      "reported_cohort": {"flagged_shipments": 5, "distinct_shipments": 511, "rate_percent": 0.9785, "dispatch_trigger_met": false}
+    },
+    {
+      "period_end_exclusive": "2026-08-10",
+      "card_id": "card-weekly-northstar-shipment-damage-review-e9e42fff",
+      "card_version": 1,
+      "outcome": "investigate",
+      "mode": "shadow",
+      "status": "delivery_disabled",
+      "receipt_id": "receipt-8c9979ce50f743acac19e6ebf2a8c6fc",
+      "reported_cohort": {"flagged_shipments": 12, "distinct_shipments": 497, "rate_percent": 2.4145, "dispatch_trigger_met": true}
+    },
+    {
+      "period_end_exclusive": "2026-08-17",
+      "card_id": "card-weekly-northstar-shipment-damage-review-e9e42fff",
+      "card_version": 1,
+      "outcome": "ignore",
+      "mode": "shadow",
+      "status": "delivery_disabled",
+      "receipt_id": "receipt-db240d74541247018b5896e19b971cef",
+      "reported_cohort": {"flagged_shipments": 4, "distinct_shipments": 527, "rate_percent": 0.7590, "dispatch_trigger_met": false}
+    }
+  ],
+  "human_messages": [
+    {
+      "message_id": "signalweave-message-1",
+      "period_start_inclusive": "2026-07-27",
+      "period_end_exclusive": "2026-08-03",
+      "recipient": "dispatch",
+      "body": "Weekly shipment damage review — promised_date cohort 2026-07-27 through 2026-08-02\n\nThe overall follow-up trigger was not met: 5 of 511 distinct shipments had damage_flag=true (0.98%), versus 3 of 486 (0.62%) the prior week, up 0.36 percentage points. Dispatch’s trigger is strictly above 2% with at least 400 shipments. All seven promised dates are represented; this cohort had no null shipment IDs, null damage flags, or duplicate IDs in the checked source rows.\n\nOne carrier difference merits a look under your guidance to review carrier differences: Pioneer Express had 3 flags among 127 shipments (2.36%), versus 0 of 124 last week. Two flags were promised July 27 and also have late_flag=true; the August 1 flag is not marked late. These records are leads, not evidence that the carrier caused damage. The attached worklist contains all five flagged shipments.\n\nRate calculation: distinct shipment IDs with damage_flag=true ÷ all distinct shipment IDs. The source flag is an operational review signal, not confirmation of physical damage or customer harm. No source coverage gap was observed, so I did not send a separate Data Operations note.",
+      "source_refs": [
+        "Northstar Lakehouse database 1: enterprise_lake.silver.fct_delivery",
+        "Superset SQL Lab query 66: weekly summary; query 67: carrier comparison; query 68: carrier by promised date; query 69: flagged shipment details",
+        "superset_sql|query:weekly_damage_summary:d7853c52143376010fba37a8afa3c16df7a37e59309f16e741d11a15f10ad5fe",
+        "superset_sql|query:weekly_carrier_comparison:1ed797383139a996327e190b40cb7a482b622905a77f0eb124efb3271aeed198"
+      ],
+      "attachments": [
+        {"filename": "dispatch-damage-2026-08-03.md", "bytes": 3987, "sha256": "7346554a6885cabd03f0aa09c3591f21967d28b0109abcc266136ac5cab0d08a"},
+        {"filename": "dispatch-damage-2026-08-03-flagged-shipments.csv", "bytes": 646, "sha256": "0a8a42c89a0831181a7ad24e67db28bce3e08bb9fd298b805131b78d55f7c835"}
+      ]
+    },
+    {
+      "message_id": "signalweave-message-2",
+      "period_start_inclusive": "2026-08-03",
+      "period_end_exclusive": "2026-08-10",
+      "recipient": "dispatch",
+      "body": "Weekly shipment damage review — promised_date cohort 2026-08-03 through 2026-08-09\n\nThe overall follow-up trigger was met: 12 of 497 distinct shipments had damage_flag=true (2.41%), above the strictly greater than 2% threshold with at least 400 shipments. The prior cohort was 5 of 511 (0.98%), up 1.44 percentage points. All seven promised dates are represented; this cohort had no null shipment IDs, null damage flags, or duplicate IDs in the checked source rows.\n\nSummit Freight had 7 flags among 120 shipments (5.83%), versus 0 of 125 last week. Pioneer Express had 4 among 126 (3.17%), versus 3 of 127 (2.36%). Together they account for 11 of this week's 12 flags. Eight flagged records also have late_flag=true. These are descriptive leads for record review, not evidence of a carrier cause or confirmed physical damage. The attached worklist contains all 12 flagged records and their recorded attributes.\n\nRate = distinct shipment IDs with damage_flag=true divided by all distinct shipment IDs. The flag is an operational follow-up signal, not confirmation of physical damage or customer harm. No observed coverage gap warranted a separate Data Operations note.",
+      "source_refs": [
+        "Northstar Lakehouse database 1: enterprise_lake.silver.fct_delivery",
+        "Superset SQL Lab query 75: carrier comparison for current and previous cohorts",
+        "Superset SQL Lab query 76: 12 flagged shipment records",
+        "superset_sql|query:weekly_damage_summary:d7853c52143376010fba37a8afa3c16df7a37e59309f16e741d11a15f10ad5fe",
+        "superset_sql|query:weekly_carrier_comparison:1ed797383139a996327e190b40cb7a482b622905a77f0eb124efb3271aeed198"
+      ],
+      "attachments": [
+        {"filename": "dispatch-damage-2026-08-10.md", "bytes": 3950, "sha256": "140a8311c629fe2e0a8a2552e747276168f9dd342165aeec0ec05be030630f1d"},
+        {"filename": "dispatch-damage-2026-08-10-flagged-shipments.csv", "bytes": 1368, "sha256": "f536a9ed8fd2fdb9935edc1055776accc36a8cf21e51b51ce532fc4cae32b77d"}
+      ]
+    },
+    {
+      "message_id": "signalweave-message-3",
+      "period_start_inclusive": "2026-08-10",
+      "period_end_exclusive": "2026-08-17",
+      "recipient": "dispatch",
+      "body": "Weekly shipment damage review — promised_date cohort 2026-08-10 through 2026-08-16\n\nThe overall follow-up trigger was not met: 4 of 527 distinct shipments had damage_flag=true (0.76%), below the strictly greater than 2% threshold with at least 400 shipments. The prior cohort had 12 of 497 (2.41%), down 1.66 percentage points. All seven promised dates are represented; in the current cohort, source rows match distinct IDs, with no observed null IDs, null flags, or duplicate IDs.\n\nCurrent carrier counts are Pioneer Express 2/145, Maple Post 1/130, Northstar Parcel 1/118, and Summit Freight 0/134; each rate is below 2%. One of the four flagged records is also marked late. These carrier differences and the late-flag overlap are descriptive review leads, not proof of cause.\n\nThe recorded flag is an operational follow-up signal, not confirmation of physical damage or customer harm. The attached report has the full comparison and source notes; the CSV lists all four flagged records. No observed data or date-coverage gap warranted a separate Data Operations note.",
+      "source_refs": [
+        "query:weekly_damage_summary:d7853c52143376010fba37a8afa3c16df7a37e59309f16e741d11a15f10ad5fe",
+        "query:weekly_carrier_comparison:1ed797383139a996327e190b40cb7a482b622905a77f0eb124efb3271aeed198",
+        "query:weekly_flagged_shipments:adc1a78591b466aa438a19819771c9fa833dbb4895b13d8262cb8653cdadb574"
+      ],
+      "attachments": [
+        {"filename": "dispatch-damage-2026-08-17.md", "bytes": 3918, "sha256": "fe00ee02cf1fdbfd8ff4e2f555dc7b80a364fb6b1dd7aae75367c3764b93a830"},
+        {"filename": "dispatch-damage-2026-08-17-flagged-shipments.csv", "bytes": 544, "sha256": "20e1966f5b35b7598e3cc6aee326ee3ddefe0cc9fd5ba765757f4cbf6bdf9d24"}
+      ]
+    },
+    {
+      "message_id": "signalweave-message-4",
+      "period_start_inclusive": "2026-08-10",
+      "period_end_exclusive": "2026-08-17",
+      "recipient": "data-operations",
+      "body": "Source follow-up: the August 3–9 carrier leads cannot be given a documented resolution status from the exposed warehouse evidence. silver.fct_delivery has shipment_id/order_id but no ticket or disposition fields; silver.fct_support_ticket has ticket_id/customer_id and generic tickets_resolved/resolution_hours measures but no shipment/order link or documented check, finding, or action fields. gold.mart_support_ops is aggregate only. You confirmed there is no other documented source or approved linkage in your available context. We will report resolution as unknown; this does not establish that no follow-up occurred. This concerns follow-up outcome coverage, not a defect in the current cohort's damage-flag/date measurements. The attached note records the field checks and source evidence.",
+      "source_refs": [
+        "enterprise_lake.silver.fct_delivery",
+        "enterprise_lake.silver.fct_sales_order_line",
+        "enterprise_lake.silver.fct_support_ticket",
+        "enterprise_lake.gold.mart_support_ops",
+        "SQL Lab query 80",
+        "SQL Lab query 81"
+      ],
+      "attachments": [
+        {"filename": "dispatch-lead-resolution-2026-08-17.md", "bytes": 2271, "sha256": "4f4de92cb8cc3b79cc27b5e34aca3f65062584ec3d21a0092b486f3001ae1886"}
+      ]
+    },
+    {
+      "message_id": "signalweave-message-5",
+      "period_start_inclusive": "2026-08-10",
+      "period_end_exclusive": "2026-08-17",
+      "recipient": "dispatch",
+      "body": "I checked the August 3–9 Summit Freight and Pioneer Express leads against the available shipment and support fields. I could not find a documented disposition linked to either carrier lead. The support-ticket fact has customer-level ticket IDs and generic resolved counts, but no shipment/order link or fields for what was checked, found, and done. Data Operations confirmed no other documented source or approved linkage is available in its context.\n\nResolution status is unknown. That does not establish that no follow-up happened, and the lower flag rate or delivery status does not establish resolution. The attached note lists the exact fields checked and source trail.",
+      "source_refs": [
+        "enterprise_lake.silver.fct_delivery",
+        "enterprise_lake.silver.fct_sales_order_line",
+        "enterprise_lake.silver.fct_support_ticket",
+        "enterprise_lake.gold.mart_support_ops"
+      ],
+      "attachments": [
+        {"filename": "dispatch-lead-resolution-2026-08-17.md", "bytes": 2271, "sha256": "4f4de92cb8cc3b79cc27b5e34aca3f65062584ec3d21a0092b486f3001ae1886"}
+      ]
+    }
+  ],
+  "local_inbox_receipts": {
+    "message_ids_with_feedback_processed": [
+      "signalweave-message-1",
+      "signalweave-message-2",
+      "signalweave-message-3",
+      "signalweave-message-4",
+      "signalweave-message-5"
+    ],
+    "all_sent_message_bodies_processed_for_feedback": true,
+    "attachment_opens": "Not established by the recorded feedback-read events."
+  },
+  "historical_references_not_new_comparisons": {
+    "baseline_B": {
+      "sha256": "ba955f16fcecc7c74c467a1046be1a97f33d0df25007741bf1799b7d91aacf79",
+      "byte_identical_preserved_reference": true,
+      "process_complete": true,
+      "elapsed_seconds": 388.236,
+      "jev_requests": 0,
+      "frontier_uncached_input_tokens": 211065,
+      "frontier_output_tokens": 36270
+    },
+    "earlier_zero_jev_T": {
+      "sha256": "f766390f9dc6c2cc4bf59f272553da6ec92752059ad6087764ff6d67cc90ae54",
+      "process_complete": true,
+      "elapsed_seconds": 640.841,
+      "jev_requests": 0,
+      "frontier_uncached_input_tokens": 252516,
+      "frontier_output_tokens": 63790
+    }
+  }
+}
