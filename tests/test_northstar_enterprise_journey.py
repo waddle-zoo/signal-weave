@@ -153,6 +153,56 @@ async def test_native_failure_is_observed_but_does_not_block_consented_human_rep
     assert (workspace / "tool-responses").is_dir()
 
 
+async def test_owner_authorizes_native_approval_only_for_exact_displayed_card_without_approving_it(tmp_path):
+    source_ref = "superset_sql|query:dispatch-weekly-delivery:abc123"
+    card = {
+        "id": "card-dispatch-v2", "title": "Dispatch weekly delivery damage review", "version": 2,
+        "sources": [{"key": "dispatch", "adapter": "superset_sql", "resource": "query:dispatch-weekly-delivery:abc123"}],
+        "onboarding_review": {"source_selection_fingerprint": "review-fingerprint-v2"},
+    }
+    calls = []
+
+    class CardReader:
+        async def call(self, name, arguments):
+            calls.append((name, arguments))
+            return {"result": {"card": card}}
+
+    world = journey.NorthstarWorld(_source(), tmp_path, "signalweave", native=Mock())
+    consent = await world.call("confirm_workflow", {
+        "summary": "Present the saved card for review.", "card_id": card["id"],
+    }, CardReader())
+    assert consent["saved_card"] == card
+    assert "explicitly authorize you to call the real native approve_insight_card" in consent["consent"]
+    assert "version 2" in consent["consent"] and source_ref in consent["consent"]
+    assert consent["approval_authorization"] == {
+        "action": "call_native_approve_insight_card",
+        "card_id": card["id"], "title": card["title"], "version": 2,
+        "source_refs": [source_ref],
+        "source_scope": card["sources"],
+        "source_selection_fingerprint": "review-fingerprint-v2",
+    }
+    assert "does not itself change approval status" in consent["consent"]
+    assert world.approved_card_id is None
+    assert [name for name, _ in calls] == ["get_insight_card"]
+    answer = await world.call("ask_dispatch_owner", {"question": "What should the weekly policy be?"})
+    assert answer["answer"] == journey.OWNER_POLICY and answer["consent"] is False
+    assert world.approved_card_id is None
+
+
+async def test_owner_without_displayed_card_only_returns_business_policy_not_card_authority(tmp_path):
+    world = journey.NorthstarWorld(_source(), tmp_path, "signalweave", native=Mock())
+    procedure = await world.call("confirm_workflow", {"summary": "Weekly retrospective report."})
+    assert "procedure-only consent" in procedure["consent"]
+    assert "approval_authorization" not in procedure
+    answer = await world.call("ask_dispatch_owner", {
+        "question": "Do you explicitly approve a saved policy and source scope? Please answer yes or no."
+    })
+    assert answer["answer"] == journey.OWNER_POLICY
+    assert answer["consent"] is False
+    assert "authorization" not in answer
+    assert world.approved_card_id is None
+
+
 async def test_local_inbox_keeps_source_ids_as_locators_and_hashes_actual_workspace_copies(tmp_path):
     workspace = _workspace(tmp_path)
     evidence = workspace / "evidence.csv"
@@ -249,7 +299,8 @@ async def test_native_owner_rpc_restarts_with_each_trusted_explicit_clock(monkey
     assert set(context_tasks + operation_tasks) == {owner_task}
 
 
-async def test_operator_import_uses_same_validated_actor_file_without_rewriting(tmp_path, monkeypatch):
+@pytest.mark.parametrize("returncode", [0, 23])
+async def test_operator_import_returns_bounded_cli_output_without_rewriting_actor_file(tmp_path, monkeypatch, returncode):
     _workspace(tmp_path, "signalweave")
     home = tmp_path / "private-home"
     home.mkdir(mode=0o700)
@@ -273,28 +324,39 @@ async def test_operator_import_uses_same_validated_actor_file_without_rewriting(
     }))
     original = query_path.read_bytes()
     seen = {}
+    stdout = "Native import response\n" + "x" * 2400
+    stderr = "Native import diagnostic\n" + "y" * 2400
 
     class FakeProcess:
-        returncode = 0
+        def __init__(self, result_code):
+            self.returncode = result_code
 
         async def communicate(self):
-            return b"1 reviewed query active", b""
+            return stdout.encode(), stderr.encode()
 
     async def fake_exec(*args, **kwargs):
         seen["args"] = args
         seen["kwargs"] = kwargs
-        return FakeProcess()
+        return FakeProcess(returncode)
 
     monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_exec)
     result = await world.call(journey.IMPORT_TOOL, {"proposal_path": "query-catalog.json"})
 
-    assert result["imported"] and result["operator_action_count"] == 1
+    assert result["imported"] is (returncode == 0) and result["operator_action_count"] == 1
+    assert result["returncode"] == returncode
+    assert result["stdout"] == stdout[:2000] and len(result["stdout"]) == 2000
+    assert result["stderr"] == stderr[:2000] and len(result["stderr"]) == 2000
+    assert result["reconnected"] is (returncode == 0)
     assert query_path.read_bytes() == original
     assert journey._sha(query_path) == result["proposal_sha256"]
     assert seen["args"][:7] == (str(binary), "queries", "import", "--source", "superset", "--yes", "--file")
     assert seen["kwargs"]["env"]["SIGNALWEAVE_QUERY_AS_OF_DATE"] == "2026-08-03"
     assert seen["kwargs"]["env"]["PINE_SOURCE_PYTHONPATH"] == str(journey.ROOT)
     assert "--home" in seen["args"] and str(home) in seen["args"]
+    if returncode == 0:
+        native.restart.assert_awaited_once()
+    else:
+        native.restart.assert_not_awaited()
 
 
 async def test_prepare_freezes_canonical_read_grants_and_preflights_each_arm(tmp_path, monkeypatch):
@@ -389,4 +451,3 @@ async def test_prepare_freezes_canonical_read_grants_and_preflights_each_arm(tmp
         assert frozen["arms"][arm]["read_paths"] == expected
         assert frozen["arms"][arm]["sandbox"]["profile_tag"] == index + 1
         assert "legacy_empty_profile" not in frozen["arms"][arm]["sandbox"]
-

@@ -261,9 +261,40 @@ def _native_query_schema(binary: Path, home: Path, workspace: Path) -> dict:
             "reference_sha256": _sha(workspace / "query-sources.md")}
 
 
-async def prepare(root, binary, codex, key_file, source_executable, source_checkout, url="http://127.0.0.1:18089"):
+def _prior_attempts(previous: Path) -> dict:
+    """Keep the closed pair and its costs visible before a fresh forward check."""
+    previous = Path(previous).resolve(strict=True)
+    study = setup.shared.read(previous / "study.json")
+    if study.get("protocol") != PROTOCOL or study.get("reporting_period_ends") != list(PERIOD_ENDS):
+        raise ValueError("Forward check needs the same company's retained seven-period study")
+    records = {arm: setup.shared.read(previous / f"{arm}.json") for arm in ORDER}
+    for arm, record in records.items():
+        if record.get("protocol") != PROTOCOL or record.get("arm") != arm:
+            raise ValueError("Prior terminal record does not identify the expected arm")
+        _check_prior_baseline(record)
+    return {
+        "root": str(previous), "study_sha256": _sha(previous / "study.json"),
+        "terminal_sha256": {arm: _sha(previous / f"{arm}.json") for arm in ORDER},
+        "usage": {arm: record["usage"] for arm, record in records.items()},
+        "seconds": {arm: record.get("seconds") for arm, record in records.items()},
+        "provider_requests": {arm: record.get("provider_requests") for arm, record in records.items()},
+        "source_identity": {key: study[key] for key in (
+            "warehouse", "source_revision", "source_environment", "binary",
+        )},
+        "limitation": (
+            "Fresh forward treatment after a simulator repair, not a replacement or rescore of "
+            "either prior attempt. Retain all prior costs; no clean paired efficiency claim."
+        ),
+    }
+
+
+async def prepare(root, binary, codex, key_file, source_executable, source_checkout,
+                  url="http://127.0.0.1:18089", *, treatment_only=False, prior_study=None):
     """Reuse the actual isolated Superset/native/Codex setup; zero paid calls."""
     _require_source_docker_context()
+    if treatment_only != (prior_study is not None):
+        raise ValueError("A forward treatment check requires --treatment-only and --prior-study together")
+    prior_attempts = _prior_attempts(prior_study) if treatment_only else None
     root = Path(root).absolute()
     await setup.prepare(
         root, binary, codex, key_file, source_executable, source_checkout, url,
@@ -288,7 +319,9 @@ async def prepare(root, binary, codex, key_file, source_executable, source_check
         protocol=PROTOCOL,
         method=method(),
         limits=LIMITS,
-        order=list(ORDER),
+        order=["signalweave"] if treatment_only else list(ORDER),
+        comparison=("fresh forward treatment only; retained prior pair, not a new paired baseline"
+                    if treatment_only else "baseline first, one attempt each"),
         bootstrap=bootstrap,
         source_tool_names=sorted(setup.SOURCE_TOOLS),
         source_tool_server_count=len(source_names),
@@ -314,13 +347,20 @@ async def prepare(root, binary, codex, key_file, source_executable, source_check
             "recurrence-value claim is implied by this simulated journey."
         ),
         scope=(
+            "One fresh forward SignalWeave attempt with its prior pair retained across seven retrospective "
+            if treatment_only else
             "One baseline-first and one SignalWeave agent attempt across seven retrospective "
+        ) + (
             "Northstar delivery cohorts, using the current downloaded native, isolated Codex "
             "setup, the existing 137-tool community Superset server with its frozen 27-tool "
             "read-only analytical allowlist exposed to both arms, simulated Dispatch/Data Operations "
             "and local inboxes. No warehouse changes or external delivery."
         ),
     )
+    if prior_attempts is not None:
+        if any(study[key] != value for key, value in prior_attempts["source_identity"].items()):
+            raise ValueError("Forward check source or native identity differs from the retained pair")
+        study["prior_attempts"] = prior_attempts
     for arm in ORDER:
         workspace = root / arm / "workspace"
         response_dir = workspace / "tool-responses"
@@ -358,6 +398,12 @@ def verify(study: dict, root: Path) -> None:
     _require_source_docker_context()
     if study.get("protocol") != PROTOCOL or study.get("method") != method() or study.get("limits") != LIMITS:
         raise ValueError("Frozen Northstar journey method changed")
+    if study.get("order") == ["signalweave"]:
+        retained = study.get("prior_attempts", {})
+        if not retained or _prior_attempts(Path(retained["root"])) != retained:
+            raise ValueError("Retained forward-check ledger changed")
+    elif study.get("order") != list(ORDER):
+        raise ValueError("Unknown actor order")
     bootstrap = study["bootstrap"]
     if verify_binary(Path(study["installed_binary"]), ROOT) != study["binary"]:
         raise ValueError("The installed native candidate changed")
@@ -446,12 +492,13 @@ def _tool_schema(arm: str) -> list[dict]:
     ref_array = {"type": "array", "maxItems": 20, "items": text}
     tools = [
         function("ask_dispatch_owner",
-            "Ask the simulated Dispatch owner about business rules or the retrospective reporting scope. "
-            "The answer contains no measured period results or causes.",
+            "Ask the simulated Dispatch owner about business rules or retrospective scope. The answer contains no measured period results or causes.",
             {"question": {**text, "maxLength": 2000}}, ("question",)),
         function("confirm_workflow",
-            "Show the proposed procedure and, when useful, include card_id so the simulated owner can see the actual saved card/source scope. "
-            "The owner can still consent to a local reporting procedure if no card is available; this does not approve a card or validate SQL/calculations.",
+            "Show the proposed procedure and include card_id when asking about a saved card. If the exact saved card is successfully fetched and displayed, "
+            "the simulated owner explicitly authorizes you to call native approve_insight_card for that saved version, policy, and exact source scope. "
+            "This is authority to make the real native call, not a card status change or evaluation. Without a displayed card, consent is procedure-only. "
+            "Neither consent validates SQL/calculations or authorizes scheduling or external delivery.",
             {"summary": {**text, "maxLength": 6000}, "card_id": {"type": "string", "minLength": 1}}, ("summary",)),
         function("send_message",
             "Deliver a real message only to a local simulated inbox. source_refs are retained as locators and are not "
@@ -496,6 +543,7 @@ class NorthstarWorld:
         self.card_id = None
         self.reviewed_card_id = None
         self.confirmed_card_id = None
+        self.displayed_card = None
         self.approved_card_id = None
         self.evaluations: dict[int, list[str]] = {i: [] for i in range(len(PERIOD_ENDS))}
         self.inbox_read_periods: set[int] = set()
@@ -573,6 +621,8 @@ class NorthstarWorld:
             if card_id:
                 self.card_id = card_id
             self.reviewed_card_id = None
+            self.confirmed_card_id = None
+            self.displayed_card = None
         elif name == "approve_insight_card":
             self.approved_card_id = card_id
 
@@ -588,24 +638,61 @@ class NorthstarWorld:
             card = None
             card_id = args.get("card_id")
             card_read_error = None
+            self.confirmed_card_id = None
+            self.displayed_card = None
             if self.arm == "signalweave" and self.native and delegate and card_id:
                 self.hidden_mcp_calls += 1
                 try:
-                    card = await delegate.call("get_insight_card", {"card_id": card_id})
-                    self.confirmed_card_id = card_id
+                    fetched_card = await delegate.call("get_insight_card", {"card_id": card_id})
+                    card = _find_saved_card(fetched_card, card_id)
+                    if card is not None:
+                        self.displayed_card = card
+                        self.confirmed_card_id = card_id
+                    else:
+                        card = None
+                        card_read_error = "CardIdentityMismatch"
                 except Exception as exc:  # noqa: BLE001 - owner may still consent to a fallback procedure
                     card_read_error = type(exc).__name__
             consent = (
                 "I consent to the described procedure for local retrospective shadow runs and local "
-                "simulated inbox delivery. If a saved card was displayed, this consent covers "
-                "presenting that version for native approval; it does not replace native review or "
-                "approval. If no card was displayed, no card is approved by this consent. This is "
+                "simulated inbox delivery. This procedure consent does not itself change card status. "
+                "If no saved card was displayed, this is procedure-only consent. This is "
                 "fictional consent only; it does not validate SQL, data quality, calculations, causes, "
                 "or real-company delivery, and does not authorize scheduling."
             )
+            approval_authorization = None
+            if card is not None:
+                sources = card.get("sources")
+                if (isinstance(sources, list) and sources
+                        and all(isinstance(source, dict) and source.get("adapter") and source.get("resource")
+                                for source in sources)
+                        and isinstance(card.get("title"), str)
+                        and isinstance(card.get("version"), int)
+                        and not isinstance(card.get("version"), bool)):
+                    source_refs = [f"{source['adapter']}|{source['resource']}" for source in sources]
+                    approval_authorization = {
+                        "action": "call_native_approve_insight_card",
+                        "card_id": card_id,
+                        "title": card["title"],
+                        "version": card["version"],
+                        "source_refs": source_refs,
+                        "source_scope": sources,
+                    }
+                    fingerprint = card.get("onboarding_review", {}).get("source_selection_fingerprint")
+                    if fingerprint:
+                        approval_authorization["source_selection_fingerprint"] = fingerprint
+                    consent += (
+                        f" Yes: I explicitly authorize you to call the real native approve_insight_card tool for "
+                        f"this exact displayed saved card, {card['title']} version {card['version']}, its saved "
+                        f"policy, and this exact source scope: {', '.join(source_refs)}. This is permission to make "
+                        "that native call after review; it does not itself change approval status, evaluate the card, "
+                        "schedule it, or send externally."
+                    )
             event = {"summary": args["summary"], "card_id": card_id, "saved_card": card,
                      "card_read_error": card_read_error, "period_end": self.period_end,
                      "consent": consent}
+            if approval_authorization:
+                event["approval_authorization"] = approval_authorization
             self.owner_confirmations.append(event)
             return event
         if name == IMPORT_TOOL:
@@ -731,7 +818,12 @@ class NorthstarWorld:
         if before != after:
             raise ValueError("Operator import changed the actor-authored proposal file")
         if process.returncode:
-            raise ValueError("Current native query import failed; inspect the retained CLI diagnostics")
+            return {"imported": False, "query_count": len(catalog.queries),
+                    "proposal_sha256": before, "operator_action_count": len(self.operations),
+                    "reconnected": False, "returncode": process.returncode,
+                    "stdout": stdout.decode(errors="replace")[:2000],
+                    "stderr": stderr.decode(errors="replace")[:2000],
+                    "next": "Native query import failed; inspect this CLI response and decide what to do next."}
         self.native.select_period(self.period_end)
         try:
             await self.native.restart()
@@ -742,6 +834,9 @@ class NorthstarWorld:
         self.record()
         return {"imported": True, "query_count": len(catalog.queries),
                 "proposal_sha256": before, "operator_action_count": len(self.operations),
+                "returncode": process.returncode,
+                "stdout": stdout.decode(errors="replace")[:2000],
+                "stderr": stderr.decode(errors="replace")[:2000],
                 "reconnected": True, "next": "Inspect the imported query source and actual result before card review."}
 
 def _find_card_id(value):
@@ -759,6 +854,24 @@ def _find_card_id(value):
         for nested in value:
             found = _find_card_id(nested)
             if found:
+                return found
+    return None
+
+
+def _find_saved_card(value, card_id):
+    """Unwrap common MCP envelopes and return only the exact requested saved card."""
+    if isinstance(value, dict):
+        if (value.get("id") == card_id and isinstance(value.get("title"), str)
+                and isinstance(value.get("version"), int)):
+            return value
+        for nested in value.values():
+            found = _find_saved_card(nested, card_id)
+            if found is not None:
+                return found
+    elif isinstance(value, list):
+        for nested in value:
+            found = _find_saved_card(nested, card_id)
+            if found is not None:
                 return found
     return None
 
@@ -950,25 +1063,30 @@ def _check_prior_baseline(record: dict) -> None:
             raise ValueError("Between-actor token stop reached")
 
 
+def _check_actor_order(study: dict, root: Path, arm: str) -> None:
+    order = study["order"]
+    if arm not in order:
+        raise ValueError("Unknown arm")
+    prior = []
+    for name in order:
+        record_path, claim_path = root / f"{name}.json", root / f"{name}.claimed"
+        if claim_path.exists() and not record_path.exists():
+            raise ValueError("A prior actor attempt is unreported; do not retry or continue")
+        if record_path.is_file():
+            prior.append(setup.shared.read(record_path))
+    if len(prior) >= len(order) or order[len(prior)] != arm:
+        raise ValueError("One attempt per arm in the frozen study order")
+    if prior:
+        _check_prior_baseline(prior[0])
+
+
 async def actor(root: Path, arm: str, review: Path | None = None):
     root = Path(root).absolute()
     review = Path(review) if review else root / "admission-review.json"
     study = setup.shared.read(root / "study.json")
     verify(study, root)
     _admission(root, review, study)
-    if arm not in ORDER:
-        raise ValueError("Unknown arm")
-    prior = []
-    for name in ORDER:
-        record_path, claim_path = root / f"{name}.json", root / f"{name}.claimed"
-        if claim_path.exists() and not record_path.exists():
-            raise ValueError("A prior actor attempt is unreported; do not retry or continue")
-        if record_path.is_file():
-            prior.append(setup.shared.read(record_path))
-    if len(prior) >= len(ORDER) or ORDER[len(prior)] != arm:
-        raise ValueError("One attempt per arm in baseline-first order")
-    if prior:
-        _check_prior_baseline(prior[0])
+    _check_actor_order(study, root, arm)
     if setup.workspace_inventory(root / arm / "workspace") != study["arms"][arm]["initial_inventory"]:
         raise ValueError("Actor starting workspace changed")
     _private_file(root / f"{arm}.claimed", PROTOCOL)
@@ -1060,6 +1178,8 @@ def main():
     prep.add_argument("--source-executable", type=Path, required=True)
     prep.add_argument("--source-checkout", type=Path, required=True)
     prep.add_argument("--url", default="http://127.0.0.1:18089")
+    prep.add_argument("--treatment-only", action="store_true", help="Fresh forward treatment; does not replace prior results")
+    prep.add_argument("--prior-study", type=Path, help="Retained terminal records and costs for a forward treatment")
     for name in ("preflight", "actor"):
         command = commands.add_parser(name)
         command.add_argument("--root", type=Path, required=True)
