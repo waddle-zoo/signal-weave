@@ -115,3 +115,24 @@ counterexamples and exact final source fingerprint. No provider limit or
 confidence gate was relaxed; current native and full-journey proof is separate.
 The final source suite passed 5,097 tests with 13 opt-in skips, and scoped
 internal code review cleared the limited change—not enterprise readiness.
+
+### V5: the first positive sample concealed a wrong rule
+
+The fresh paired attempt stopped after two baseline onboarding sessions,
+before recurrence or any treatment actor. Its current source figures were
+correct: three response candidates, 78 resolution-only cases and a weekly
+7/98 miss rate. The owner faithfully corrected a proposed “either missed
+clock” trigger to the response-review rule. The saved Python helper still
+notified on the union of both groups.
+
+Today's send was warranted by the three response candidates; this was not an
+observed false alert. But it did not validate the reusable rule. Independent
+data and product reviewers rejected recurrence readiness. The weekly workflow
+was aligned; the daily helper was not. Both stage records and usage are known,
+with zero Jev calls. No researcher repaired the helper or fabricated a missing
+baseline-recurring claim to unlock treatment. This is a negative control
+onboarding result, not a SignalWeave result or a completed comparison.
+
+A separate prospective, fresh treatment-only study is adaptive and unpaired.
+It must earn its own full functional result; it cannot supply a comparative
+accuracy, cost or efficacy headline for the failed v5 pair.

@@ -354,5 +354,80 @@
       "interrupted_older_verification_is_not_final_proof": true
     }
   },
+  "next_development_attempt_v5": {
+    "status": "closed_at_negative_baseline_onboarding_readiness",
+    "study_sha256": "7d4dfcba46f03e66a12351c3f1f078c02646f47f093c13508ce4ff0b2e9f1270",
+    "method_commit": "d8e46e6",
+    "phases": [
+      {
+        "arm": "baseline",
+        "phase": "queue-onboarding",
+        "process_complete": true,
+        "elapsed_seconds": 256.8152142079998,
+        "analyst_usage": {
+          "input_tokens": 886968,
+          "cached_input_tokens": 793728,
+          "uncached_input_tokens": 93240,
+          "output_tokens": 28588,
+          "responses": 1
+        },
+        "provider_requests": 0,
+        "provider_usage": {
+          "known": true,
+          "attempts": 0,
+          "usage": {
+            "input_tokens": 0,
+            "output_tokens": 0
+          }
+        },
+        "message_count_cumulative": 3,
+        "person_replies": 1,
+        "inputs_unchanged": true
+      },
+      {
+        "arm": "baseline",
+        "phase": "weekly-onboarding",
+        "process_complete": true,
+        "elapsed_seconds": 286.03123304199835,
+        "analyst_usage": {
+          "input_tokens": 960081,
+          "cached_input_tokens": 879232,
+          "uncached_input_tokens": 80849,
+          "output_tokens": 33543,
+          "responses": 1
+        },
+        "provider_requests": 0,
+        "provider_usage": {
+          "known": true,
+          "attempts": 0,
+          "usage": {
+            "input_tokens": 0,
+            "output_tokens": 0
+          }
+        },
+        "message_count_cumulative": 4,
+        "person_replies": 3,
+        "inputs_unchanged": true
+      }
+    ],
+    "readiness": {
+      "approved": false,
+      "queue_record_sha256": "6e76a2405675981275185a49087fcbab951f4a4dd2810e7e6ddea423868eb324",
+      "weekly_record_sha256": "49dd9e9a81bd0bf3644ea56a4ce7848d7319776d14ccb8775d3b718cfe0d0433"
+    },
+    "current_source_facts_supported": {
+      "daily_response": 3,
+      "daily_resolution_only": 78,
+      "weekly_misses": 7,
+      "weekly_denominator": 98
+    },
+    "defect": "The owner explicitly corrected the proposed response-or-resolution rule to response-review membership. The saved daily helper still notifies whenever either group is nonempty. The actual current send is warranted by three response candidates; it is not an observed false alert. All-positive dates conceal this branch error.",
+    "policy_helper_sha256": "5fbd13c2cd0487fe2572bab1b941319ec7e971a31c5dcb9047bbada939ea68d3",
+    "source_or_proxy_failure": false,
+    "recurring_started": false,
+    "treatment_started": false,
+    "complete_pair": false,
+    "proposed_successor": "New fresh-root, explicitly frozen adaptive unpaired treatment functional study, not a rescue or comparison score."
+  },
   "follow_up": "Prospective runner/packaging/agent-guidance changes require fresh native verification and whole journeys. No stopped result is rescored."
 }

@@ -537,7 +537,7 @@ def test_source_advance_copies_only_next_frozen_snapshot_without_mutating_future
             os.chmod(path, 0o600)
 
 
-def _admission_context(tmp_path, *, approved=True):
+def _admission_context(tmp_path, *, approved=True, execution_arms=None):
     root = tmp_path / "admission"
     root.mkdir()
     roles_path = root / "roles.json"
@@ -549,6 +549,8 @@ def _admission_context(tmp_path, *, approved=True):
         "roles": str(roles_path),
         "roles_sha256": journey.sha(roles_path),
     }
+    if execution_arms is not None:
+        study["execution_arms"] = execution_arms
     study_path = root / "study.json"
     study_path.write_text(json.dumps(study), encoding="utf-8")
     review = root / "review.json"
@@ -582,7 +584,10 @@ def _claim(root, arm, phase, result=None):
         (root / f"{stem}.json").write_text(json.dumps(result), encoding="utf-8")
 
 
-def test_admission_requires_approved_frozen_role_deck_and_normalized_people_keys(tmp_path):
+@pytest.mark.parametrize("treatment_only", [False, True])
+def test_admission_requires_approved_frozen_role_deck_and_normalized_people_keys(
+    tmp_path, treatment_only
+):
     root = tmp_path / "finalize"
     root.mkdir()
     protocol = root / "owner-protocol.md"
@@ -607,10 +612,15 @@ def test_admission_requires_approved_frozen_role_deck_and_normalized_people_keys
         journey.finalize(root, roles)
 
     roles.write_text(json.dumps(_role_deck()), encoding="utf-8")
-    finalized = journey.finalize(root, roles)
+    finalized = journey.finalize(root, roles, treatment_only=treatment_only)
     frozen_study = json.loads((root / "study.json").read_text(encoding="utf-8"))
     assert finalized["finalized_before_inference"] is True
     assert frozen_study["roles_sha256"] == journey.sha(roles)
+    assert frozen_study["execution_arms"] == (
+        ["signalweave"] if treatment_only else list(journey.ARMS)
+    )
+    if treatment_only:
+        assert "no control arm" in frozen_study["comparison_scope"]
     assert set(json.loads(roles.read_text(encoding="utf-8"))["people"]) == {
         "owner", "queue-lead", "duty-manager", "operations", "data-operations"
     }
@@ -633,6 +643,44 @@ def test_admission_requires_approved_frozen_role_deck_and_normalized_people_keys
     )
     with pytest.raises(ValueError, match="Independent admission"):
         journey.admission(root, "baseline", journey.PHASES[0], review, frozen_study)
+
+
+@pytest.mark.parametrize("arms", [[], ["baseline"], ["signalweave", "baseline"],
+                                  ["signalweave", "signalweave"], ("signalweave",)])
+def test_execution_plan_rejects_unapproved_arm_sets(arms):
+    with pytest.raises(ValueError, match="Execution arms must be"):
+        journey.execution_order({"execution_arms": arms})
+
+
+def test_standalone_treatment_is_explicit_and_retains_three_phase_order(tmp_path):
+    root, study, review, _roles_path = _admission_context(
+        tmp_path, execution_arms=["signalweave"]
+    )
+    assert journey.execution_order({}) == [
+        (arm, phase) for arm in journey.ARMS for phase in journey.PHASES
+    ]
+    with pytest.raises(ValueError, match="baseline-first order"):
+        journey.admission(root, "baseline", "queue-onboarding", review, study)
+    calls = 0
+    for phase in journey.PHASES:
+        assert journey.admission(root, "signalweave", phase, review, study) == calls
+        _claim(root, "signalweave", phase, _terminal(provider_requests=2, uncached=100))
+        calls += 2
+    with pytest.raises(ValueError, match="baseline-first order"):
+        journey.admission(root, "signalweave", "recurring", review, study)
+
+
+def test_standalone_plan_cannot_hide_existing_baseline_claims(tmp_path):
+    root, study, review, roles = _admission_context(
+        tmp_path, execution_arms=["signalweave"]
+    )
+    _claim(root, "baseline", "queue-onboarding", _terminal(provider_requests=1))
+    with pytest.raises(ValueError, match="outside the frozen execution plan"):
+        journey.admission(root, "signalweave", "queue-onboarding", review, study)
+    before = (root / "study.json").read_bytes()
+    with pytest.raises(ValueError, match="after an actor has been attempted"):
+        journey.finalize(root, roles, treatment_only=True)
+    assert (root / "study.json").read_bytes() == before
 
 
 def test_admission_retains_costs_enforces_phase_order_and_rejects_after_all_six_attempts(

@@ -89,6 +89,14 @@ def method() -> dict[str, str]:
     return {name: sha(ROOT / name) for name in METHOD_FILES}
 
 
+def execution_order(study: dict) -> list[tuple[str, str]]:
+    """Use only an explicitly frozen paired or standalone treatment plan."""
+    arms = study.get("execution_arms", list(ARMS))
+    if type(arms) is not list or arms not in (list(ARMS), ["signalweave"]):
+        raise ValueError("Execution arms must be baseline then signalweave, or standalone signalweave")
+    return [(arm, phase) for arm in arms for phase in PHASES]
+
+
 def manifest(snapshot: Path) -> dict:
     """Expose source-owned tier definitions, not researcher-authored business SQL."""
     return {"version": 1, "connections": [{
@@ -224,6 +232,7 @@ async def prepare(root: Path, archive: Path, codex: str, key_file: Path, fixture
 def verify(study: dict, root: Path) -> None:
     if study["protocol"] != PROTOCOL or study["method"] != method():
         raise ValueError("Frozen study method changed")
+    execution_order(study)
     if not isinstance(study.get("key_file"), str) or not Path(study["key_file"]).is_absolute():
         raise ValueError("Prepared study is incomplete: rerun fresh preparation with an explicit private key-file path")
     if verify_binary(Path(study["binary_path"]), ROOT) != study["binary"]:
@@ -239,10 +248,12 @@ def verify(study: dict, root: Path) -> None:
         raise ValueError("Missing study root")
 
 
-def finalize(root: Path, roles: Path) -> dict:
+def finalize(root: Path, roles: Path, *, treatment_only: bool = False) -> dict:
     """Freeze integrated methods/roles BEFORE inference; retain preparation revisions."""
     if list(root.glob("*.claimed")) or list(root.glob("actor-*.json")):
         raise ValueError("Cannot change a protocol after an actor has been attempted")
+    if type(treatment_only) is not bool:
+        raise ValueError("treatment_only must be an explicit boolean")
     roles = roles.resolve(strict=True)
     deck = json.loads(roles.read_text())
     if set(deck.get("people", {})) != {"owner", "queue-lead", "duty-manager", "operations", "data-operations"}:
@@ -259,6 +270,7 @@ def finalize(root: Path, roles: Path) -> dict:
     # No old paid attempt may be relabeled under the final protocol.
     study.setdefault("preparation_revisions", []).append(prior)
     study.update(method=method(), limits=LIMITS, roles=str(roles), roles_sha256=sha(roles),
+        execution_arms=["signalweave"] if treatment_only else list(ARMS),
         people_profile=deck.get("people_profile", {"model": "gpt-6-luna", "effort": "xhigh"}),
         owner_protocol_sha256=sha(Path(study["owner_protocol"])),
         comparison_scope=(
@@ -267,9 +279,16 @@ def finalize(root: Path, roles: Path) -> dict:
             "Treatment retains direct native tools and optional caller context, outside that batch path. "
             "Any noise or effort difference describes this configured workflow, not every possible integration."
         ))
+    if treatment_only:
+        study["comparison_scope"] = (
+            "Standalone treatment functional journey with no control arm. "
+            "Not a paired comparison or evidence of comparative accuracy, effort, cost, "
+            "latency, quiet-day savings, or general enterprise effectiveness."
+        )
     save(root / "study.json", study)
     return {"finalized_before_inference": True, "study_sha256": sha(root / "study.json"),
-            "roles_sha256": study["roles_sha256"], "provider_requests": 0}
+            "roles_sha256": study["roles_sha256"], "provider_requests": 0,
+            "execution_arms": study["execution_arms"]}
 
 
 class Caller:
@@ -555,7 +574,12 @@ def admission(root: Path, arm: str, phase: str, review: Path, study: dict) -> in
         raise ValueError("Independent admission must name this exact study, preflight and limits")
     if sha(Path(study["roles"])) != study["roles_sha256"]:
         raise ValueError("Employee role context changed")
-    order = [(candidate, stage) for candidate in ARMS for stage in PHASES]
+    order = execution_order(study)
+    for candidate in ARMS:
+        for stage in PHASES:
+            if ((candidate, stage) not in order
+                    and (root / f"actor-{candidate}-{stage}.claimed").exists()):
+                raise ValueError("Prior actor claims are outside the frozen execution plan")
     attempted, prior_provider_calls, uncached = [], 0, 0
     for candidate, stage in order:
         stem = f"actor-{candidate}-{stage}"
@@ -725,6 +749,8 @@ def main() -> None:
     freeze = commands.add_parser("finalize")
     freeze.add_argument("root", type=Path)
     freeze.add_argument("--roles", type=Path, required=True)
+    freeze.add_argument("--treatment-only", action="store_true",
+                        help="Freeze a standalone functional study, not a paired comparison")
     run = commands.add_parser("actor")
     run.add_argument("root", type=Path)
     run.add_argument("arm", choices=ARMS)
@@ -737,7 +763,7 @@ def main() -> None:
     elif args.command == "preflight":
         result = asyncio.run(preflight(args.root.absolute()))
     elif args.command == "finalize":
-        result = finalize(args.root.absolute(), args.roles)
+        result = finalize(args.root.absolute(), args.roles, treatment_only=args.treatment_only)
     else:
         result = asyncio.run(actor(args.root.absolute(), args.arm, args.phase, args.review))
     print(json.dumps(result, indent=2))
