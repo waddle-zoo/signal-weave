@@ -1697,7 +1697,8 @@ def create_mcp(
             handoff = getattr(error, "prepared_handoff", None)
             if (
                 (isinstance(error, ContextReviewRequired)
-                 or (isinstance(error, JevPayloadError) and error.stage == "judgment"))
+                 or (isinstance(error, (EvaluationPayloadError, JevPayloadError))
+                     and error.stage == "judgment"))
                 and isinstance(handoff, dict)
             ):
                 deferred_card = handoff["card"]
@@ -1721,8 +1722,8 @@ def create_mcp(
                             "stage": error.stage,
                             "observed_bytes": error.observed_bytes,
                             "budget_bytes": error.budget_bytes,
-                            "observed_tokens": error.observed_tokens,
-                            "budget_tokens": error.budget_tokens,
+                            "observed_tokens": getattr(error, "observed_tokens", None),
+                            "budget_tokens": getattr(error, "budget_tokens", None),
                         },
                         "provider_call_attempts": getattr(error, "provider_call_attempts", 0),
                         "attempt_scope": "current_judgment",

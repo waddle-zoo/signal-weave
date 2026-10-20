@@ -424,7 +424,7 @@ class InsightEngine:
                 result = await self.judger.judge(
                     materials.state, evaluation_card, plan, materials.observations
                 )
-            except JevPayloadError as error:
+            except (EvaluationPayloadError, JevPayloadError) as error:
                 if error.stage == "judgment":
                     attempts = getattr(request_attempts, "count", None)
                     error.provider_call_attempts = (

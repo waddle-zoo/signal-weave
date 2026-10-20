@@ -4,6 +4,8 @@ import asyncio
 import json
 from pathlib import Path
 
+import pytest
+
 from evaluations.northstar_growth_history_adversarial_review import audit_report
 from evaluations.northstar_growth_history_trial import (
     DEFAULT_SPEC,
@@ -15,6 +17,53 @@ from evaluations.northstar_growth_history_trial import (
 )
 from evaluations.northstar_shadow_trial import _build_resources, _load_period_data
 from signalweave.models import Evidence, InsightResult, Outcome
+
+
+def test_openai_replay_uses_selected_provider_and_reports_unknown_usage(tmp_path, monkeypatch):
+    from signalweave import openai_judger
+
+    seen = []
+
+    class OfflineDecisions:
+        name = "openai-decisions"
+
+        def __init__(self, key):
+            assert key == "test-provider-key-sentinel"
+
+        async def decide(self, input_text, questions):
+            state = json.loads(input_text)
+            seen.append(state)
+            result = {}
+            for question in questions:
+                if question["type"] == "predicate":
+                    result[question["name"]] = {"type": "predicate", "probability": 0.5}
+                else:
+                    choices = [item["value"] for item in question["choices"]]
+                    selected = choices[0]
+                    result[question["name"]] = {"type": "choice", "choice": selected,
+                        "probabilities": {value: float(value == selected) for value in choices},
+                        "confidence": 1.0}
+            return result
+
+    monkeypatch.setattr(openai_judger, "OpenAIDecisionsTransport", OfflineDecisions)
+    key_file = tmp_path / "openai.key"
+    key_file.write_text("test-provider-key-sentinel\n")
+    output = tmp_path / "report.json"
+    report = asyncio.run(run_trial(seed_dir=_write_seed_dir(tmp_path / "seed"), output=output,
+                                   decision_provider="openai-decisions", openai_key_file=key_file))
+    assert len(seen) == 48
+    assert report["decision_provider"] == "openai-decisions"
+    assert report["provider_usage_instrumented"] is False
+    assert "live Jev" not in report["design"]["signalweave_arm"]
+    assert "test-provider-key-sentinel" not in output.read_text()
+    assert all("observations" in state["evidence_bundle"] for state in seen)
+
+
+@pytest.mark.parametrize("provider", ["jev", "openai-decisions", "unsupported"])
+def test_live_replay_requires_the_selected_providers_key(tmp_path, provider):
+    with pytest.raises(ValueError):
+        asyncio.run(run_trial(seed_dir=_write_seed_dir(tmp_path / "seed"),
+                               output=tmp_path / "report.json", decision_provider=provider))
 
 
 def _write_seed_dir(root: Path) -> Path:

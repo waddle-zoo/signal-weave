@@ -95,6 +95,55 @@ async def test_openai_local_budget_failure_names_actual_provider(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_openai_engine_byte_budget_also_defers_without_dropping_source_facts(tmp_path, monkeypatch):
+    from tests.test_deferred_judgment_handoff import configured_server, read_all_pages, tool
+
+    class NoInferenceTransport:
+        name = "openai-decisions"
+
+        async def decide(self, *_):
+            raise AssertionError("The engine byte guard must run before inference")
+
+    monkeypatch.setenv("SIGNALWEAVE_MAX_DECISION_INPUT_TOKENS", "1000000")
+    server, catalog = configured_server(tmp_path, observation_count=333,
+                                        judger=OpenAIDecisionJudger(NoInferenceTransport()))
+    store = server._test_runtime.card_store
+    card = store.get_card("deferred-card")
+    anchor = card.sources[0]
+    store.save_card(card.model_copy(update={"sources": [anchor, *[
+        anchor.model_copy(update={"key": f"growth-{i}", "resource": f"dashboard:{7+i}"})
+        for i in (1, 2)
+    ]]}))
+    catalog.resources.extend([
+        catalog.resources[0].model_copy(update={"resource": f"dashboard:{7+i}"})
+        for i in (1, 2)
+    ])
+    original_inspect = catalog.inspect
+
+    async def wide_inspect(source):
+        snapshot = await original_inspect(source)
+        return snapshot.model_copy(update={"observations": [
+            row.model_copy(update={"attributes": {**row.attributes, "detail": "x" * 2500}})
+            for row in snapshot.observations
+        ]})
+
+    monkeypatch.setattr(catalog, "inspect", wide_inspect)
+    response = await tool(server, "evaluate_insight_card")(
+        card_id="deferred-card", idempotency_key="openai-byte-wide:1", response_mode="compact",
+    )
+    assert response["result"]["judgment"]["status"] == "deferred"
+    budget = response["result"]["judgment"]["input_budget"]
+    assert budget["stage"] == "judgment"
+    assert budget["observed_bytes"] > budget["budget_bytes"] == 4_000_000
+    assert budget["observed_tokens"] is None
+    rows = await read_all_pages(server, response["receipt"]["receipt_id"],
+                                ["judgment_state", "observations"])
+    assert len(rows) == 999 and rows[-1]["attributes"]["detail"] == "x" * 2500
+    assert response["receipt"]["delivery_enabled"] is False
+    assert response["result"]["outcome"] is None
+
+
+@pytest.mark.asyncio
 async def test_openai_budget_counts_decoded_input_not_http_string_escaping(monkeypatch):
     from signalweave.typesafe_adapter import estimate_json_tokens
 
