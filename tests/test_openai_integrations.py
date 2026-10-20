@@ -9,6 +9,7 @@ import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
 
 from signalweave import chatgpt_auth
+from signalweave.compiler import base_plan
 from signalweave.local_setup import SetupError, read_config, setup_local
 from signalweave.local_status import local_status
 from signalweave.models import (
@@ -16,6 +17,7 @@ from signalweave.models import (
     Evidence,
     InsightCard,
     InsightPlan,
+    Observation,
     Outcome,
     SourceRef,
 )
@@ -24,6 +26,95 @@ from signalweave.openai_judger import (
     OpenAIDecisionJudger,
     OpenAIDecisionsTransport,
 )
+from signalweave.typesafe_adapter import JevPayloadError
+
+
+def test_openai_policy_packet_preserves_all_facts_without_unrequested_role_sampling():
+    source = SourceRef(key="measure", adapter="mcp", resource="measure:1", label="Measure")
+    card = InsightCard(id="preserve-policy-facts", title="Policy facts",
+                       what_to_watch="Source-defined measures", why_watch="Repeat the agreed policy",
+                       sources=[source], decision_guidance="Apply the confirmed rule.")
+    observations = [Observation(source_key=source.key, subject_id=f"row-{i}",
+                                subject_label=f"Row {i}", metric=f"measure-{i}",
+                                current=i, attributes={"late_detail": "x" * 1100})
+                    for i in range(29)]
+    evidence = [Evidence(source_key=source.key, subject_id="sql-only", subject_label="SQL row",
+                         statement="Source SQL values", values={f"field-{i}": i for i in range(30)},
+                         provenance=["source:query-definition"]).model_dump(mode="json")]
+    state = {"observations": [o.model_dump(mode="json") for o in observations],
+             "evidence": evidence, "source_errors": [{"source_key": "optional", "blocking": False}],
+             "analyses": [], "context": None}
+    packet = OpenAIDecisionJudger._input_state(state, card, base_plan(card), observations)
+    bundle = packet["evidence_bundle"]
+    assert bundle["observations"] == state["observations"]
+    assert bundle["evidence"] == evidence
+    assert bundle["source_errors"] == state["source_errors"]
+    assert "evidence_rollup" not in bundle and "source_details" not in bundle
+    assert bundle["card"]["decision_guidance"] == card.decision_guidance
+
+
+@pytest.mark.asyncio
+async def test_openai_oversized_packet_uses_receipt_backed_frontier_handoff(tmp_path, monkeypatch):
+    from tests.test_deferred_judgment_handoff import configured_server, read_all_pages, tool
+
+    class NoInferenceTransport:
+        name = "openai-decisions"
+
+        async def decide(self, *_):
+            raise AssertionError("Oversized input must not reach the provider")
+
+    monkeypatch.setenv("SIGNALWEAVE_MAX_DECISION_INPUT_TOKENS", "1024")
+    judger = OpenAIDecisionJudger(NoInferenceTransport())
+    server, catalog = configured_server(tmp_path, observation_count=29, judger=judger)
+    response = await tool(server, "evaluate_insight_card")(
+        card_id="deferred-card", idempotency_key="openai-wide:1", response_mode="compact",
+    )
+    assert response["result"]["judgment"]["status"] == "deferred"
+    assert response["result"]["outcome"] is None
+    assert response["receipt"]["delivery_enabled"] is False
+    rows = await read_all_pages(server, response["receipt"]["receipt_id"],
+                                ["judgment_state", "observations"])
+    assert len(rows) == 29
+    assert rows[-1]["subject_id"] == "row-0028"
+    before = catalog.inspect_count
+    replay = await tool(server, "evaluate_insight_card")(
+        card_id="deferred-card", idempotency_key="openai-wide:1", response_mode="compact",
+    )
+    assert replay["replayed"] is True and catalog.inspect_count == before
+
+
+@pytest.mark.asyncio
+async def test_openai_local_budget_failure_names_actual_provider(monkeypatch):
+    monkeypatch.setenv("SIGNALWEAVE_MAX_DECISION_INPUT_TOKENS", "1")
+    judger = OpenAIDecisionJudger(type("NoCalls", (), {"name": "openai-decisions"})())
+    with pytest.raises(JevPayloadError, match="openai-decisions payload") as failure:
+        await judger._ask({"fact": "keep this entire fact"}, [{"name": "outcome"}])
+    assert failure.value.stage == "judgment"
+    assert failure.value.budget_tokens == 1
+    assert failure.value.observed_tokens > 1
+
+
+@pytest.mark.asyncio
+async def test_openai_budget_counts_decoded_input_not_http_string_escaping(monkeypatch):
+    from signalweave.typesafe_adapter import estimate_json_tokens
+
+    state = {"facts": [{"field": "a quoted value", "value": i} for i in range(30)]}
+    questions = [{"name": "outcome", "type": "choice", "choices": [{"value": "review"}]}]
+    decoded = estimate_json_tokens({"input": state, "questions": questions})
+    escaped = estimate_json_tokens({"input": json.dumps(state, separators=(",", ":")),
+                                    "questions": questions})
+    assert escaped > decoded
+    monkeypatch.setenv("SIGNALWEAVE_MAX_DECISION_INPUT_TOKENS", str(decoded))
+
+    class CaptureTransport:
+        name = "openai-decisions"
+
+        async def decide(self, input_text, received_questions):
+            assert json.loads(input_text) == state
+            assert received_questions == questions
+            return {"outcome": {"type": "choice", "choice": "review"}}
+
+    assert (await OpenAIDecisionJudger(CaptureTransport())._ask(state, questions))["outcome"]["choice"] == "review"
 
 
 def _choice(name: str, selected: str, distribution: dict[str, float]) -> dict:

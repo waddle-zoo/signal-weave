@@ -151,6 +151,7 @@ class JevPayloadError(ValueError):
     def __init__(
         self, *, stage: str, observed_bytes: int, budget_bytes: int,
         observed_tokens: int | None = None, budget_tokens: int | None = None,
+        provider: str = "Jev",
     ) -> None:
         self.stage = stage
         self.observed_bytes = observed_bytes
@@ -164,7 +165,7 @@ class JevPayloadError(ValueError):
             else ""
         )
         super().__init__(
-            f"{stage} Jev payload exceeded the configured budget "
+            f"{stage} {provider} payload exceeded the configured budget "
             f"({observed_bytes} > {budget_bytes} bytes{token_detail})"
         )
 

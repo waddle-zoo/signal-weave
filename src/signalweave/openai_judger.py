@@ -31,7 +31,7 @@ from .models import (
     WatchStatus,
 )
 from .retrieval import resource_ref
-from .typesafe_adapter import JevJudger, compact_json_value, estimate_json_tokens
+from .typesafe_adapter import JevJudger, JevPayloadError, compact_json_value, estimate_json_tokens
 
 DECISIONS_URL = "https://api.openai.com/v1/decisions"
 RESPONSES_URL = "https://api.openai.com/v1/responses"
@@ -493,12 +493,21 @@ class OpenAIDecisionJudger:
 
     async def _ask(self, state: Any, questions: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
         input_text = json.dumps(state, ensure_ascii=False, separators=(",", ":"), default=str)
-        observed = estimate_json_tokens({"input": input_text, "questions": questions})
+        # The provider reads the decoded input text, not the HTTP envelope's
+        # escaped copy of that JSON string. Do not count every quote/backslash
+        # twice when estimating model input.
+        budget_payload = {"input": state, "questions": questions}
+        observed = estimate_json_tokens(budget_payload)
         budget = int(os.getenv("SIGNALWEAVE_MAX_DECISION_INPUT_TOKENS", str(MAX_INPUT_TOKENS)))
         if budget < 1 or observed > budget:
-            raise RuntimeError(
-                f"Decision request is too large ({observed} estimated tokens; limit {budget}); "
-                "narrow the selected evidence or card scope"
+            raise JevPayloadError(
+                stage="judgment",
+                observed_bytes=len(json.dumps(budget_payload, ensure_ascii=False,
+                                              separators=(",", ":"), default=str).encode()),
+                budget_bytes=max(0, budget) * 3,
+                observed_tokens=observed,
+                budget_tokens=budget,
+                provider=self.name,
             )
         try:
             answers = await self.transport.decide(input_text, questions)
@@ -545,9 +554,12 @@ class OpenAIDecisionJudger:
         plan: InsightPlan,
         observations: list[Observation],
     ) -> dict[str, Any]:
-        compact = JevJudger._compact_synthesis_state(
-            state, card, plan, observations, {}, semantic_roles=False
-        )
+        # Share the ordinary Jev path's lossless projection, not its experimental
+        # sampled/role-classified synthesis. Unrequested role classification is
+        # not missing business evidence. Wide input is deferred, never sampled
+        # into a falsely complete decision packet.
+        del plan
+        compact = JevJudger._lossless_judgment_state(state, card, observations)
         return {
             "evidence_bundle": compact,
             "decision_contract": {
