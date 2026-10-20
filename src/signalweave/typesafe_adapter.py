@@ -2541,7 +2541,7 @@ class JevJudger:
         summary = (
             f"Evaluated {source_evidence_count} source evidence items, {len(observations)} "
             f"normalized observations, and {len(state.get('analyses', []))} computed analyses "
-            f"across {len(source_keys)} sources; "
+            f"across {len(source_keys)} sources (counts may overlap); "
             f"{len(watch_results)} watch items and {len(question_results)} questions were checked."
         )
         return InsightResult(

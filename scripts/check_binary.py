@@ -1,7 +1,8 @@
 """Smoke-test a built binary in a private home, outside the checkout.
 
 Offline by default. --live performs one approved synthetic investigation with
-Jev, then proves replay across a separate binary process. No external delivery.
+the selected provider, then proves replay across a separate binary process.
+This is packaging/transport proof, not human onboarding or business-value proof.
 """
 from __future__ import annotations
 
@@ -172,7 +173,11 @@ def diagnose_environment(binary: Path) -> None:
         print(json.dumps(report, sort_keys=True))
 
 
-async def check(binary: Path, key_file: Path | None, live: bool):
+async def check(
+    binary: Path, key_file: Path | None, live: bool, *, decision_provider: str = "jev",
+):
+    if decision_provider not in {"jev", "openai-decisions"}:
+        raise ValueError("Binary live check supports jev or openai-decisions")
     identity = verify_binary(binary)
     with tempfile.TemporaryDirectory(prefix="signalweave-binary-check-") as temporary:
         # macOS aliases /var to /private/var; the setup contract rejects symlink
@@ -202,7 +207,9 @@ async def check(binary: Path, key_file: Path | None, live: bool):
             target.write("offline-source-check-not-a-real-password")
         command(
             "setup", "--non-interactive", "--home", str(home),
-            "--key-file", str(private_key), "--source", "superset",
+            "--decision-provider", decision_provider,
+            "--key-file" if decision_provider == "jev" else "--openai-key-file",
+            str(private_key), "--source", "superset",
             "--url", "http://127.0.0.1:8080", "--username", "packaging-user",
             "--secret-file", str(source_secret), "--tenant", "local",
             "--principal", "packaging-agent", "--agent", "codex",
@@ -219,7 +226,10 @@ async def check(binary: Path, key_file: Path | None, live: bool):
         assert settings["SIGNALWEAVE_PRINCIPAL_ID"] == "packaging-agent"
         assert settings["SUPERSET_URL"] == "http://127.0.0.1:8080"
         assert "SUPERSET_PASSWORD_FILE" in settings and "SUPERSET_PASSWORD" not in settings
-        assert "TYPESAFE_API_KEY_FILE" in settings and "TYPESAFE_API_KEY" not in settings
+        credential_name = "TYPESAFE_API_KEY" if decision_provider == "jev" else "OPENAI_API_KEY"
+        other_credential = "OPENAI_API_KEY" if decision_provider == "jev" else "TYPESAFE_API_KEY"
+        assert f"{credential_name}_FILE" in settings and credential_name not in settings
+        assert f"{other_credential}_FILE" not in settings and other_credential not in settings
         # The original credential inputs can disappear; setup must have copied them.
         private_key.unlink()
         source_secret.unlink()
@@ -258,6 +268,7 @@ async def check(binary: Path, key_file: Path | None, live: bool):
                   "stdio_tools": len(names), "different_cwd": True, "live": live,
                   "version": binary_version}
         result["build"] = identity
+        result["tested_decision_provider"] = decision_provider
         result["orientation_paths"] = ["start", "monitor"]
         # Exercise the no-Jev install variants in the actual frozen binary.
         openai_key = folder / "openai-input.key"
@@ -323,10 +334,13 @@ async def check(binary: Path, key_file: Path | None, live: bool):
             first = json.loads(command(*args))
             assert first["result"]["analyses"][0]["delta"] == -20
             assert first["result"]["outcome"] == "notify"
+            expected_evaluator = "jev-latest" if decision_provider == "jev" else decision_provider
+            assert first["result"]["evaluator"] == expected_evaluator
             assert first["receipt"]["delivery_enabled"] is False
             replay = json.loads(command(*args))
             assert replay["replayed"] and first["result"] == replay["result"]
-            result.update({"live_outcome": "notify", "measured_delta": -20, "process_restart_replay": True})
+            result.update({"live_outcome": "notify", "live_evaluator": expected_evaluator,
+                           "measured_delta": -20, "process_restart_replay": True})
         print(json.dumps(result, indent=2))
 
 
@@ -335,6 +349,7 @@ def main():
     parser.add_argument("--binary", type=Path, default=ROOT / "dist/signalweave")
     parser.add_argument("--key-file", type=Path, help="Required only for --live; offline smoke uses a dummy key")
     parser.add_argument("--live", action="store_true")
+    parser.add_argument("--decision-provider", choices=["jev", "openai-decisions"], default="jev")
     parser.add_argument("--diagnose-environment", action="store_true")
     args = parser.parse_args()
     if args.diagnose_environment:
@@ -346,7 +361,8 @@ def main():
     if args.live and not args.key_file:
         parser.error("--live requires --key-file")
     os.umask(0o077)
-    asyncio.run(check(args.binary.resolve(), args.key_file.resolve() if args.key_file else None, args.live))
+    asyncio.run(check(args.binary.resolve(), args.key_file.resolve() if args.key_file else None,
+                      args.live, decision_provider=args.decision_provider))
 
 
 if __name__ == "__main__":

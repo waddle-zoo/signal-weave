@@ -112,10 +112,12 @@ an old approval does not cover it. Context pins remain and must still be valid.
 Check that the replacement measure has the intended meaning, not just matching
 comparison-key names. A current context pin alone does not prove a new query
 uses that definition.
-The same revision can set `max_source_age_hours`, including explicit `null` to
-remove an inappropriate age limit for an agreed historical review. Omission
-preserves the current limit. Removing it does not make old evidence fresh or
-waive data quality, source authorization or comparison checks.
+The same revision can set `max_source_age_hours`; omission preserves the current
+limit. For an agreed historical review, use a separately reviewed archival card
+that can explicitly set this field to `null`, leaving the current recurring
+card's freshness limit intact. Removing the limit does not make old evidence
+fresh or waive the historical cutoff, data quality, source authorization or
+comparison checks.
 
 Normal agent responses omit historical review/correction packets from the
 revision receipt while preserving active policy, exact source scope, version and
@@ -163,8 +165,9 @@ scopes and populations, then reuse the supplied approval arguments after you
 confirm them. You can answer in ordinary language; the agent records the
 confirmed choice and reason rather than asking you to write API fields.
 You can explicitly delegate technical source/card validation to your expert agent
-within the business policy you confirmed. It records that bounded consent; this
-does not expand source access, change policy or authorize sending. Conflicting
+within the business policy you confirmed. Keep that consent in the conversation
+or caller-owned audit; there is no dedicated native delegation-consent field.
+This does not expand source access, change policy or authorize sending. Conflicting
 approval language needs clarification, not an assumed sign-off.
 The supplied fingerprint binds your reply to the reviewed snapshot. If the card
 changes while you are reviewing it, the agent must show the change and ask again;

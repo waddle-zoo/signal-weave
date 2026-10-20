@@ -703,7 +703,7 @@ class OpenAIDecisionJudger:
             summary=(
                 f"Evaluated {source_evidence_count} source evidence items, {len(observations)} "
                 f"normalized observations, and {len(state.get('analyses', []))} computed analyses "
-                f"across {len(source_keys)} sources."
+                f"across {len(source_keys)} sources (counts may overlap)."
             ),
             rationale=(
                 f"{self.name} evaluated the owner's typed watch, question, and outcome policy; "

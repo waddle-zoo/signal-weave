@@ -104,10 +104,10 @@ choices in conversation rather than
 making every recurring run ask them again. Use relative periods for recurrence
 unless a fixed period was requested. For a point-in-time policy with no period
 comparison, explicitly set `comparison_windows=[]`; do not invent a baseline.
-For an agreed archival review, distinguish the historical measurement cutoff from
-today's freshness. If the current age limit is inappropriate, propose a reviewed
-`max_source_age_hours=null` revision for that historical scope only. This does not
-make the data current or waive cutoff, coverage or comparison checks.
+For an agreed archival review, use a separately reviewed archival card rather
+than removing freshness from the current recurring card. An archival card may
+use `max_source_age_hours=null` with owner consent; preserve its historical cutoff,
+coverage and comparison checks and never present the evidence as current.
 Put the agent's follow-up procedure in `follow_up_guidance`, not an extra
 prerequisite for a policy that the selected evidence already answers. Keep
 presentation preferences in caller notes, not business purpose or policy. Do not
@@ -137,8 +137,9 @@ policy and scope before `approve_insight_card`. If review returns an
 `approval_handoff`, reuse its supplied arguments and snapshot fingerprint after
 confirmation; record the confirmed source choice in `source_selection_reason`.
 The owner may explicitly delegate technical source/card validation to the expert
-agent within confirmed business policy. Record that bounded consent, not an
-assumed delegation; clarify conflicting approval language before recording approval.
+agent within confirmed business policy. Keep that consent in the conversation
+or caller-owned audit, not an assumed delegation or a claimed native consent
+field. Clarify conflicting approval language before recording approval.
 An omitted scope map is not empty: retrieve it before asking for approval. Obtain
 any separate expansion acknowledgement required by the handoff, not inferred
 consent. Do not make the owner compose API fields. A changed draft needs renewed review

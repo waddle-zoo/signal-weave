@@ -95,8 +95,9 @@ clean replication or a replacement for the earlier timeout.
 | Colleague uncached input / output tokens | 66,178 / 1,663 | 52,114 / 1,226 |
 | Live Jev requests | 0 | 2 |
 
-All usage above is known. Treatment saved two approved cards, reviewed shared
-definitions and fixed query sources. Its two Jev requests used 13,711 input and
+All usage above is known. Treatment persisted two cards in approved status
+(consent ambiguity is described below), reviewed shared definitions and fixed
+query sources. Its two Jev requests used 13,711 input and
 285 output tokens combined, with **no context overflow**. Provider round trips
 were 0.274 and 0.205 seconds; complete native evaluations, including source
 reads, were 1.245 and 0.842 seconds. These narrow timings are not workflow savings.

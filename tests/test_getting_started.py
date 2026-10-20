@@ -59,9 +59,12 @@ def test_agent_guidance_distinguishes_replay_routes_and_bounded_delegation(task,
     assert "Without a notify route" in limits
     assert "does not authorize or send" in limits
     assert "historical measurement cutoff" in limits
+    assert "separately reviewed archival card" in limits
+    assert "preserving the current recurring card's freshness limit" in limits
     assert "does not make evidence current" in limits
     assert "explicitly delegate" in limits and "clarify conflicting approval language" in limits
     assert "does not grant new source access" in limits
+    assert "conversation or caller-owned audit" in limits
     assert guide["inference_performed"] is False
 
 

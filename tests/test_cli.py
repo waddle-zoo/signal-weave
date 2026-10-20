@@ -429,8 +429,9 @@ def test_stdio_restores_original_streams_and_closes_duplicates(tmp_path, monkeyp
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("shutdown_traceback", [True, False])
+@pytest.mark.parametrize("decision_provider", ["jev", "openai-decisions"])
 async def test_binary_checker_checks_stderr_after_shutdown_without_echo(
-    tmp_path, monkeypatch, capsys, shutdown_traceback,
+    tmp_path, monkeypatch, capsys, shutdown_traceback, decision_provider,
 ):
     from scripts import check_binary
 
@@ -451,6 +452,11 @@ async def test_binary_checker_checks_stderr_after_shutdown_without_echo(
                 setup_local(
                     option("--home"), decision_provider=provider,
                     openai_key_file=option("--openai-key-file"), source=option("--source"),
+                    url=option("--url") if "--url" in argv else None,
+                    username=option("--username") if "--username" in argv else None,
+                    secret_file=option("--secret-file") if "--secret-file" in argv else None,
+                    tenant=option("--tenant") if "--tenant" in argv else None,
+                    principal=option("--principal") if "--principal" in argv else None,
                     non_interactive=True,
                 )
             elif provider == "chatgpt-plan":
@@ -518,12 +524,12 @@ async def test_binary_checker_checks_stderr_after_shutdown_without_echo(
     monkeypatch.setattr(check_binary, "ClientSession", Session)
     if shutdown_traceback:
         with pytest.raises(RuntimeError, match="diagnostic contents withheld") as error:
-            await check_binary.check(binary, key, live=False)
+            await check_binary.check(binary, key, live=False, decision_provider=decision_provider)
         assert "ValueError" in str(error.value)
         assert "secret-path-sentinel" not in str(error.value)
         assert "secret-message-sentinel" not in str(error.value)
     else:
-        await check_binary.check(binary, key, live=False)
+        await check_binary.check(binary, key, live=False, decision_provider=decision_provider)
     captured = capsys.readouterr()
     assert "secret-path-sentinel" not in captured.out + captured.err
     assert "secret-message-sentinel" not in captured.out + captured.err
