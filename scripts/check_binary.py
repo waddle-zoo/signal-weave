@@ -346,7 +346,7 @@ async def check(
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--binary", type=Path, default=ROOT / "dist/signalweave")
+    parser.add_argument("--binary", type=Path, default=ROOT / "dist/signalweave/signalweave")
     parser.add_argument("--key-file", type=Path, help="Required only for --live; offline smoke uses a dummy key")
     parser.add_argument("--live", action="store_true")
     parser.add_argument("--decision-provider", choices=["jev", "openai-decisions"], default="jev")

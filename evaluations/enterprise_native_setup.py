@@ -1,7 +1,8 @@
 """Isolated native MCP setup for a fictional-enterprise journey.
 
 The supplied GitHub Actions artifact is checksum-verified and only the exact
-regular ``signalweave`` tar member is extracted. The real setup wizard and
+regular ``signalweave`` tar member and bounded regular ``_internal/`` runtime
+files are extracted. The real setup wizard and
 Codex CLI run with a fresh fake-person HOME/CODEX_HOME. No published installer
 is exercised; setup and source-health checks do not request a Jev judgment.
 """
@@ -30,7 +31,7 @@ ROOT = Path(__file__).resolve().parents[1]
 ARCHIVE_MEMBER = "signalweave"
 MAX_ARCHIVE_BYTES = 1_000_000_000
 MAX_BINARY_BYTES = 512_000_000
-MAX_ARCHIVE_MEMBERS = 20_000
+MAX_ARCHIVE_MEMBERS = 20_003
 MAX_TRANSCRIPT_BYTES = 2_000_000
 MAX_COMMAND_OUTPUT_BYTES = 2_000_000
 
@@ -67,6 +68,7 @@ def extract_candidate(archive: Path, expected_sha256: str, fake_home: Path) -> d
     if archive_sha != expected_sha256:
         raise ValueError("Downloaded archive checksum does not match")
 
+    resources: dict[str, bytes] = {}
     try:
         with tarfile.open(archive, mode="r:*") as package:
             members = package.getmembers()
@@ -87,6 +89,28 @@ def extract_candidate(archive: Path, expected_sha256: str, fake_home: Path) -> d
             payload = stream.read(MAX_BINARY_BYTES + 1)
             if len(payload) != member.size or len(payload) > MAX_BINARY_BYTES:
                 raise ValueError("Archive member size did not match its header")
+            total_bytes = len(payload)
+            for resource in members:
+                if not resource.name.startswith("_internal/"):
+                    continue
+                relative = PurePosixPath(resource.name)
+                if (not resource.isfile() or resource.issparse()
+                        or str(relative) != resource.name or ".." in relative.parts
+                        or resource.name in resources or resource.size < 0):
+                    raise ValueError("Runtime members must be unique regular bounded paths")
+                total_bytes += resource.size
+                if total_bytes > MAX_BINARY_BYTES:
+                    raise ValueError("Expanded runtime exceeds its byte limit")
+                resource_stream = package.extractfile(resource)
+                if resource_stream is None:
+                    raise ValueError("Runtime file could not be read")
+                data = resource_stream.read(resource.size + 1)
+                if len(data) != resource.size:
+                    raise ValueError("Runtime file size did not match its header")
+                resources[resource.name] = data
+            if any(str(parent) in resources for name in resources
+                   for parent in PurePosixPath(name).parents):
+                raise ValueError("Runtime file conflicts with a parent directory")
     except (tarfile.TarError, OSError) as error:
         raise ValueError("Could not safely read the supplied tar archive") from error
 
@@ -108,6 +132,12 @@ def extract_candidate(archive: Path, expected_sha256: str, fake_home: Path) -> d
             output.flush()
             os.fsync(output.fileno())
         binary.chmod(0o700)
+        for name, data in resources.items():
+            destination = install_dir / name
+            destination.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+            fd = os.open(destination, flags, 0o700)
+            with os.fdopen(fd, "wb") as output:
+                output.write(data)
     except BaseException:
         binary.unlink(missing_ok=True)
         raise
@@ -117,6 +147,7 @@ def extract_candidate(archive: Path, expected_sha256: str, fake_home: Path) -> d
         "member_size": len(payload),
         "binary_sha256": _sha256_file(binary),
         "binary_path": str(binary),
+        "runtime_files": len(resources),
         "install_scope": "fresh fake-person HOME/.local/bin; no published installer",
     }
 

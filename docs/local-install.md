@@ -40,6 +40,24 @@ startup files. In a new terminal, follow its PATH instruction if needed; use
 Bare `signalweave` opens guided setup on first run and
 shows local status on subsequent runs.
 
+### Terminal and automation output
+
+The current installer shows download, verification and startup-check stages.
+Interactive terminals also get curl's download progress bar. In pipes or CI,
+progress is plain text on stderr; add `--quiet` to suppress installer progress
+and success messages, while keeping errors. Setup prompts are not suppressed.
+`NO_COLOR=1` disables color, and `TERM=dumb` disables terminal effects.
+Use `status --json` and `health --json` for machine-readable results. MCP stdio
+keeps stdout reserved for its protocol—no banners or progress are added there.
+
+The current native build keeps its runtime in `.signalweave-runtime` beside
+the installed command. `signalweave` remains the stable command registered with
+your agent. Older runtime versions stay available across upgrades for running
+processes and are reclaimed by explicit uninstall; local cards and credentials
+are separate and remain unless you choose `--purge`. Older published one-file
+builds still extract their runtime at each launch; see the
+[release reference](local-install-reference.md#release-compatibility).
+
 That one guided command walks through setup in this order:
 
 1. Decision provider (Jev, OpenAI Decisions, or ChatGPT-plan Responses)

@@ -20,6 +20,7 @@ def main() -> None:
     from importlib.metadata import version
 
     metadata = build_metadata()
+    metadata["bundle_layout"] = "directory-v1"
     if version("signal-weave") != metadata["version"]:
         raise RuntimeError("Installed package metadata is stale; sync the environment before building")
     skill_file = ROOT / "skills" / "signalweave" / "SKILL.md"
@@ -29,7 +30,7 @@ def main() -> None:
     manifest.parent.mkdir(parents=True, exist_ok=True)
     manifest.write_text(json.dumps(metadata, indent=2) + "\n")
     subprocess.run([
-        sys.executable, "-m", "PyInstaller", "--noconfirm", "--onefile",
+        sys.executable, "-m", "PyInstaller", "--noconfirm", "--onedir",
         "--name", "signalweave", "--paths", str(ROOT / "src"),
         "--specpath", str(ROOT / "build"), "--workpath", str(ROOT / "build" / "binary"),
         "--distpath", str(ROOT / "dist"),

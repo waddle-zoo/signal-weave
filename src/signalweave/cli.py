@@ -11,6 +11,7 @@ from contextlib import ExitStack, nullcontext
 from pathlib import Path
 
 from . import __version__
+from .cli_output import emphasis, progress
 from .local_setup import (
     SetupError,
     agent_config,
@@ -333,7 +334,7 @@ def main() -> None:
             )
             guided_sources = not options.get("non_interactive") and options.get("source") is None
             if guided_sources:
-                print("SignalWeave setup")
+                print(emphasis("SignalWeave setup"))
                 print("Private home: " + str(options.get("home") or Path.home() / ".signalweave"))
                 print("Choose a decision provider, then connect the BI sources your agent may read.")
             home, agent = setup_local(**options)
@@ -583,6 +584,8 @@ def main() -> None:
                     if healthy:
                         from .local_health import live_health_report
 
+                        if not args.json:
+                            progress("Checking source access (up to 15 seconds per source)...")
                         live = asyncio.run(live_health_report())
                         report["mode"] = "offline_and_live_source"
                         report["healthy"] = bool(live["healthy"])
@@ -592,6 +595,7 @@ def main() -> None:
                 if args.json:
                     print(json.dumps(report, ensure_ascii=False, indent=2))
                 else:
+                    print(emphasis("SignalWeave health: " + ("passed" if report["healthy"] else "needs attention")))
                     print("\n".join(report["messages"]))
                 if not healthy:
                     raise SystemExit(1)
@@ -637,7 +641,7 @@ def main() -> None:
 
 
 def _print_status(report: dict[str, object]) -> None:
-    print(f"SignalWeave: {str(report.get('status', 'unknown')).replace('_', ' ')}")
+    print(emphasis(f"SignalWeave: {str(report.get('status', 'unknown')).replace('_', ' ')}"))
     if report.get("home"):
         print(f"Home: {report['home']}")
     if report.get("error"):
@@ -646,23 +650,30 @@ def _print_status(report: dict[str, object]) -> None:
     if isinstance(decision, dict):
         print(f"Decision provider: {decision.get('selected', 'not configured')} ({decision.get('status', 'unknown')})")
     jev = report.get("jev")
-    if isinstance(jev, dict):
+    if isinstance(jev, dict) and not isinstance(decision, dict):
         print(f"Jev: {jev.get('status', 'unknown')} (live judgment check: {jev.get('live_check', 'not run')})")
     agents = report.get("agents")
     if isinstance(agents, dict):
         print(f"Agent: {agents.get('selected', 'not selected')}")
     domain_context = report.get("domain_context")
     if isinstance(domain_context, dict):
-        _print_domain_context_status(domain_context, configuration_only=True)
+        if domain_context.get("status") in {"blocked", "invalid"} or domain_context.get("environment_override"):
+            _print_domain_context_status(domain_context, configuration_only=True)
+        else:
+            print("Shared context: " + str(domain_context.get("status", "unknown")) + " (configuration only)")
     _print_connections(report)
     credentials = report.get("credentials")
     if isinstance(credentials, dict):
-        print("Credentials (values hidden):")
-        for name, status in credentials.items():
+        print("\n" + emphasis("Credentials (values hidden):"))
+        visible = {name: status for name, status in credentials.items()
+                   if status not in {"not_configured", "missing"}}
+        for name, status in visible.items():
             print(f"  {name}: {status}")
+        if not visible:
+            print("  none configured")
     next_steps = report.get("next_steps")
     if isinstance(next_steps, list) and next_steps:
-        print("Next:")
+        print("\n" + emphasis("Next:"))
         for step in next_steps:
             print(f"  {step}")
 
@@ -705,7 +716,7 @@ def _print_connections(report: dict[str, object]) -> None:
     connections = report.get("connections", [])
     if not isinstance(connections, list):
         return
-    print("Connections:")
+    print("\n" + emphasis("Connections:"))
     if not connections:
         print("  none")
         return
