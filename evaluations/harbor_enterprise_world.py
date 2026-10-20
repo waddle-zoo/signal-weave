@@ -37,6 +37,12 @@ MAX_TEXT_CHARS = 8_000
 MAX_CARD_SNAPSHOT_BYTES = MAX_ATTACHMENT_BYTES
 _STATE_VERSION = 1
 _CALLBACK_NAME = re.compile(r"[a-z][a-z0-9_]{0,63}\Z")
+_SNAPSHOT_CONSENT_GUIDANCE = (
+    "This tool records your reply; it does not itself change native status. "
+    "State whether you authorize the analyst to record native approval for this exact "
+    "card version, policy and source scope, or decline or request changes. "
+    "Native approval permits delivery-disabled evaluation, not scheduling or sending."
+)
 
 
 def _tool(name: str, description: str, properties: dict, required=()) -> dict:
@@ -346,7 +352,7 @@ class HarborWorld:
         if self.confirm_snapshot_callback:
             tools.append(_tool(
                 "confirm_snapshot",
-                "Show the exact saved native card returned by the caller's reader to the owner and retain the natural reply; this never approves or changes native status.",
+                "Show the exact saved native card to the owner and retain their natural reply about whether the analyst may record native approval. This tool does not itself change status or infer consent.",
                 {"card_id": _text(256), "question": _text()}, ["card_id", "question"]))
         if self.register_query_callback:
             tools.append(_tool(
@@ -407,7 +413,10 @@ class HarborWorld:
             )
 
         snapshot_sha256 = hashlib.sha256(encoded_bytes).hexdigest()
-        inline_message = f"{question}\n\nExact saved native card returned by the caller:\n{encoded}"
+        inline_message = (
+            f"{question}\n\n{_SNAPSHOT_CONSENT_GUIDANCE}\n\n"
+            f"Exact saved native card returned by the caller:\n{encoded}"
+        )
         delivery = None
         if len(inline_message) <= MAX_CONTEXT_CHARS:
             message = inline_message
@@ -418,8 +427,7 @@ class HarborWorld:
                 f"{question}\n\nThe exact saved native card snapshot is delivered as "
                 f"{attachment_name} ({len(encoded_bytes)} UTF-8 bytes; SHA-256 "
                 f"{snapshot_sha256}). Please use read_delivered_attachment to inspect this exact "
-                "JSON file before stating whether you consent. This review does not approve or "
-                "change native status."
+                f"JSON file before stating whether you consent. {_SNAPSHOT_CONSENT_GUIDANCE}"
             )
             if len(message) > MAX_CONTEXT_CHARS:
                 raise ValueError(

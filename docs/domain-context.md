@@ -43,9 +43,9 @@ can still require those dependencies: disabling the extension is not approval
 to ignore them or to act on an old receipt.
 
 The connected guide includes `domain_context` only when the extension is enabled.
-Older binaries, including the published rc3 preview, do not contain this feature;
-use the development checkout for evaluation until a matching native build is
-published. This is an opt-in feature under evaluation, not a hosted-service offer.
+This feature ships in the `v0.2.0rc4` native preview; upgrade older binaries
+before enabling it. It remains opt-in and under evaluation, not a
+hosted-service offer. See the [release reference](local-install-reference.md#release-compatibility).
 
 Ask your agent:
 

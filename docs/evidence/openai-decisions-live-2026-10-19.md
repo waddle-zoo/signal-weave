@@ -1,15 +1,97 @@
 # OpenAI Decisions: live integration and Northstar policy replay
 
-OpenAI Decisions now exercises the same saved-card workflow without a Jev key.
-A fresh local native candidate completed setup, offline health, normal-profile
-MCP startup, a live typed `notify` judgment and receipt replay across process
-restart. This is integration proof, not an enterprise-readiness certification.
+OpenAI Decisions exercises the same saved-card workflow without a Jev key.
+The **published `v0.2.0rc4` download** completed guided setup, source health,
+normal-profile MCP startup, a live typed `notify` judgment and receipt replay
+across process restart. This is integration proof, not an enterprise-readiness
+certification.
+
+## Published install: the actual user path
+
+The release was built from merged `main` commit
+`de7d769df162e4e8d0936f510a833dc1e8ceb922`. macOS ARM64/x64 and Linux x64
+native release jobs passed. The actual GitHub installer and Apple Silicon
+archive were downloaded over HTTPS and their checksums verified. The published
+executable SHA-256 is
+`e5fa49cefff9d22c2979cb8e238fbd9dac4fd7cf989c8da1ca5a263ec621d3e2`.
+
+An isolated fake-person home then exercised:
+
+- One piped installer command with `--setup`, the hidden OpenAI-key prompt,
+  a reviewed company-MCP manifest and confirmed Codex registration.
+- The actual Codex CLI registration and bundled skill, `signalweave --help`
+  through PATH, and a live read-only source-health probe.
+- The installed executable's default 11-tool profile, one seeded approved-card
+  live OpenAI `notify` evaluation, and replay after process restart.
+- Native uninstall with local configuration retained, followed by reinstallation
+  and a healthy existing configuration.
+
+No Jev credential or user-global agent configuration was used or changed.
+Terminal inputs were scripted; this was not a novice-human usability panel.
+The seeded card proves the provider path, not fresh business card authoring.
+OpenAI API usage is separate from a Codex subscription. Install or switch
+providers using the [local walkthrough](../local-install.md#choose-a-decision-provider).
+
+## Source-candidate checks
 
 The frozen local `rc4` candidate was built from `b155de0`, production-source
 fingerprint `054ef3d6fb9a544a4e4154fcce6734407c6061622e5646b1ac1e1fa23e5f9a57`
 and executable SHA-256 `8b691244a81270b7f6dc5f0a70d98f63cc5e9768c7f9ddcd5acfd7b8dafa5513`.
 Its isolated installer/reinstall/uninstall check passed, as did 5,162 offline
-tests (13 skipped). These are local-candidate checks, not a public-download claim.
+tests (13 skipped). The published-download check above is separate from these
+local-candidate checks; both have the same production-source fingerprint.
+
+## Codex using the published binary on company cards
+
+One actual Luna Codex invocation used the published executable to find and
+evaluate two existing, analyst-authored Meridian **historical** cash and renewal
+cards in native approved status, not researcher-supplied gold cards or newly
+completed onboarding. That status did not resolve the original journey's
+consent contradiction, described in the
+[Meridian review](meridian-onboarding-diagnostics-2026-10-19.md#retained-budget-continuation-useful-files-incomplete-human-workflow).
+This check establishes technical reuse, not valid human authorization.
+Their SQL, business guidance and
+July 6 source snapshot stayed unchanged. New run keys ensured live OpenAI
+judgments rather than replay of the earlier Jev receipts.
+
+The first attempt stopped before inference because unattended Codex denied
+MCP tool approvals. It is retained. A separately recorded attempt explicitly
+permitted only its two configured test servers and completed in 113.44 seconds:
+seven MCP calls, two new OpenAI receipts and a 214-word business brief. No shell,
+web, card edits, external messages or full renewal-worklist delivery occurred.
+
+The brief reported historical net settled cash separately in EUR, SGD and USD;
+it did **not** call the empty prior ledger window a confirmed cash increase.
+It also reported 1,668 scheduled renewals, retaining currency splits and the
+July 6–August 4 population. OpenAI routed cash to `insufficient_data` and renewals
+to `investigate`; those labels were not treated as reasons to withhold supported
+findings or as proof of customer harm. The prior Jev choices differed, so this
+does not demonstrate provider decision agreement.
+
+Independent internal review passed the scoped integration and verified the
+brief's reported figures, but **did not pass the first brief's completeness**:
+it omitted settled-event and pending counts requested by the cash card. The
+review also requested an explicit visible-at-cutoff qualification for renewals.
+The original brief and failure are retained; correct inference and figures do
+not by themselves establish a complete human report.
+
+A separate saved-receipt feedback attempt hit its artificial four-call test
+cap before a final revision; it created no new decisions and its frontier usage
+is unknown after interruption. That is an incomplete test, not proof that
+feedback works or a product-level four-call limit. It is not counted as a
+successful report or retried into one.
+
+The same installed binary subsequently served authenticated Streamable HTTP,
+replayed both OpenAI receipts and rejected an unauthenticated request. This
+checks transport and receipt portability, not new live inference over HTTP or
+a managed-cloud deployment.
+
+The completed agent invocation used 45,257 uncached input and 13,210 output
+tokens; provider token usage was not instrumented. There is no matched baseline,
+speed advantage, cost advantage or enterprise accuracy claim. The company
+fixture and raw traces are retained locally, not published as a reproducible
+public benchmark. This scoped reuse check does not replace the larger
+[mixed Meridian journey](meridian-onboarding-diagnostics-2026-10-19.md).
 
 ## What the live testing caught
 
