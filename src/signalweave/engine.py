@@ -1520,6 +1520,7 @@ class InsightEngine:
                             ),
                             "source_url": resource.source_url,
                             "blocking": source.required,
+                            "quality_status": "stale",
                         }
                     )
         return errors
@@ -1583,14 +1584,36 @@ class InsightEngine:
                 for item in source_error_evidence
                 if (item.source_key, item.subject_id, item.statement) not in existing_evidence
             )
+            unavailable_statuses = {None, "failed", "unknown"}
+            has_unavailable_source = any(
+                error.get("quality_status") in unavailable_statuses
+                for error in blocking_source_errors
+            )
+            has_quality_limited_source = any(
+                error.get("quality_status") not in unavailable_statuses
+                for error in blocking_source_errors
+            )
+            if has_unavailable_source and has_quality_limited_source:
+                rationale = (
+                    "One or more required card sources were unavailable, and one or more "
+                    "returned stale or quality-limited evidence, so no automatic "
+                    "interpretation is safe."
+                )
+            elif has_quality_limited_source:
+                rationale = (
+                    "One or more required card sources returned stale or quality-limited "
+                    "evidence, so no automatic interpretation is safe."
+                )
+            else:
+                rationale = (
+                    "One or more required card sources were unavailable, so no automatic "
+                    "interpretation is safe."
+                )
             return cls._with_outcome(
                 result,
                 card,
                 Outcome.INSUFFICIENT_DATA,
-                rationale=(
-                    "One or more required card sources were unavailable, so no automatic "
-                    "interpretation is safe."
-                ),
+                rationale=rationale,
                 confidence=max(result.confidence or 0.0, 0.95),
                 evidence=new_evidence,
             )

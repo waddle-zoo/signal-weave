@@ -82,6 +82,9 @@ Preserve the agreed question, why it matters, exact sources, comparison period,
 meaningful-change rules, exceptions, quiet behavior and intended recipients.
 Keep required evidence distinct from optional diagnostic context. Routine reports
 and exception-only alerts are different requests.
+Record intended outcome routes in `delivery_methods` even for a delivery-disabled
+review: without a notify route, the provider cannot choose `notify`. Routes are
+policy metadata, not permission to send; the caller still owns actual delivery.
 
 Identify which missing facts could change each action. A supported individual
 finding need not establish a complete population; zero findings, rates and
@@ -101,6 +104,10 @@ choices in conversation rather than
 making every recurring run ask them again. Use relative periods for recurrence
 unless a fixed period was requested. For a point-in-time policy with no period
 comparison, explicitly set `comparison_windows=[]`; do not invent a baseline.
+For an agreed archival review, distinguish the historical measurement cutoff from
+today's freshness. If the current age limit is inappropriate, propose a reviewed
+`max_source_age_hours=null` revision for that historical scope only. This does not
+make the data current or waive cutoff, coverage or comparison checks.
 Put the agent's follow-up procedure in `follow_up_guidance`, not an extra
 prerequisite for a policy that the selected evidence already answers. Keep
 presentation preferences in caller notes, not business purpose or policy. Do not
@@ -129,6 +136,9 @@ Get explicit approval from the owner or authorized delegate for this exact saved
 policy and scope before `approve_insight_card`. If review returns an
 `approval_handoff`, reuse its supplied arguments and snapshot fingerprint after
 confirmation; record the confirmed source choice in `source_selection_reason`.
+The owner may explicitly delegate technical source/card validation to the expert
+agent within confirmed business policy. Record that bounded consent, not an
+assumed delegation; clarify conflicting approval language before recording approval.
 An omitted scope map is not empty: retrieve it before asking for approval. Obtain
 any separate expansion acknowledgement required by the handoff, not inferred
 consent. Do not make the owner compose API fields. A changed draft needs renewed review

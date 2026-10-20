@@ -815,7 +815,7 @@ async def test_explicit_required_comparison_still_blocks_without_that_comparison
     result = (await InsightEngine(SafetyTestDouble()).evaluate(card, [resource])).result
     assert result.outcome == Outcome.INSUFFICIENT_DATA
     assert result.delivery_methods == []
-    assert "unavailable" in result.rationale
+    assert "quality-limited evidence" in result.rationale
 
 
 async def test_unavailable_comparison_window_preserves_adapter_baseline():
@@ -894,6 +894,36 @@ async def test_source_failure_is_not_treated_as_ignore():
     assert run.result.outcome == Outcome.INSUFFICIENT_DATA
     assert run.result.delivery_methods == []
     assert "timeout" in run.result.evidence[-1].statement
+    assert "sources were unavailable" in run.result.rationale
+
+
+async def test_missing_required_source_is_reported_as_unavailable():
+    source = SourceRef(
+        key="missing-query",
+        adapter="sql",
+        resource="query:revenue",
+        label="Revenue query",
+    )
+    card = card_for(
+        card_id="card-missing-source",
+        title="Missing source insight",
+        source=source,
+        delivery_methods=[
+            DeliveryMethod(
+                key="ops",
+                outcome=Outcome.NOTIFY,
+                label="Ops",
+                destination="slack://ops",
+            )
+        ],
+    )
+
+    run = await InsightEngine(SafetyTestDouble()).evaluate(card, [])
+
+    assert run.result.outcome == Outcome.INSUFFICIENT_DATA
+    assert run.result.delivery_methods == []
+    assert "Source missing-query was not returned" in run.result.evidence[-1].statement
+    assert "sources were unavailable" in run.result.rationale
 
 
 async def test_oversized_source_payload_cannot_trigger_automatic_delivery():
@@ -1361,6 +1391,7 @@ async def test_empty_required_source_is_not_automatic():
 
 
 async def test_old_required_source_snapshot_is_not_automatic():
+    fixed_now = datetime(2026, 10, 19, 12, tzinfo=timezone.utc)
     source = SourceRef(
         key="old-source",
         adapter="sql",
@@ -1385,7 +1416,7 @@ async def test_old_required_source_snapshot_is_not_automatic():
         adapter=source.adapter,
         resource=source.resource,
         title=source.label,
-        captured_at=datetime.now(timezone.utc) - timedelta(hours=25),
+        captured_at=fixed_now - timedelta(hours=25),
         observations=[
             Observation(
                 source_key=source.key,
@@ -1398,10 +1429,18 @@ async def test_old_required_source_snapshot_is_not_automatic():
             )
         ],
     )
-    run = await InsightEngine(SafetyTestDouble()).evaluate(card, [resource])
+    run = await InsightEngine(
+        SafetyTestDouble(), clock=lambda: fixed_now
+    ).evaluate(card, [resource])
     assert run.result.outcome == Outcome.INSUFFICIENT_DATA
     assert run.result.delivery_methods == []
-    assert "hours old" in run.result.evidence[-1].statement
+    assert run.result.confidence == 0.99
+    assert "returned stale or quality-limited evidence" in run.result.rationale
+    stale_evidence = next(
+        item for item in run.result.evidence if "hours old" in item.statement
+    )
+    assert stale_evidence.origin == "derived"
+    assert stale_evidence.values["quality_status"] == "stale"
 
 
 async def test_provider_capture_time_controls_freshness_over_retrieval_time():

@@ -51,6 +51,20 @@ def test_first_use_guide_still_exposes_discovery_and_owner_approval():
             "review_insight_card", "approve_insight_card"} <= steps
 
 
+@pytest.mark.parametrize("task", ["start", "monitor"])
+@pytest.mark.parametrize("provider", ["jev-latest", "openai-decisions", "chatgpt-plan-responses"])
+def test_agent_guidance_distinguishes_replay_routes_and_bounded_delegation(task, provider):
+    guide = agent_getting_started(task, decision_provider=provider)
+    limits = " ".join(guide["limits"])
+    assert "Without a notify route" in limits
+    assert "does not authorize or send" in limits
+    assert "historical measurement cutoff" in limits
+    assert "does not make evidence current" in limits
+    assert "explicitly delegate" in limits and "clarify conflicting approval language" in limits
+    assert "does not grant new source access" in limits
+    assert guide["inference_performed"] is False
+
+
 def test_onboarding_verifies_the_actual_repeating_source_without_a_new_tool_or_gate():
     guide = agent_getting_started("start")
     limits = " ".join(guide["limits"])

@@ -134,6 +134,10 @@ windows remain explicitly **unverified**; your reviewed card preserves business
 meaning, not a fabricated source guarantee. Adding intended recipients does not
 turn approval into delivery permission. Known incompatible windows, source
 permissions, health checks and explicit required-comparison bindings still apply.
+Keep intended outcome routes in `delivery_methods` during a delivery-disabled
+evaluation: without a notify route the provider cannot select `notify`. An empty
+route list is not required for shadow review. A routine digest can instead be a
+caller-owned report; test that the caller actually delivers it to the intended reader.
 Before unattended delivery, separately test the actual workflow against the
 owner's examples, including partial periods and missing context, and authorize
 the caller's delivery tools. Do not treat an approved card or a high-confidence
@@ -158,6 +162,10 @@ When a review returns `approval_handoff`, the agent can show the exact declared
 scopes and populations, then reuse the supplied approval arguments after you
 confirm them. You can answer in ordinary language; the agent records the
 confirmed choice and reason rather than asking you to write API fields.
+You can explicitly delegate technical source/card validation to your expert agent
+within the business policy you confirmed. It records that bounded consent; this
+does not expand source access, change policy or authorize sending. Conflicting
+approval language needs clarification, not an assumed sign-off.
 The supplied fingerprint binds your reply to the reviewed snapshot. If the card
 changes while you are reviewing it, the agent must show the change and ask again;
 it must not substitute the latest stored review for the one you saw.

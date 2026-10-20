@@ -2536,9 +2536,12 @@ class JevJudger:
         if confidence_fallback:
             outcome = Outcome.INVESTIGATE
         source_keys = plan.selected_source_keys or [source.key for source in card.sources]
+        evidence = [Evidence.model_validate(item) for item in state["evidence"]]
+        source_evidence_count = sum(item.origin == "source" for item in evidence)
         summary = (
-            f"Evaluated {len(observations)} observations and {len(state.get('analyses', []))} "
-            f"computed analyses across {len(source_keys)} sources; "
+            f"Evaluated {source_evidence_count} source evidence items, {len(observations)} "
+            f"normalized observations, and {len(state.get('analyses', []))} computed analyses "
+            f"across {len(source_keys)} sources; "
             f"{len(watch_results)} watch items and {len(question_results)} questions were checked."
         )
         return InsightResult(
@@ -2559,7 +2562,7 @@ class JevJudger:
             watch_results=watch_results,
             question_results=question_results,
             evidence_findings=evidence_findings,
-            evidence=[Evidence.model_validate(item) for item in state["evidence"]],
+            evidence=evidence,
             observations=observations,
             source_keys=source_keys,
             evaluator=self.name,

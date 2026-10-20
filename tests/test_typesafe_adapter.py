@@ -180,6 +180,60 @@ def _repeated_lineage_evidence(count):
     return rows
 
 
+@pytest.mark.parametrize(
+    ("origins", "analysis_count", "source_evidence_count"),
+    [
+        pytest.param(["source"] * 6, 0, 6, id="sql-evidence-only"),
+        pytest.param(["derived", "context"], 2, 0, id="derived-and-context-only"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_jev_summary_counts_source_evidence_separately(
+    monkeypatch, origins, analysis_count, source_evidence_count
+):
+    FakeClient.calls = []
+    monkeypatch.setattr(typesafe_sdk, "AsyncTypeSafeClient", FakeClient)
+    monkeypatch.setattr(typesafe_sdk, "Noul", FakeNoul)
+    source = SourceRef(
+        key="source-a", adapter="sql", resource="query:records", label="SQL records"
+    )
+    card = _factoring_test_card().model_copy(update={"sources": [source]})
+    evidence = [
+        Evidence(
+            source_key=source.key,
+            subject_id=f"row-{index}",
+            subject_label=f"Row {index}",
+            statement=f"Evidence record {index}.",
+            origin=origin,
+        ).model_dump(mode="json")
+        for index, origin in enumerate(origins)
+    ]
+    state = _factoring_test_state(card, evidence)
+    state["analyses"] = [
+        {"source_key": source.key, "status": "complete"}
+        for _ in range(analysis_count)
+    ]
+    if "derived" in origins:
+        state["source_errors"] = [
+            {
+                "source_key": source.key,
+                "message": "A source error was represented as derived evidence.",
+                "quality_status": "stale",
+            }
+        ]
+
+    result = await JevJudger(api_key="offline-test").judge(
+        state, card, base_plan(card), []
+    )
+
+    assert (
+        f"Evaluated {source_evidence_count} source evidence items, 0 normalized "
+        f"observations, and {analysis_count} computed analyses"
+    ) in result.summary
+    assert [item.model_dump(mode="json") for item in result.evidence] == evidence
+    assert result.outcome == Outcome.NOTIFY
+
+
 @pytest.mark.parametrize("selected", list(Outcome))
 @pytest.mark.parametrize("support", [.47, .70])
 async def test_confidence_floor_preserves_review_handoffs_but_gates_business_actions(monkeypatch, selected, support):

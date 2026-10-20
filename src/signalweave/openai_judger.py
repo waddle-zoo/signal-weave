@@ -695,12 +695,15 @@ class OpenAIDecisionJudger:
             if self.name == "chatgpt-plan-responses"
             else "Probabilities are the provider's typed Decisions API distribution."
         )
+        evidence = [Evidence.model_validate(item) for item in state.get("evidence", [])]
+        source_evidence_count = sum(item.origin == "source" for item in evidence)
         return InsightResult(
             card_id=card.id,
             outcome=routed_outcome,
             summary=(
-                f"Evaluated {len(observations)} observations and {len(state.get('analyses', []))} "
-                f"computed analyses across {len(source_keys)} sources."
+                f"Evaluated {source_evidence_count} source evidence items, {len(observations)} "
+                f"normalized observations, and {len(state.get('analyses', []))} computed analyses "
+                f"across {len(source_keys)} sources."
             ),
             rationale=(
                 f"{self.name} evaluated the owner's typed watch, question, and outcome policy; "
@@ -712,7 +715,7 @@ class OpenAIDecisionJudger:
             watch_results=watch_results,
             question_results=question_results,
             evidence_findings=[],
-            evidence=[Evidence.model_validate(item) for item in state.get("evidence", [])],
+            evidence=evidence,
             observations=observations,
             source_keys=source_keys,
             evaluator=self.name,

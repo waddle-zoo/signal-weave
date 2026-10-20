@@ -13,6 +13,7 @@ from signalweave.local_setup import SetupError, read_config, setup_local
 from signalweave.local_status import local_status
 from signalweave.models import (
     DeliveryMethod,
+    Evidence,
     InsightCard,
     InsightPlan,
     Outcome,
@@ -328,6 +329,104 @@ def test_judger_routes_by_support_floor_and_preserves_typed_handoff(
         assert result.confidence == pytest.approx(0.6)
         assert result.probabilities == pytest.approx(expected_distribution)
         assert "selected=insufficient_data, support=0.60; routed=insufficient_data." in result.rationale
+
+
+@pytest.mark.parametrize(
+    ("origins", "analysis_count", "source_evidence_count"),
+    [
+        pytest.param(["source"] * 6, 0, 6, id="sql-evidence-only"),
+        pytest.param(["derived", "context"], 2, 0, id="derived-and-context-only"),
+    ],
+)
+def test_openai_judger_summary_counts_source_evidence_separately(
+    origins, analysis_count, source_evidence_count
+):
+    class FakeTypedTransport:
+        name = "openai-decisions-test-double"
+
+        async def decide(self, _input: str, questions: list[dict]) -> dict:
+            answers = {}
+            for question in questions:
+                choices = [item["value"] for item in question["choices"]]
+                selected = "notify" if question["name"] == "outcome" else choices[0]
+                support = 0.9
+                remainder = (1.0 - support) / (len(choices) - 1)
+                probabilities = {
+                    choice: support if choice == selected else remainder
+                    for choice in choices
+                }
+                answers[question["name"]] = {
+                    "type": "choice",
+                    "choice": selected,
+                    "probabilities": probabilities,
+                    "confidence": support,
+                }
+            return answers
+
+    source = SourceRef(
+        key="sql-records", adapter="sql", resource="query:records", label="SQL records"
+    )
+    card = InsightCard(
+        id="sql-evidence-summary",
+        title="SQL evidence summary",
+        what_to_watch="The supplied SQL evidence.",
+        why_watch="Apply the configured policy.",
+        sources=[source],
+        decision_guidance="Notify when the supplied evidence supports the policy.",
+        delivery_methods=[
+            DeliveryMethod(
+                key="ops",
+                outcome=Outcome.NOTIFY,
+                label="Ops",
+                destination="agent://ops",
+            )
+        ],
+    )
+    evidence = [
+        Evidence(
+            source_key=source.key,
+            subject_id=f"row-{index}",
+            subject_label=f"Row {index}",
+            statement=f"Evidence record {index}.",
+            origin=origin,
+        ).model_dump(mode="json")
+        for index, origin in enumerate(origins)
+    ]
+    state = {
+        "evidence": evidence,
+        "analyses": [
+            {"source_key": source.key, "status": "complete"}
+            for _ in range(analysis_count)
+        ],
+        "source_errors": (
+            [{"source_key": source.key, "message": "Stale source evidence."}]
+            if "derived" in origins
+            else []
+        ),
+        "context": None,
+    }
+
+    result = asyncio.run(
+        OpenAIDecisionJudger(FakeTypedTransport()).judge(
+            state,
+            card,
+            InsightPlan(
+                card_id=card.id,
+                selected_source_keys=[source.key],
+                comparison_windows=["previous_period"],
+                capabilities=[],
+                card_scope="sql-records",
+            ),
+            [],
+        )
+    )
+
+    assert (
+        f"Evaluated {source_evidence_count} source evidence items, 0 normalized "
+        f"observations, and {analysis_count} computed analyses"
+    ) in result.summary
+    assert [item.model_dump(mode="json") for item in result.evidence] == evidence
+    assert result.outcome == Outcome.NOTIFY
 
 
 def test_setup_stores_openai_key_privately_and_selects_requested_provider(tmp_path):
