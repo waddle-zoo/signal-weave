@@ -57,6 +57,28 @@ def test_key_file_is_copied_and_survives_original_removal(tmp_path):
     assert (root / "typesafe.key").read_text() == "test-file-key\n"
 
 
+def test_openai_setup_file_passes_offline_health_and_rotation(tmp_path):
+    source = private_file(tmp_path / "openai-input", "test-openai-private-key\n")
+    root, _ = setup.setup_local(tmp_path / "openai-home", decision_provider="openai-decisions",
+                                openai_key_file=source, source="skip", non_interactive=True)
+    source.unlink()
+    assert (root / "openai.key").read_text() == "test-openai-private-key\n"
+    assert not (root / "typesafe.key").exists()
+    with setup.local_environment(root):
+        assert setup.validate_decision_configuration(root) == ("openai-decisions", "readable private file")
+        healthy, messages = setup.doctor(root)
+        assert healthy, messages
+    setup.set_credential(root, "openai", value="test-rotated-openai-key")
+    with setup.local_environment(root):
+        assert setup.doctor(root)[0]
+    private_file(root / "openai.key", "test-invalid embedded-key\n")
+    with setup.local_environment(root):
+        healthy, messages = setup.doctor(root)
+        assert not healthy
+        assert any("OpenAI API key is invalid" in message for message in messages)
+        assert all("embedded-key" not in message for message in messages)
+
+
 def test_repeated_init_preserves_config_key_and_database(home, monkeypatch):
     add_config(home, 'SUPERSET_URL = "http://localhost:8088"')
     database = private_file(home / "state" / "signalweave.db", "existing-state")

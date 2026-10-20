@@ -1019,7 +1019,7 @@ def _validate_openai_key_configuration() -> str:
         raise SetupError("Set only one of OPENAI_API_KEY or OPENAI_API_KEY_FILE")
     if key_file:
         try:
-            key = _read_private(Path(key_file))
+            key = _read_private(Path(key_file)).strip()
         except SetupError:
             raise SetupError(
                 "OpenAI key file is missing or unreadable; run `signalweave credentials set openai` to repair it"
