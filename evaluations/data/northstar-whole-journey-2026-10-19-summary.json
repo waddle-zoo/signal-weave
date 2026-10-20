@@ -1,0 +1,1079 @@
+{
+  "schema_version": 1,
+  "protocol": "northstar-retrospective-enterprise-journey-v1",
+  "company": "Northstar Outfitters, fictional retail enterprise",
+  "scope": "Real native/Codex/company-MCP/Jev execution with scripted company people and local inboxes.",
+  "temporal_scope": "Complete finalized historical warehouse; retrospective period selector only. No ingestion-time isolation, as-known-at-the-time claim, or real-time backtest. Native retrieval timestamp remains actual current retrieval time.",
+  "policy": "Simulated owner policy: damage rate >2.0% with >=400 shipments merits Dispatch investigation; all seven promised-date days must be represented for a clear period; coverage gaps go separately to Data Operations; carrier splits are leads, not causes; Dispatch gets a routine digest every period. Formative whole-product exercise, not an independent test of a threshold selected after source inspection.",
+  "binary": {
+    "dirty": false,
+    "format_version": 1,
+    "frozen": true,
+    "git_commit": "04dedb355cdbab12c99ab3f9bc67dc888da4761f",
+    "python": "3.12.10",
+    "source_sha256": "a4a27dbfc34b0c3c9126dd344f75e7b45f90eff33381243ec0e7bb122de79255",
+    "version": "0.2.0rc3",
+    "binary_sha256": "8f66b60b4d3ac548bae39caccf080c3a040d49f2b9825c4de8bede9d7680f1a1"
+  },
+  "warehouse": {
+    "sha256": "980a1f043637545ad486a95aecf0e7508a7c2bed30f2c02ba19bc5702a7bc6d3",
+    "bytes": 83079257
+  },
+  "source_revision": "4e0a856a1d45b8f2799e6926dac41fbc64307191",
+  "source_tools": {
+    "exposed": 27,
+    "server": 137
+  },
+  "independent_facts_sha256": "d90233be857b44236dcfaec125ef2dc8026013702739e062b5c3378492c7aee6",
+  "reference_findings": [
+    "2026-08-03 week is the only complete >=400-row week above the strict 2.0% damage trigger: 12/497.",
+    "Carrier arithmetic for that week sums to 12 damages across 497 shipments; Summit 7/120, Pioneer 4/126, Northstar Parcel 1/106, Maple Post 0/145. These are contribution/rate decompositions, not causes.",
+    "The following 2026-08-10 week is below threshold at 4/527; the 2026-08-17 week remains below at 4/524, which provides a second follow-up observation.",
+    "The 2026-09-07 cohort has 0/154 damages but only five represented promised dates (Sep 7-11, 55/42/28/14/15 rows); classify incomplete and route a coverage gap, never clear based on zero damages.",
+    "Seven represented calendar dates are not proof every eligible shipment arrived. The reviewed checks establish only the listed row-level consistency/null/duplicate conditions; no independent completeness manifest is established.",
+    "The source is finalized and retrospective. Latest delivered_date is 2026-09-15, beyond the last candidate week end (2026-09-14); do not describe any result as known at the time.",
+    "Generator metadata DQ labels were not used as truth; all quantified facts come from raw silver.fct_delivery SELECTs."
+  ],
+  "baseline_control": "Same company BI tools, owner policy, workspace/SQL/code and reusable notes; no SignalWeave/Jev expected.",
+  "retained_pair": [
+    {
+      "arm": "baseline",
+      "attempt": "northstar-enterprise-journey-v2",
+      "terminal_sha256": "653e4cd24f014fd14d454133438379866c93b7d59477f9bb5efbb41314ee8d34",
+      "world_sha256": "2073b30440dd2705be4829b5ab3c5a93a932940bbb4dde36238f7cc32be85f31",
+      "process_complete": true,
+      "inputs_unchanged": true,
+      "errors": [],
+      "coordinator_seconds": 398.52528937499847,
+      "episode_seconds": 396.5072437079998,
+      "mcp_calls": 54,
+      "workspace_operations": 28,
+      "frontier_usage": {
+        "known": true,
+        "usage": {
+          "input_tokens": 5203523,
+          "cached_input_tokens": 5072512,
+          "uncached_input_tokens": 131011,
+          "output_tokens": 37755,
+          "responses": 1
+        },
+        "observed": {
+          "input_tokens": 5203523,
+          "cached_input_tokens": 5072512,
+          "uncached_input_tokens": 131011,
+          "output_tokens": 37755,
+          "responses": 1
+        }
+      },
+      "provider_requests": 0,
+      "provider": {
+        "known": true,
+        "attempts": 0,
+        "usage": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        }
+      },
+      "owner_questions": 1,
+      "owner_confirmations": 1,
+      "admin_imports": 0,
+      "native_operation_counts": {},
+      "policy_calls": [],
+      "cards": null,
+      "evaluations_by_period": {
+        "0": [],
+        "1": [],
+        "2": [],
+        "3": [],
+        "4": [],
+        "5": [],
+        "6": []
+      },
+      "feedback_periods_read": 7,
+      "messages": [
+        {
+          "id": "baseline-message-1",
+          "to": "dispatch",
+          "period_start_inclusive": "2026-07-27",
+          "period_end_exclusive": "2026-08-03",
+          "body": "**Weekly delivery digest — promised-date cohort [2026-07-27, 2026-08-03)**\n\n- 511 shipments; 5 flagged damaged (0.98%). All seven promised dates are represented.\n- The agreed weekly investigation rule (>2.0% damage and at least 400 shipments) is not met, so there is no weekly investigation trigger.\n- Descriptive concentration: 3 of the 5 damage flags fell on 2026-07-27 (3/74, 4.05%). That date group is below the 400-shipment floor; this observation does not independently meet the weekly rule. No cause is established, and no carrier split was run because the weekly trigger was not met.\n- Cohort check: 511 rows and 511 distinct non-null shipment IDs; no null damage flags.\n- Coverage: 7 of 7 promised-date days represented; no Data Operations coverage gap to report.\n\nThis is a retrospective selection from the complete finalized warehouse, retrieved at 2026-10-19 05:17:56 UTC. Later outcomes may already exist; this is not an as-known-at-the-time or real-time view. Retrieval time is not a source-freshness boundary.",
+          "source_refs": [
+            "Northstar Lakehouse database 1, silver.fct_delivery (Superset dataset 22)",
+            "SQL Lab query 136: weekly totals and cohort checks",
+            "SQL Lab query 137: seven-date coverage and daily counts"
+          ],
+          "attachments": []
+        },
+        {
+          "id": "baseline-message-2",
+          "to": "dispatch",
+          "period_start_inclusive": "2026-08-03",
+          "period_end_exclusive": "2026-08-10",
+          "body": "**Routine weekly digest — promised-date cohort [2026-08-03, 2026-08-10)**\n\n- Denominator: 497 shipments; 12 flagged damaged (2.41%). Cohort IDs are unique and non-null; no damage flags are null.\n- Coverage: all 7 of 7 promised-date days represented.\n- Retrospective finalized-warehouse selection retrieved at 2026-10-19 05:19:23 UTC. Later outcomes may already exist; this is not an as-known-at-the-time or real-time view.\n\n**Investigation rule and measured leads**\n\nThe agreed rule is met (>2.0% and at least 400 shipments). Carrier counts/rates: Summit Freight 7/120 (5.83%); Pioneer Express 4/126 (3.17%); Northstar Parcel 1/106 (0.94%); Maple Post 0/145 (0.00%). Also, 11 of 12 flags fell on August 4–7. These are descriptive leads only; they do not establish a cause. No action or result is known.\n\nNo separate Data Operations coverage note: all seven dates are represented.",
+          "source_refs": [
+            "Northstar Lakehouse database 1, silver.fct_delivery (Superset dataset 22)",
+            "SQL Lab query 138: weekly totals and cohort checks",
+            "SQL Lab query 139: seven-date coverage and daily counts",
+            "SQL Lab query 140: triggered carrier split"
+          ],
+          "attachments": []
+        },
+        {
+          "id": "baseline-message-3",
+          "to": "dispatch",
+          "period_start_inclusive": "2026-08-10",
+          "period_end_exclusive": "2026-08-17",
+          "body": "**Routine weekly digest — promised-date cohort [2026-08-10, 2026-08-17)**\n\n- Denominator: 527 shipments; 4 flagged damaged (0.76%). Cohort IDs are unique and non-null; no damage flags are null.\n- Coverage: all 7 of 7 promised-date days represented.\n- The agreed weekly investigation rule (>2.0% and at least 400 shipments) is not met; the damage rate is below the threshold.\n- The four flags were distributed one each across August 10–13. No carrier breakdown was run because the weekly trigger was not met; no cause is established.\n\nRetrospective finalized-warehouse selection retrieved at 2026-10-19 05:20:04 UTC. Later outcomes may already exist; this is not an as-known-at-the-time or real-time view. No separate Data Operations coverage note is needed for this period.",
+          "source_refs": [
+            "Northstar Lakehouse database 1, silver.fct_delivery (Superset dataset 22)",
+            "SQL Lab query 141: weekly totals and cohort checks",
+            "SQL Lab query 142: seven-date coverage and daily counts"
+          ],
+          "attachments": []
+        },
+        {
+          "id": "baseline-message-4",
+          "to": "dispatch",
+          "period_start_inclusive": "2026-08-17",
+          "period_end_exclusive": "2026-08-24",
+          "body": "**Routine weekly digest — promised-date cohort [2026-08-17, 2026-08-24)**\n\n- Denominator: 524 shipments; 4 flagged damaged (0.76%). Cohort IDs are unique and non-null; no damage flags are null.\n- Coverage: all 7 of 7 promised-date days represented.\n- The agreed weekly investigation rule (>2.0% and at least 400 shipments) is not met; the weekly rate is below threshold.\n- Descriptive day-level concentration: 2 of 4 flags fell on August 22 (2/69, 2.90%). The date group is below the weekly volume floor; this does not independently trigger investigation. No carrier breakdown was run and no cause is established.\n\nRetrospective finalized-warehouse selection retrieved at 2026-10-19 05:20:29 UTC. Later outcomes may already exist; this is not an as-known-at-the-time or real-time view. No separate Data Operations coverage note is needed for this period.",
+          "source_refs": [
+            "Northstar Lakehouse database 1, silver.fct_delivery (Superset dataset 22)",
+            "SQL Lab query 144: weekly totals and cohort checks",
+            "SQL Lab query 143: seven-date coverage and daily counts"
+          ],
+          "attachments": []
+        },
+        {
+          "id": "baseline-message-5",
+          "to": "dispatch",
+          "period_start_inclusive": "2026-08-24",
+          "period_end_exclusive": "2026-08-31",
+          "body": "**Routine weekly digest — promised-date cohort [2026-08-24, 2026-08-31)**\n\n- Denominator: 502 shipments; 6 flagged damaged (1.20%). Cohort IDs are unique and non-null; no damage flags are null.\n- Coverage: all 7 of 7 promised-date days represented.\n- The agreed weekly investigation rule (>2.0% and at least 400 shipments) is not met; the weekly rate is below threshold.\n- Descriptive distribution: 4 of 6 flags fell on August 26 and August 28 (2/68 and 2/77, respectively). No carrier breakdown was run because the weekly trigger was not met; no cause is established.\n\nRetrospective finalized-warehouse selection retrieved at 2026-10-19 05:20:48 UTC. Later outcomes may already exist; this is not an as-known-at-the-time or real-time view. No separate Data Operations coverage note is needed for this period.",
+          "source_refs": [
+            "Northstar Lakehouse database 1, silver.fct_delivery (Superset dataset 22)",
+            "SQL Lab query 146: weekly totals and cohort checks",
+            "SQL Lab query 145: seven-date coverage and daily counts"
+          ],
+          "attachments": []
+        },
+        {
+          "id": "baseline-message-6",
+          "to": "dispatch",
+          "period_start_inclusive": "2026-08-31",
+          "period_end_exclusive": "2026-09-07",
+          "body": "**Routine weekly digest — promised-date cohort [2026-08-31, 2026-09-07)**\n\n- Denominator: 504 shipments; 3 flagged damaged (0.60%). Cohort IDs are unique and non-null; no damage flags are null.\n- Coverage: all 7 of 7 promised-date days represented.\n- The agreed weekly investigation rule (>2.0% and at least 400 shipments) is not met; the weekly rate is below threshold.\n- Descriptive day-level count: 2 of 3 flags fell on September 1 (2/62, 3.23%). That daily group is below the weekly volume floor and does not independently trigger investigation. No carrier split was run; no cause is established.\n\nRetrospective finalized-warehouse selection retrieved at 2026-10-19 05:21:07 UTC. Later outcomes may already exist; this is not an as-known-at-the-time or real-time view. No separate Data Operations coverage note is needed for this period.",
+          "source_refs": [
+            "Northstar Lakehouse database 1, silver.fct_delivery (Superset dataset 22)",
+            "SQL Lab query 148: weekly totals and cohort checks",
+            "SQL Lab query 147: seven-date coverage and daily counts"
+          ],
+          "attachments": []
+        },
+        {
+          "id": "baseline-message-7",
+          "to": "dispatch",
+          "period_start_inclusive": "2026-09-07",
+          "period_end_exclusive": "2026-09-14",
+          "body": "**Routine weekly digest — promised-date cohort [2026-09-07, 2026-09-14)**\n\n- Observed denominator: 154 shipments; 0 flagged damaged (0.00% among observed rows). IDs are unique and non-null; no damage flags are null.\n- Coverage: 5 of 7 promised-date days represented. There are no rows for September 12 or 13, so this is not a complete seven-day rate and the period cannot be called clear.\n- The numeric investigation rule is not met on the observed rows (154 is below the 400-shipment floor); full-period status remains unassessed because of the coverage gap. No carrier breakdown was run.\n\nRetrospective finalized-warehouse selection retrieved at 2026-10-19 05:21:35 UTC. Later outcomes may already exist; this is not an as-known-at-the-time or real-time view. I sent Data Operations a separate note with the two unrepresented dates.",
+          "source_refs": [
+            "Northstar Lakehouse database 1, silver.fct_delivery (Superset dataset 22)",
+            "SQL Lab query 149: observed cohort counts and checks",
+            "SQL Lab query 150: seven-date coverage, including Sep 12 and 13 with zero rows"
+          ],
+          "attachments": []
+        },
+        {
+          "id": "baseline-message-8",
+          "to": "data-operations",
+          "period_start_inclusive": "2026-09-07",
+          "period_end_exclusive": "2026-09-14",
+          "body": "**Promised-date coverage gap — [2026-09-07, 2026-09-14)**\n\nThe direct daily coverage query against `silver.fct_delivery` found 0 rows for `promised_date` 2026-09-12 and 2026-09-13. The other five expected dates are represented, with 154 rows in total. Dispatch's coverage criterion requires representation on all seven dates, so this period cannot be called clear.\n\nPlease review whether this reflects incomplete coverage. This note reports only the observed representation gap; it does not establish that shipments were expected on those dates, why rows are absent, or a cause or fix.",
+          "source_refs": [
+            "Northstar Lakehouse database 1, silver.fct_delivery (Superset dataset 22)",
+            "SQL Lab query 150: expected-date series with zero-row counts for 2026-09-12 and 2026-09-13",
+            "SQL Lab query 149: 154 observed cohort rows"
+          ],
+          "attachments": []
+        }
+      ],
+      "review": {
+        "reader_review_sha256": "edf8f57c301e6c48a8f1ce873085948b0add6b46386f3e5e3c28dac98ba1387d",
+        "raw_review_sha256": "f3c7061a8bb0ccd73ffe1b0951398addf462e02334a3e9b7e67346aacc2c7d32",
+        "reader_stages": [
+          {
+            "stage": "owner_clarification_and_saved_policy",
+            "grade": "pass",
+            "reasons": [
+              "The owner clarified the half-open promised_date cohort, damaged/cohort denominator, strict >2.0% plus >=400 trigger, seven-day coverage rule, weekly digest expectation, and separate Data Operations routing for gaps.",
+              "The later confirmation explicitly consented to local retrospective shadow runs before the procedure was used. It also explicitly did not approve a saved card; card_id and saved_card were null, and no native approval was claimed.",
+              "The owner policy was saved in the chronological review notes and parameterized SQL, not left as a promise."
+            ]
+          },
+          {
+            "stage": "seven_weekly_dispatch_digests",
+            "grade": "pass",
+            "reasons": [
+              "Dispatch received a distinct message for every promised-date week, with period, denominator, damage count/rate, and coverage. The seven core results reconcile to independent raw counts: 2026-07-27 5/511 (0.98%), 2026-08-03 12/497 (2.41%), 2026-08-10 4/527 (0.76%), 2026-08-17 4/524 (0.76%), 2026-08-24 6/502 (1.20%), 2026-08-31 3/504 (0.60%), and 2026-09-07 0/154 observed (0.00%, incomplete).",
+              "The six complete weeks are distinguished from the final incomplete period; routine results remain useful rather than being omitted for not crossing the investigation trigger. Messages are scannable, though they repeat some retrospective caveats."
+            ]
+          },
+          {
+            "stage": "damage_investigation_and_routing",
+            "grade": "pass",
+            "reasons": [
+              "The only complete week meeting the rule is 2026-08-03 through 2026-08-09: 12/497 = 2.4145%. The message surfaces it to Dispatch and separates the investigation section from routine reporting.",
+              "The reported carrier counts reconcile to independent raw facts: Summit Freight 7/120, Pioneer Express 4/126, Northstar Parcel 1/106, Maple Post 0/145. The message calls these descriptive leads, states no cause is established, and claims no action or result.",
+              "The following complete weeks (4/527 and 4/524) are correctly described as below the weekly rule."
+            ]
+          },
+          {
+            "stage": "final_incomplete_week_and_dataops_gap",
+            "grade": "pass",
+            "reasons": [
+              "Dispatch is told that 0/154 is only among observed rows, coverage is 5/7, Sep 12 and Sep 13 have no represented rows, and the period cannot be called clear; full-period status remains unassessed.",
+              "A separate Data Operations message names the promised_date field and both missing dates, gives the five-day/154-row context, and asks for review while explicitly leaving expected volume, cause, and fix unknown.",
+              "Independent raw facts confirm the final-week daily counts (55, 42, 28, 14, 15) and absence of rows for Sep 12-13. The later scripted acknowledgement is not treated as evidence of repair or dissatisfaction."
+            ]
+          },
+          {
+            "stage": "qualified_next_steps_and_human_claims",
+            "grade": "pass",
+            "reasons": [
+              "The concrete Data Operations next step is a request to review whether the observed gap reflects incomplete coverage; it is not presented as an accepted assignment. No repair, cause, customer harm, or unverified human action is asserted.",
+              "The delivered messages identify the work as a retrospective query over finalized warehouse data, not an as-known-at-the-time or real-time view. The terminal handoff is not counted as one of the eight company inbox deliveries."
+            ]
+          },
+          {
+            "stage": "recipient_evidence_access_and_numeric_support",
+            "grade": "needs_revision",
+            "reasons": [
+              "The primary weekly counts/rates, trigger week, carrier split, and final coverage gap reconcile to the independent raw-facts packet; inline figures make the messages useful without opening a file.",
+              "All eight delivered messages have empty attachments. Their source_refs are plain database/query descriptions and SQL Lab IDs, not recipient-open links; no working recipient evidence path was demonstrated. The IDs are locators, not proof of access. This is a traceability/access gap, not a finding that the inline business message is analytically unusable.",
+              "Some supplemental day-level concentration claims (including the 11-of-12 Aug 4-7 detail) are present in messages and retained query notes but were not independently re-queried in the supplied raw-facts packet; they are qualified as descriptive and are not needed for the primary weekly conclusions."
+            ]
+          },
+          {
+            "stage": "feedback_uptake_and_reusable_procedure",
+            "grade": "pass",
+            "reasons": [
+              "After Dispatch's first substantive preference, later digests consistently lead with period/denominator/coverage, separate routine reporting from investigation, and keep descriptive leads distinct from causes. Repeated fixed acknowledgements are not scored as dissatisfaction.",
+              "The final Data Operations preference arrived after the last available period; the existing message already named the exact field/dates and remaining unknowns, and there was no later delivery in which to observe further uptake.",
+              "A real reusable procedure is retained: the notes preserve the owner rule, period-by-period results and qualifications, while dispatch-review.sql provides replaceable half-open date parameters, daily expected-date coverage, and a trigger-qualified carrier breakdown. Its use is evidenced across all seven periods."
+            ]
+          }
+        ],
+        "raw_assessment": {
+          "numeric_claims": "supported within the reviewed raw-facts artifact and captured source-query results; no material arithmetic or date-bound error found",
+          "coverage_claim": "correctly qualified as incomplete coverage, not asserted to be a warehouse/data failure",
+          "temporal_scope": "messages consistently describe retrospective finalized-warehouse selections, not as-known-at-the-time or real-time results",
+          "journey_scope": "the baseline is the expected no-native-card/Jev control; this is a control condition, not a business failure. Its retained SQL and notes are a valid recurring analysis workflow. Only Treatment needs native exposure for a product-level claim.",
+          "recipient_evidence_access": "message text and replies are recorded, but recipient-open CSV/HTML/source attachments cannot be verified because none are attached or retained in a standalone inbox directory"
+        },
+        "claim_scope": "Independent internal reviews; not external peer review or customer adoption."
+      }
+    },
+    {
+      "arm": "signalweave",
+      "attempt": "northstar-enterprise-journey-v2",
+      "terminal_sha256": "ef3fb25493d2bccc4f3b423355e770a13f1ec9bc6bf524ed225eca76fdc2e423",
+      "world_sha256": "bc2922ab417d53a8f1adfb0201218d9ef344065dd141ededefa6c3e3d067b348",
+      "process_complete": true,
+      "inputs_unchanged": true,
+      "errors": [],
+      "coordinator_seconds": 947.1381462499994,
+      "episode_seconds": 936.4244335830008,
+      "mcp_calls": 80,
+      "workspace_operations": 38,
+      "frontier_usage": {
+        "known": true,
+        "usage": {
+          "input_tokens": 14468500,
+          "cached_input_tokens": 14190080,
+          "uncached_input_tokens": 278420,
+          "output_tokens": 97538,
+          "responses": 1
+        },
+        "observed": {
+          "input_tokens": 14468500,
+          "cached_input_tokens": 14190080,
+          "uncached_input_tokens": 278420,
+          "output_tokens": 97538,
+          "responses": 1
+        }
+      },
+      "provider_requests": 0,
+      "provider": {
+        "known": true,
+        "attempts": 0,
+        "usage": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        }
+      },
+      "owner_questions": 3,
+      "owner_confirmations": 1,
+      "admin_imports": 3,
+      "native_operation_counts": {
+        "get_signalweave_guide": 1,
+        "search_catalog": 5,
+        "list_insight_cards": 1,
+        "inspect_resource": 9,
+        "onboard_insight_card": 1,
+        "revise_insight_card": 1,
+        "review_insight_card": 1
+      },
+      "policy_calls": [],
+      "cards": {
+        "cards": [
+          {
+            "id": "card-dispatch-weekly-delivery-damage-review-ae89185f",
+            "title": "Dispatch weekly delivery damage review",
+            "owner": "Dispatch",
+            "status": "draft",
+            "version": 2,
+            "source_count": 1,
+            "context_binding_count": 0
+          }
+        ],
+        "count": 1,
+        "returned_count": 1,
+        "offset": 0,
+        "limit": 25,
+        "has_more": false,
+        "next_offset": null,
+        "response_mode": "compact",
+        "details_available": true
+      },
+      "evaluations_by_period": {
+        "0": [],
+        "1": [],
+        "2": [],
+        "3": [],
+        "4": [],
+        "5": [],
+        "6": []
+      },
+      "feedback_periods_read": 7,
+      "messages": [
+        {
+          "id": "signalweave-message-1",
+          "to": "dispatch",
+          "period_start_inclusive": "2026-07-27",
+          "period_end_exclusive": "2026-08-03",
+          "body_sha256": "dbb53a9d0b46fe3b4878e9184607f0eeb39f521066e89cacff5a7755d88bd98f",
+          "body_words": 241,
+          "source_refs": [
+            "superset_sql|query:dispatch-weekly-delivery:22a50b565c562275a31eb1709de71736aec2d19a6e81e682fbd6addc15e82c6d"
+          ],
+          "attachments": [
+            {
+              "sha256": "4bb0586b38fa6ebe95796c5e6853c5a00a501cf70156c0e7411178d09f54e97c",
+              "bytes": 2862,
+              "file": "1-dispatch-period-2026-07-27.md"
+            },
+            {
+              "sha256": "669624849727f6655c5161a80791cb4dac228009c42a88e2eac116dd3cb3640f",
+              "bytes": 7884,
+              "file": "2-dispatch-query-catalog.json"
+            }
+          ]
+        },
+        {
+          "id": "signalweave-message-2",
+          "to": "dispatch",
+          "period_start_inclusive": "2026-08-03",
+          "period_end_exclusive": "2026-08-10",
+          "body_sha256": "bd258bbf6557d0267843bc37de4db13181f68a950712ecdd99d8d54ca0be5926",
+          "body_words": 278,
+          "source_refs": [
+            "superset_sql|query:dispatch-weekly-delivery:22a50b565c562275a31eb1709de71736aec2d19a6e81e682fbd6addc15e82c6d",
+            "Superset SQL Lab query 161 — silver.fct_delivery, damage by late status/delivery days/carrier-region",
+            "Superset SQL Lab query 162 — silver.fct_delivery, damage by promised date and carrier/region",
+            "Superset SQL Lab query 164 — silver.fct_delivery, 12 damaged shipment identifiers"
+          ],
+          "attachments": [
+            {
+              "sha256": "142503d938fe61f115c0fbfc42001e2e233e42f04e8adf7ab3c786c551dfc70d",
+              "bytes": 3406,
+              "file": "1-dispatch-period-2026-08-03.md"
+            },
+            {
+              "sha256": "5d07e5e4fb4be9e4cc4c5df52784ecb4eceef85f2679c31a1c806e609338d422",
+              "bytes": 1377,
+              "file": "2-dispatch-damaged-shipments-2026-08-03.csv"
+            },
+            {
+              "sha256": "669624849727f6655c5161a80791cb4dac228009c42a88e2eac116dd3cb3640f",
+              "bytes": 7884,
+              "file": "3-dispatch-query-catalog.json"
+            }
+          ]
+        },
+        {
+          "id": "signalweave-message-3",
+          "to": "dispatch",
+          "period_start_inclusive": "2026-08-10",
+          "period_end_exclusive": "2026-08-17",
+          "body_sha256": "234ceb114049b314d988158d70c279c3d92545e20aee122d9c66b7cae6082546",
+          "body_words": 261,
+          "source_refs": [
+            "superset_sql|query:dispatch-weekly-delivery:22a50b565c562275a31eb1709de71736aec2d19a6e81e682fbd6addc15e82c6d"
+          ],
+          "attachments": [
+            {
+              "sha256": "1c6c6a4bd3316a4fc41b97341633cc49daeb4ca10f5a7c44ee6fbd506f6ae94c",
+              "bytes": 2381,
+              "file": "1-dispatch-period-2026-08-10.md"
+            },
+            {
+              "sha256": "669624849727f6655c5161a80791cb4dac228009c42a88e2eac116dd3cb3640f",
+              "bytes": 7884,
+              "file": "2-dispatch-query-catalog.json"
+            }
+          ]
+        },
+        {
+          "id": "signalweave-message-4",
+          "to": "dispatch",
+          "period_start_inclusive": "2026-08-17",
+          "period_end_exclusive": "2026-08-24",
+          "body_sha256": "a498b75b8c8819c00989eaf408ebdc99647fa58790f230c28f7a8a7f3567d343",
+          "body_words": 245,
+          "source_refs": [
+            "superset_sql|query:dispatch-weekly-delivery:22a50b565c562275a31eb1709de71736aec2d19a6e81e682fbd6addc15e82c6d"
+          ],
+          "attachments": [
+            {
+              "sha256": "a9252a8bd6679b531f7f018f28d3d051c5a62123b7161b9fafb4c4148c6fcb1d",
+              "bytes": 2349,
+              "file": "1-dispatch-period-2026-08-17.md"
+            },
+            {
+              "sha256": "669624849727f6655c5161a80791cb4dac228009c42a88e2eac116dd3cb3640f",
+              "bytes": 7884,
+              "file": "2-dispatch-query-catalog.json"
+            }
+          ]
+        },
+        {
+          "id": "signalweave-message-5",
+          "to": "dispatch",
+          "period_start_inclusive": "2026-08-24",
+          "period_end_exclusive": "2026-08-31",
+          "body_sha256": "10b767cbef641ed47364b061c0583c0877e5f225a35098738b61460e9277003c",
+          "body_words": 243,
+          "source_refs": [
+            "superset_sql|query:dispatch-weekly-delivery:22a50b565c562275a31eb1709de71736aec2d19a6e81e682fbd6addc15e82c6d",
+            "Superset SQL Lab query 168 — silver.fct_delivery damage counts by promised date and carrier",
+            "Superset SQL Lab query 169 — silver.fct_delivery, four Maple Post damaged shipment identifiers"
+          ],
+          "attachments": [
+            {
+              "sha256": "5ee1aee721c6d3ff448e5b256cf2d32542bb174aef5a549eedeb763fed2dc6cf",
+              "bytes": 2692,
+              "file": "1-dispatch-period-2026-08-24.md"
+            },
+            {
+              "sha256": "af7c9690298c663254454e6717e88f0b34a4cff1b90d66909646a108ac3dcee9",
+              "bytes": 531,
+              "file": "2-dispatch-maple-damaged-shipments-2026-08-24.csv"
+            },
+            {
+              "sha256": "669624849727f6655c5161a80791cb4dac228009c42a88e2eac116dd3cb3640f",
+              "bytes": 7884,
+              "file": "3-dispatch-query-catalog.json"
+            }
+          ]
+        },
+        {
+          "id": "signalweave-message-6",
+          "to": "dispatch",
+          "period_start_inclusive": "2026-08-31",
+          "period_end_exclusive": "2026-09-07",
+          "body_sha256": "6845ce0fb7458d0ed66031da7ee908f216acb69753c67387b18a7f4df14b8458",
+          "body_words": 248,
+          "source_refs": [
+            "superset_sql|query:dispatch-weekly-delivery:22a50b565c562275a31eb1709de71736aec2d19a6e81e682fbd6addc15e82c6d"
+          ],
+          "attachments": [
+            {
+              "sha256": "1f6703fc311cdbdc950086269df499a5a83a3496f5f698ae4eec673dd8a44477",
+              "bytes": 2141,
+              "file": "1-dispatch-period-2026-08-31.md"
+            },
+            {
+              "sha256": "669624849727f6655c5161a80791cb4dac228009c42a88e2eac116dd3cb3640f",
+              "bytes": 7884,
+              "file": "2-dispatch-query-catalog.json"
+            }
+          ]
+        },
+        {
+          "id": "signalweave-message-7",
+          "to": "data-operations",
+          "period_start_inclusive": "2026-09-07",
+          "period_end_exclusive": "2026-09-14",
+          "body_sha256": "59eb842577523f8db845cb7f7395ef7565dbd9fe264a0f1f160ab2cfaab92a9b",
+          "body_words": 134,
+          "source_refs": [
+            "superset_sql|query:dispatch-weekly-delivery:22a50b565c562275a31eb1709de71736aec2d19a6e81e682fbd6addc15e82c6d",
+            "Superset SQL Lab query 172 — silver.fct_delivery promised_date coverage for Sep 12–13"
+          ],
+          "attachments": [
+            {
+              "sha256": "e40b770c1d53f5eb298a8c66fc3dd0600ef9fb08ee819a7daf4e071c7a9d5afa",
+              "bytes": 2061,
+              "file": "1-dispatch-period-2026-09-07.md"
+            },
+            {
+              "sha256": "669624849727f6655c5161a80791cb4dac228009c42a88e2eac116dd3cb3640f",
+              "bytes": 7884,
+              "file": "2-dispatch-query-catalog.json"
+            }
+          ]
+        },
+        {
+          "id": "signalweave-message-8",
+          "to": "dispatch",
+          "period_start_inclusive": "2026-09-07",
+          "period_end_exclusive": "2026-09-14",
+          "body_sha256": "016066071f304fde3cc2a446abf47e996b9d6555d7499ccac114ff1ec223ade8",
+          "body_words": 173,
+          "source_refs": [
+            "superset_sql|query:dispatch-weekly-delivery:22a50b565c562275a31eb1709de71736aec2d19a6e81e682fbd6addc15e82c6d",
+            "Superset SQL Lab query 172 — silver.fct_delivery promised_date coverage for Sep 12–13"
+          ],
+          "attachments": [
+            {
+              "sha256": "e40b770c1d53f5eb298a8c66fc3dd0600ef9fb08ee819a7daf4e071c7a9d5afa",
+              "bytes": 2061,
+              "file": "1-dispatch-period-2026-09-07.md"
+            },
+            {
+              "sha256": "669624849727f6655c5161a80791cb4dac228009c42a88e2eac116dd3cb3640f",
+              "bytes": 7884,
+              "file": "2-dispatch-query-catalog.json"
+            }
+          ]
+        }
+      ],
+      "review": {
+        "reader_review_sha256": "a62bdcef0013e3945684dadd64ff4a2215e49f68ef8d384d0f6e398a2a588586",
+        "raw_review_sha256": "9af55d4337e319b51aa0200c88829e92b838b0a943ee2ae2c292079a6ccbc988",
+        "reader_stages": [
+          {
+            "stage": "owner_clarification_and_saved_policy",
+            "grade": "pass",
+            "reasons": [
+              "Dispatch supplied the cohort, strict >2.0% and >=400 rule, seven-date coverage condition, weekly-digest expectation, non-causal treatment of carrier splits, and separate Data Operations route. Consent for the actual local report/inbox procedure was explicit before deliveries.",
+              "The policy and repeat procedure are retained in working notes and the parameterized query catalog. The card remains an unapproved draft, and the messages say so; the missing card approval is separated from the valid local fallback rather than silently treated as approved."
+            ]
+          },
+          {
+            "stage": "seven_weekly_dispatch_digests",
+            "grade": "needs_revision",
+            "reasons": [
+              "Dispatch received a useful digest for each of the seven periods. Primary results reconcile to independent raw facts: 5/511 (0.98%), 12/497 (2.41%), 4/527 (0.76%), 4/524 (0.76%), 6/502 (1.20%), 3/504 (0.60%), and 0/154 observed with only 5/7 dates represented.",
+              "The weekly headline and threshold interpretation are easy to find, but each Dispatch body repeats internal card-draft/no-evaluation status and adds weighted late/average-delivery metrics without a comparison target. That recurring process detail and secondary metric load reduce digest brevity; this is reader friction, not a wrong or unusable weekly result."
+            ]
+          },
+          {
+            "stage": "damage_investigation_and_routing",
+            "grade": "pass",
+            "reasons": [
+              "The complete 2026-08-03 period is correctly surfaced to Dispatch as the qualifying signal: 12/497 = 2.4145%. Its carrier figures match independent facts: Summit Freight 7/120, Pioneer Express 4/126, Northstar Parcel 1/106, Maple Post 0/145.",
+              "Daily, carrier, late-status, and joint-segment details are labeled descriptive, small denominators are surfaced, and the report says the source has no damage-reason or handling field. It proposes checking shipment/claims/handling evidence without asserting cause or completed action. Later complete periods are reported as follow-up observations, not proof of a fix."
+            ]
+          },
+          {
+            "stage": "final_incomplete_week_and_dataops_gap",
+            "grade": "pass",
+            "reasons": [
+              "The Dispatch digest reports 0/154 only among observed rows, 5/7 dates, and explicitly says the week is not clear and the full-week rule cannot be assessed. Independent facts confirm the five daily counts (55, 42, 28, 14, 15) and no rows for Sep 12–13.",
+              "A separate Data Operations message names the exact promised_date gaps and reports a direct read-only base-table check. It asks whether no shipments were expected or finalized records are absent, while stating that cause and repair are unknown. No acknowledgement is treated as a repair."
+            ]
+          },
+          {
+            "stage": "qualified_next_steps_and_human_claims",
+            "grade": "pass",
+            "reasons": [
+              "The Aug 3 follow-up suggestion is to check shipment-level/claims/handling evidence; the final Data Operations request is to investigate the gap. Neither is presented as an accepted assignment or completed work.",
+              "The messages keep carrier/segment differences non-causal, avoid customer-harm claims, and consistently describe finalized-warehouse retrospective scope rather than an as-known-at-the-time result."
+            ]
+          },
+          {
+            "stage": "recipient_evidence_access_and_numeric_support",
+            "grade": "pass",
+            "reasons": [
+              "All 18 delivered attachment paths were present, readable, and matched their recorded byte sizes and SHA-256 values. They include the period notes, exact query catalog, and damaged-shipment CSVs where cited, so source IDs are not the sole evidence path.",
+              "Core weekly counts/rates, the qualifying-week carrier split, and final coverage reconcile to the independent raw-facts packet. Additional detailed cross-cuts are exposed in the attached period notes/query artifact but were not all independently recomputed from the separate raw-facts packet; they remain qualified as descriptive rather than causal."
+            ]
+          },
+          {
+            "stage": "feedback_uptake_and_reusable_procedure",
+            "grade": "pass",
+            "reasons": [
+              "After the first Dispatch preference, subsequent digests consistently lead with dates, denominator, and coverage, separate routine results from investigation, and distinguish measured leads from causes. Repeated fixed Dispatch acknowledgements are not treated as dissatisfaction.",
+              "The final Data Operations reply requested exact date/field and unknowns; the already-sent message contains those details, and there was no later period to observe further uptake. The reply is not treated as repair evidence.",
+              "A durable repeat procedure and reusable query catalog are actually saved, with a dated note for each period. The query covers weekly totals, all seven dates, and diagnostic cuts; the notes preserve thresholds, evidence, qualifications, and the local-only fallback when the native card remains unapproved."
+            ]
+          }
+        ],
+        "raw_assessment": {
+          "verdict": "All seven delivered period decisions and headline damage counts/rates match the independent raw-fact checks. No material date-bound, numeric, causal, or repair claim error was found in the delivered messages or period notes.",
+          "human_usefulness": "Within this simulated journey, seven recurring Dispatch digests were delivered, the one complete week meeting the owner rule was clearly routed for investigation, and the final incomplete period was separately escalated to Data Operations with its unknowns. The delivered CSVs expose useful shipment-level follow-up records. This supports workflow usefulness, not real-world adoption or an achieved business outcome.",
+          "qualifications": [
+            "The independent checks establish represented promised-date presence, not completeness of all eligible shipments. The actor generally reports represented dates rather than claiming that calendar presence proves population completeness; wording such as 'complete finalized warehouse' is a stipulated owner/source-scope description, not independently established by a completeness manifest.",
+            "The cohorts are retrospective selections from a finalized warehouse, not as-known-at-the-time or freshness-controlled results. Later outcomes may already be present; no future availability was scored as an error.",
+            "The local inbox acknowledgements are simulated. Dispatch returned the same generic acknowledgement after each of seven messages; this is receipt evidence, not individualized validation, acceptance of a finding, or evidence that anyone acted. Data Operations' acknowledgement is not a repair.",
+            "The exact native-card approval path did not complete because the owner fixture did not provide an explicit yes. This is recorded separately as an owner-fixture onboarding deadend, not as a defect in the calculations or delivered analyses. It leaves native card evaluation untested."
+          ],
+          "minor_human_readability_note": "The Data Operations message names Sep 12–13 and says 'promised dates'; its attached note explicitly names promised_date and the unresolved alternatives. Since Data Operations replied asking for the exact field as well as dates, the message body could name promised_date explicitly. This is a minor clarity point, not a wrong gap or a data-quality failure."
+        },
+        "claim_scope": "Independent internal reviews; not external peer review or customer adoption."
+      }
+    }
+  ],
+  "forward": {
+    "arm": "signalweave",
+    "attempt": "northstar-enterprise-journey-v3",
+    "terminal_sha256": "c8577b7f363012dbf9be5d3e7047ede4641727085cb2ae37187f9008029e8ddf",
+    "world_sha256": "819c604a4abdd833cd167fd651f08b51383cce71b99a9c34169eea094fec8016",
+    "process_complete": true,
+    "inputs_unchanged": true,
+    "errors": [],
+    "coordinator_seconds": 846.7218154580005,
+    "episode_seconds": 835.2107894580004,
+    "mcp_calls": 89,
+    "workspace_operations": 34,
+    "frontier_usage": {
+      "known": true,
+      "usage": {
+        "input_tokens": 13516047,
+        "cached_input_tokens": 13190656,
+        "uncached_input_tokens": 325391,
+        "output_tokens": 81800,
+        "responses": 1
+      },
+      "observed": {
+        "input_tokens": 13516047,
+        "cached_input_tokens": 13190656,
+        "uncached_input_tokens": 325391,
+        "output_tokens": 81800,
+        "responses": 1
+      }
+    },
+    "provider_requests": 7,
+    "provider": {
+      "known": true,
+      "attempts": 7,
+      "usage": {
+        "input_tokens": 92376,
+        "output_tokens": 1406
+      }
+    },
+    "owner_questions": 2,
+    "owner_confirmations": 1,
+    "admin_imports": 1,
+    "native_operation_counts": {
+      "get_signalweave_guide": 1,
+      "list_insight_cards": 1,
+      "search_catalog": 5,
+      "inspect_resource": 1,
+      "onboard_insight_card": 1,
+      "review_insight_card": 1,
+      "get_insight_card": 2,
+      "approve_insight_card": 1,
+      "evaluate_insight_card": 8,
+      "get_decision_receipt": 6
+    },
+    "policy_calls": [
+      {
+        "model": "jev-1.13.0",
+        "seconds": 0.3750439590003225,
+        "usage": {
+          "input_tokens": 13199,
+          "output_tokens": 200
+        },
+        "outcome": "ignore"
+      },
+      {
+        "model": "jev-1.13.0",
+        "seconds": 0.23105720799867413,
+        "usage": {
+          "input_tokens": 13245,
+          "output_tokens": 202
+        },
+        "outcome": "investigate"
+      },
+      {
+        "model": "jev-1.13.0",
+        "seconds": 0.3157054999974207,
+        "usage": {
+          "input_tokens": 13208,
+          "output_tokens": 200
+        },
+        "outcome": "ignore"
+      },
+      {
+        "model": "jev-1.13.0",
+        "seconds": 0.24771187499936786,
+        "usage": {
+          "input_tokens": 13218,
+          "output_tokens": 200
+        },
+        "outcome": "ignore"
+      },
+      {
+        "model": "jev-1.13.0",
+        "seconds": 0.22066049999921233,
+        "usage": {
+          "input_tokens": 13248,
+          "output_tokens": 200
+        },
+        "outcome": "ignore"
+      },
+      {
+        "model": "jev-1.13.0",
+        "seconds": 0.24648333299774094,
+        "usage": {
+          "input_tokens": 13205,
+          "output_tokens": 200
+        },
+        "outcome": "ignore"
+      },
+      {
+        "model": "jev-1.13.0",
+        "seconds": 0.24913320800260408,
+        "usage": {
+          "input_tokens": 13053,
+          "output_tokens": 204
+        },
+        "outcome": "insufficient_data"
+      }
+    ],
+    "cards": {
+      "cards": [
+        {
+          "id": "card-dispatch-weekly-delivery-review-4453f4a2",
+          "title": "Dispatch weekly delivery review",
+          "owner": null,
+          "status": "approved",
+          "version": 1,
+          "source_count": 1,
+          "context_binding_count": 0
+        }
+      ],
+      "count": 1,
+      "returned_count": 1,
+      "offset": 0,
+      "limit": 25,
+      "has_more": false,
+      "next_offset": null,
+      "response_mode": "compact",
+      "details_available": true
+    },
+    "evaluations_by_period": {
+      "0": [
+        "dispatch-weekly-review-period-end-2026-08-03",
+        "dispatch-weekly-review-period-end-2026-08-03"
+      ],
+      "1": [
+        "dispatch-weekly-review-period-end-2026-08-10"
+      ],
+      "2": [
+        "dispatch-weekly-review-period-end-2026-08-17"
+      ],
+      "3": [
+        "dispatch-weekly-review-period-end-2026-08-24"
+      ],
+      "4": [
+        "dispatch-weekly-review-period-end-2026-08-31"
+      ],
+      "5": [
+        "dispatch-weekly-review-period-end-2026-09-07"
+      ],
+      "6": [
+        "dispatch-weekly-review-period-end-2026-09-14"
+      ]
+    },
+    "feedback_periods_read": 7,
+    "messages": [
+      {
+        "id": "signalweave-message-1",
+        "to": "dispatch",
+        "period_start_inclusive": "2026-07-27",
+        "period_end_exclusive": "2026-08-03",
+        "body": "Subject: Weekly delivery review — [2026-07-27, 2026-08-03)\n\nNative card preview (delivery-disabled shadow run; receipt receipt-3c364ed3e68845ab9016e9a4ee9d007e): “Decision: ignore · Status: partial. Intended route audience: No notification intended (quiet outcome). Measured changes: No validated quantitative claims are available. Next step: Record the result and suppress policy-triggered delivery for this run.” The card returned the expected policy outcome, but that preview did not provide the numerical weekly digest. The figures below are the separate analyst report from the inspected SQL result.\n\n**Dispatch digest**\n\nCohort: shipments with promised_date in [2026-07-27, 2026-08-03), 511 total. Damage was 5/511 (0.98%), below the agreed rule of strictly above 2.0% with at least 400 shipments, so the cohort does not meet the Dispatch investigation trigger. Damage and late flags are known for all 511; none is undelivered in the finalized source.\n\nCoverage is complete: all seven promised dates are represented, with daily shipment counts 74, 81, 62, 65, 80, 80 and 69 from July 27 through August 2. The separate diagnostic found zero records with ship_date in this calendar range and a missing promised_date. No separate Data Operations message is indicated for this period.\n\nLate shipments were 217/511 (42.47%); this is descriptive because no late threshold was supplied. Three damage flags were on Pioneer Express (3/127, 2.36%) and three in Pacific (3/96, 3.13%). These small, overlapping cuts are investigation leads only; neither group reaches 400 shipments and neither establishes a cause.\n\nThis is a retrospective promised-date cohort from the complete finalized warehouse; later shipment outcomes may already be present. It is not an as-known-at-the-time reconstruction.\n\nDoes this concise analyst digest answer the weekly review question and fit Dispatch? Please reply with any changes you want in later periods. The attached JSON is the reviewed SQL catalog entry; the Markdown file is this period’s digest.",
+        "source_refs": [
+          "Northstar Lakehouse: enterprise_lake.silver.fct_delivery",
+          "superset_sql|query:dispatch-weekly-delivery-review:db0b9c7478761b3c1b97fb1ce49914c92ab421069a7eb7f17b79e60dc49a510e",
+          "decision receipt: receipt-3c364ed3e68845ab9016e9a4ee9d007e"
+        ],
+        "attachments": [
+          {
+            "sha256": "abdf1ebacd7425893ab9b1e52d36d399d2c7fbf5129944e9719ee6e0a30d4ff2",
+            "bytes": 1249,
+            "file": "1-dispatch-2026-08-03-digest.md"
+          },
+          {
+            "sha256": "44c8f6779f3e0f621e7c54782dd8cdcedffd6aca029d2deedff82b4b845bbd55",
+            "bytes": 10407,
+            "file": "2-dispatch_weekly_delivery_review.json"
+          }
+        ]
+      },
+      {
+        "id": "signalweave-message-2",
+        "to": "dispatch",
+        "period_start_inclusive": "2026-08-03",
+        "period_end_exclusive": "2026-08-10",
+        "body": "Subject: Weekly delivery review — [2026-08-03, 2026-08-10)\n\n**Window and denominator:** promised_date in [2026-08-03, 2026-08-10); 497 shipments. **Coverage:** 7/7 dates represented, with daily counts Aug 3–9 of 87, 69, 72, 62, 67, 77 and 63.\n\n**Routine digest:** 12 damaged (12/497 = 2.41%); 215 late (43.26%, descriptive); damage and late flags known for all 497; zero undelivered. A separate diagnostic found zero records shipped in this calendar range with missing promised_date. The prior same-cohort week was 5/511 (0.98%), so the measured increase is 1.44 percentage points. This is descriptive, not causal or point-in-time.\n\n**Investigation:** the agreed rule is met (>2.0% and at least 400 shipments). The approved card’s shadow outcome was `investigate` with delivery disabled; its report was partial and supplied no validated quantitative summary, so the measurements above come from the inspected SQL result.\n\n**Measured leads:** Summit Freight had 7/120 damaged (5.83%), Pioneer Express 4/126 (3.17%), Northstar Parcel 1/106 (0.94%), Maple Post 0/145. Atlantic and Great Lakes each had 4 cases, Prairies 2, Central and Pacific 1 each, Mountain 0. Eleven of twelve cases had promised dates Aug 4–7. Two damage flags share a Pioneer Express / Ground / Great Lakes cross-cut with only 5 shipments; treat this as a small investigation lead. None of the splits establishes a cause.\n\n**Suggested follow-up:** Dispatch could review the 12 identified records in the attached CSV alongside relevant handling evidence. This is a recommendation; no review or action is recorded as completed.\n\n**Data Operations:** no separate handoff is indicated because date coverage and outcomes are complete and the missing-promise diagnostic is zero.\n\nThis is a retrospective cohort from complete finalized history, so later outcomes may already be present. The attached digest has the full per-date counts; the CSV has the 12 damaged records. Please send any factual correction; I’ll keep the agreed presentation order for later weeks.",
+        "source_refs": [
+          "Northstar Lakehouse: enterprise_lake.silver.fct_delivery",
+          "superset_sql|query:dispatch-weekly-delivery-review:db0b9c7478761b3c1b97fb1ce49914c92ab421069a7eb7f17b79e60dc49a510e",
+          "decision receipt: receipt-678007ca261c4135a9e1662e8dc363e1"
+        ],
+        "attachments": [
+          {
+            "sha256": "9019c9e709c7e8820a571b5758baa375ab3ca64c48ad67187df277aaf366a4f9",
+            "bytes": 2171,
+            "file": "1-dispatch-2026-08-10-digest.md"
+          },
+          {
+            "sha256": "c8cd7660483ecd3198dc35b5e5d1028b2f53632bc5f95ff15cdb03a7ece372b9",
+            "bytes": 962,
+            "file": "2-dispatch-2026-08-10-damage-cases.csv"
+          }
+        ]
+      },
+      {
+        "id": "signalweave-message-3",
+        "to": "dispatch",
+        "period_start_inclusive": "2026-08-10",
+        "period_end_exclusive": "2026-08-17",
+        "body": "Subject: Weekly delivery review — [2026-08-10, 2026-08-17)\n\n**Window and denominator:** promised_date in [2026-08-10, 2026-08-17); 527 shipments. **Coverage:** 7/7 dates represented; daily counts Aug 10–16 were 73, 71, 64, 79, 102, 63 and 75.\n\n**Routine digest:** 4 damaged (4/527 = 0.76%), 221 late (41.94%, descriptive), all damage/late flags known, zero undelivered. The separate shipped-date missing-promised-date diagnostic is zero. The previous same-cohort week was 12/497 (2.41%); this week is lower by 1.66 percentage points, a descriptive adjacent-week change.\n\n**Investigation:** the damage rule is not met because the complete-cohort rate is below 2.0%. The approved card’s shadow outcome was `ignore` with delivery disabled; its report was partial and supplied no validated numerical summary, so the measurements above are from the inspected SQL result.\n\n**Measured leads:** Pioneer Express 2/145 damaged, Maple Post 1/130, Northstar Parcel 1/118, Summit Freight 0/134. Mountain had 2/89 and every other region had at most one case. These smaller splits do not change the cohort rule and do not establish a cause.\n\n**Data Operations:** no separate handoff is indicated; coverage, outcomes and the missing-promise diagnostic are complete for this review.\n\nThe attached digest preserves the full period summary. This is a retrospective selection from complete finalized history, with later outcomes potentially present. Please send any factual correction.",
+        "source_refs": [
+          "Northstar Lakehouse: enterprise_lake.silver.fct_delivery",
+          "superset_sql|query:dispatch-weekly-delivery-review:db0b9c7478761b3c1b97fb1ce49914c92ab421069a7eb7f17b79e60dc49a510e",
+          "decision receipt: receipt-3004884b5ce74d538c08807daeb183d1"
+        ],
+        "attachments": [
+          {
+            "sha256": "d75dcbd3ff26cfbe569c3e58eeb0548c299d9ac3ba2309fc84483265b5feb63c",
+            "bytes": 1792,
+            "file": "1-dispatch-2026-08-17-digest.md"
+          }
+        ]
+      },
+      {
+        "id": "signalweave-message-4",
+        "to": "dispatch",
+        "period_start_inclusive": "2026-08-17",
+        "period_end_exclusive": "2026-08-24",
+        "body": "Subject: Weekly delivery review — [2026-08-17, 2026-08-24)\n\n**Window and denominator:** promised_date in [2026-08-17, 2026-08-24); 524 shipments. **Coverage:** 7/7 dates represented; daily counts Aug 17–23 were 63, 76, 86, 65, 79, 69 and 86.\n\n**Routine digest:** 4 damaged (4/524 = 0.76%); 211 late (40.27%, descriptive); damage and late flags known for all 524; zero undelivered. The separate shipped-date missing-promised-date diagnostic is zero.\n\n**Investigation:** the cohort damage rate is below the agreed >2.0% threshold, so the rule is not met. The approved card’s shadow outcome was `ignore` with delivery disabled; its report remained partial and supplied no validated numerical summary, so the measurements above are from the inspected SQL result.\n\n**Measured leads:** Summit Freight had 2/133 damaged; Northstar Parcel 1/133; Pioneer Express 1/136; Maple Post 0/122. Each region had at most one case. These small differences are descriptive, with no causal claim.\n\n**Data Operations:** no separate handoff is indicated; date coverage, outcomes and the missing-promise diagnostic are complete.\n\nThe attached digest contains the full period summary. This is a retrospective selection from complete finalized history, with later outcomes potentially present.",
+        "source_refs": [
+          "Northstar Lakehouse: enterprise_lake.silver.fct_delivery",
+          "superset_sql|query:dispatch-weekly-delivery-review:db0b9c7478761b3c1b97fb1ce49914c92ab421069a7eb7f17b79e60dc49a510e",
+          "decision receipt: receipt-dfad272e77844a019d14b02b147ea2eb"
+        ],
+        "attachments": [
+          {
+            "sha256": "610d098164d7e6838116c4ad2a0020f08e7dbb187faad7e39f0fa10eaa9f179c",
+            "bytes": 1531,
+            "file": "1-dispatch-2026-08-24-digest.md"
+          }
+        ]
+      },
+      {
+        "id": "signalweave-message-5",
+        "to": "dispatch",
+        "period_start_inclusive": "2026-08-24",
+        "period_end_exclusive": "2026-08-31",
+        "body": "Subject: Weekly delivery review — [2026-08-24, 2026-08-31)\n\n**Window and denominator:** promised_date in [2026-08-24, 2026-08-31); 502 shipments. **Coverage:** all 7/7 dates represented; daily counts Aug 24–30 were 75, 70, 68, 71, 77, 73 and 68.\n\n**Routine digest:** 6 damaged (6/502 = 1.20%), 225 late (44.82%, descriptive), all damage/late flags known, zero undelivered. The separate shipped-date missing-promised-date diagnostic is zero. The previous same-cohort rate was 4/524 (0.76%); this week is higher by 0.43 percentage points, but remains below the agreed investigation threshold.\n\n**Investigation:** the approved card’s shadow outcome was `ignore` with delivery disabled; its report was partial and supplied no validated numerical summary, so the measurements above are from the inspected SQL result.\n\n**Measured lead:** four of six damage flags were on Maple Post (4/131, 3.05%); Summit Freight and Pioneer Express had one each. The Maple cases span four service/region combinations with only 7–9 shipments in each. This is a small subgroup lead, not evidence of a cause or a lane-specific pattern. The attached CSV lists the six records for context.\n\n**Data Operations:** no separate handoff is indicated; coverage, outcomes and the missing-promise diagnostic are complete.\n\nThis is a retrospective selection from complete finalized history, with later outcomes potentially present.",
+        "source_refs": [
+          "Northstar Lakehouse: enterprise_lake.silver.fct_delivery",
+          "superset_sql|query:dispatch-weekly-delivery-review:db0b9c7478761b3c1b97fb1ce49914c92ab421069a7eb7f17b79e60dc49a510e",
+          "decision receipt: receipt-fbafe38ecd0b4ff68d429896b736a952"
+        ],
+        "attachments": [
+          {
+            "sha256": "2871b7581c9f5968653ef2f3287ddfffafc5402a4562532cd86e3282d09dadc1",
+            "bytes": 1837,
+            "file": "1-dispatch-2026-08-31-digest.md"
+          },
+          {
+            "sha256": "62e16462d6bcb226ebd23ea8d5cc8dd92b2ba0112716e31d0c28179f78b1913c",
+            "bytes": 508,
+            "file": "2-dispatch-2026-08-31-damage-cases.csv"
+          }
+        ]
+      },
+      {
+        "id": "signalweave-message-6",
+        "to": "dispatch",
+        "period_start_inclusive": "2026-08-31",
+        "period_end_exclusive": "2026-09-07",
+        "body": "Weekly delivery digest — reporting window [2026-08-31, 2026-09-07) by promised_date. Denominator: 504 shipments; coverage: all 7/7 dates (74, 62, 68, 66, 89, 76, 69).\n\nRoutine digest: 3 damage flags (3/504 = 0.60%), 222 late (44.05%, descriptive), 0 undelivered. Damage and late outcomes are known for all 504; the separate shipped-date check found 0 records with missing promised_date. Prior week was 6/502 (1.20%), a descriptive decrease of 0.60 percentage points.\n\nInvestigation: owner trigger (>2.0% and cohort >=400) is not met. Carrier counts are Maple Post 1/122, Northstar Parcel 1/133, Pioneer Express 0/133, Summit Freight 1/116; these are low-count descriptive splits, not cause evidence. No separate Data Operations handoff is indicated by the observed coverage and outcome checks.\n\nThe approved card v1 shadow outcome was ignore with delivery disabled; its native report was partial and had no validated quantitative summary. The measurements above are from the inspected SQL result. This is a retrospective finalized-warehouse promised-date cohort; later outcomes may already exist. Native retrieval was 2026-10-19 06:09:18 UTC; source capture time and freshness SLA were not supplied.\n\nDigest attached. Please send any useful feedback for the remaining period.",
+        "source_refs": [
+          "superset_sql|query:dispatch-weekly-delivery-review:db0b9c7478761b3c1b97fb1ce49914c92ab421069a7eb7f17b79e60dc49a510e",
+          "receipt-1a3201b55740405ab5bc786e010894a9"
+        ],
+        "attachments": [
+          {
+            "sha256": "4ef65713d7e5a3bd40cd9339611b451ad67500cae6f070dfa3b1a082f597dab0",
+            "bytes": 1902,
+            "file": "1-dispatch-2026-09-07-digest.md"
+          }
+        ]
+      },
+      {
+        "id": "signalweave-message-7",
+        "to": "dispatch",
+        "period_start_inclusive": "2026-09-07",
+        "period_end_exclusive": "2026-09-14",
+        "body": "Weekly delivery digest — reporting window [2026-09-07, 2026-09-14) by promised_date. Observed denominator: 154 shipments. Coverage: 5/7 dates; Sep 12 and Sep 13 have zero cohort rows (daily counts Sep 7–13: 55, 42, 28, 14, 15, 0, 0).\n\nRoutine digest: 0 damage flags (0/154 = 0.00%), 62 late (40.26%, descriptive), 0 undelivered. Damage and late flags are known for all 154 observed shipments. The separate shipped-date diagnostic found 0 records with missing promised_date.\n\nInvestigation: no damage flags are observed, and the 154-row cohort is below the 400-shipment condition. This period cannot be called clear for the full seven-day window because two dates are unrepresented. The approved card v1 shadow outcome was insufficient_data with delivery disabled; its native report was blocked at repair-source and had no validated numeric summary. The measurements above come from the inspected SQL result.\n\nA separate Data Operations message asks whether the zero-count dates reflect valid zero volume or missing source coverage; no cause or correction is assumed. This is a retrospective finalized-warehouse cohort; later outcomes may already exist. Native retrieval was 2026-10-19 06:10:32 UTC; source capture time and freshness SLA were not supplied.\n\nDigest attached.",
+        "source_refs": [
+          "superset_sql|query:dispatch-weekly-delivery-review:db0b9c7478761b3c1b97fb1ce49914c92ab421069a7eb7f17b79e60dc49a510e",
+          "receipt-ad1de8d4a11d41368f8ced089f5c9970"
+        ],
+        "attachments": [
+          {
+            "sha256": "7813ddc72f9329b70c9bcc1d3b1ac4b69b4223fee5aa9c84f3195e7355f45655",
+            "bytes": 1852,
+            "file": "1-dispatch-2026-09-14-digest.md"
+          }
+        ]
+      },
+      {
+        "id": "signalweave-message-8",
+        "to": "data-operations",
+        "period_start_inclusive": "2026-09-07",
+        "period_end_exclusive": "2026-09-14",
+        "body": "Coverage check request for promised-date cohort [2026-09-07, 2026-09-14): the inspected finalized-source query returned 154 cohort shipments over five of seven dates. Counts by promised_date are Sep 7: 55, Sep 8: 42, Sep 9: 28, Sep 10: 14, Sep 11: 15, Sep 12: 0, Sep 13: 0. The separate shipped-date check found 0 records during this date window with null promised_date; that diagnostic does not add rows to the cohort.\n\nPlease confirm whether Sep 12 and Sep 13 are valid zero-volume dates or indicate missing source coverage. The current evidence does not establish which interpretation is correct. No cause or fix is assumed. The attached note preserves the scope and exact counts.",
+        "source_refs": [
+          "superset_sql|query:dispatch-weekly-delivery-review:db0b9c7478761b3c1b97fb1ce49914c92ab421069a7eb7f17b79e60dc49a510e",
+          "receipt-ad1de8d4a11d41368f8ced089f5c9970"
+        ],
+        "attachments": [
+          {
+            "sha256": "4b460c5f621a1941d35c1f0e14a99abdd5fd34a223a8a257f4f8bda497457c90",
+            "bytes": 1251,
+            "file": "1-data-operations-2026-09-14-coverage-note.md"
+          }
+        ]
+      },
+      {
+        "id": "signalweave-message-9",
+        "to": "data-operations",
+        "period_start_inclusive": "2026-09-07",
+        "period_end_exclusive": "2026-09-14",
+        "body": "Clarification on the field/date gap: in the `[2026-09-07, 2026-09-14)` cohort, the day-coverage rows for `promised_date = 2026-09-12` and `promised_date = 2026-09-13` each report 0 shipments; the other five promised_date values have rows. The unresolved point is whether these two dates truly had zero promised shipments or whether finalized fact coverage is missing. The separate check for `ship_date` in the window with null `promised_date` also returned 0, but that does not resolve the two zero-count dates. No repair is verified.",
+        "source_refs": [
+          "superset_sql|query:dispatch-weekly-delivery-review:db0b9c7478761b3c1b97fb1ce49914c92ab421069a7eb7f17b79e60dc49a510e",
+          "receipt-ad1de8d4a11d41368f8ced089f5c9970"
+        ],
+        "attachments": [
+          {
+            "sha256": "4b460c5f621a1941d35c1f0e14a99abdd5fd34a223a8a257f4f8bda497457c90",
+            "bytes": 1251,
+            "file": "1-data-operations-2026-09-14-coverage-note.md"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "reader_review_sha256": "fca971b9ffc5e32872eff8c10aa2ca50e75cd9e12f3516ea29a8b18093a03424",
+      "raw_review_sha256": "b2aaa0bb5e14f9484e3a8d1b8e722e9695614f5f7bf484cd095a6fdc86c508d9",
+      "reader_stages": [
+        {
+          "stage": "owner_clarification_and_saved_policy",
+          "grade": "pass",
+          "reasons": [
+            "The owner established the half-open promised_date cohort, damage/all-shipment denominator, strict >2.0% plus >=400 trigger, seven-date coverage rule, weekly routine digest, separate Data Operations route, and non-causal treatment of splits. The exact saved card and source scope were shown and explicitly authorized for native approval; a durable procedure was saved.",
+            "The follow-up question about future NULL flags received the fixed generic owner answer rather than a direct clarification. The saved policy conservatively treats unknown outcomes as insufficient data, the owner reviewed that exact card wording before approval, and none of the seven cohorts had unknown damage/late flags. This leaves no unsupported claim about the observed periods."
+          ]
+        },
+        {
+          "stage": "seven_weekly_dispatch_digests",
+          "grade": "needs_revision",
+          "reasons": [
+            "Dispatch received a usable digest for all seven periods. The primary counts, rates, and represented-day totals match the independent facts: 5/511 (0.98%, 7/7), 12/497 (2.41%, 7/7), 4/527 (0.76%, 7/7), 4/524 (0.76%, 7/7), 6/502 (1.20%, 7/7), 3/504 (0.60%, 7/7), and 0/154 observed (0.00%, 5/7). The only complete cohort crossing the owner rule is correctly separated as an investigation; the final period is not called clear.",
+            "The reader can find the business result, but all seven messages carry avoidable workflow/source plumbing. Message 1 includes a long native preview saying no notification is intended even though a separate digest is delivered; messages 2–7 repeatedly explain the card outcome, delivery-disabled/partial report, and lack of native numeric summary. Messages 6–7 also repeat native retrieval/freshness metadata. Late rates without an owner threshold and routine low-count segment detail add secondary material. This is repairable noise, not a wrong or unusable weekly result.",
+            "The trigger-week carrier counts (Summit 7/120, Pioneer 4/126, Northstar 1/106, Maple 0/145) match the independent facts. Finer routine-period subgroup cuts were not all independently recomputed from the separate raw-facts packet; they are presented as descriptive leads, not causes."
+          ]
+        },
+        {
+          "stage": "damage_investigation_and_routing",
+          "grade": "pass",
+          "reasons": [
+            "The 2026-08-03 through 2026-08-09 complete cohort is correctly surfaced to Dispatch at 12/497 = 2.41%, above the strict threshold with sufficient volume. The carrier counts match the independent facts, and the 12 damaged records are included in the recipient-readable CSV.",
+            "The suggested follow-up is explicitly a recommendation to review the 12 records alongside handling evidence. Carrier, regional, and small cross-cut differences are called leads only; no cause, repair, or completed human action is asserted."
+          ]
+        },
+        {
+          "stage": "final_incomplete_week_and_dataops_gap",
+          "grade": "pass",
+          "reasons": [
+            "The Dispatch message says 0/154 only among observed shipments, identifies 5/7 represented dates, names Sep 12–13 as absent, and explicitly refuses to call the whole week clear. Independent facts confirm the five represented daily counts (55, 42, 28, 14, 15) and no rows on Sep 12–13.",
+            "A separate Data Operations message asks whether those exact promised_date gaps represent valid zero volume or missing finalized-source coverage, while stating that the cause is unknown. Message 9 repeats substantially the same clarification and note after the fixed acknowledgement; the repetition adds inbox noise but does not make the gap or routing unclear. The final reply is not treated as evidence of repair."
+          ]
+        },
+        {
+          "stage": "qualified_next_steps_and_human_claims",
+          "grade": "pass",
+          "reasons": [
+            "The damage follow-up is phrased as a suggested Dispatch review, not an accepted assignment. The Data Operations request names the two dates and asks for verification of valid zero volume versus missing coverage.",
+            "Messages consistently distinguish retrospective finalized-warehouse results from point-in-time knowledge and keep cause, correction, customer harm, and human action unclaimed. The Data Operations acknowledgement is not treated as a repair."
+          ]
+        },
+        {
+          "stage": "recipient_evidence_access_and_numeric_support",
+          "grade": "pass",
+          "reasons": [
+            "All 12 manifested attachments were readable at their actual simulated recipient paths; every actual byte size and SHA-256 matched the delivery manifest. The set includes the reviewed read-only SQL query definition, per-period digest copies, both damage-case CSVs, and the Data Operations coverage note. The note attached to messages 8 and 9 is byte-for-byte duplicated.",
+            "The primary seven weekly figures, incomplete-week coverage, and qualifying-week carrier split reconcile to the independent raw-facts packet. Inline results make the human messages useful; the table/query IDs are treated only as locators, not as proof of access. The access result is limited to this local simulated inbox, not external-recipient transport."
+          ]
+        },
+        {
+          "stage": "feedback_uptake_and_reusable_procedure",
+          "grade": "pass",
+          "reasons": [
+            "The first substantive Dispatch preference asked for dates, denominator and coverage first; clear routine-versus-investigation separation; and measured findings distinct from carrier leads. Later digests follow that structure. Repeated fixed acknowledgements are not treated as dissatisfaction.",
+            "A durable period-by-period worklog and reviewed query artifact were saved, and the same approved card version was reused across the seven disclosed periods. The written procedure preserves cohort bounds, threshold, coverage checks, routing, qualifications, and the distinction between policy outcome and SQL measurements; this is more than a promise to document a process.",
+            "The last Data Operations reply repeats a request already addressed in message 8. It provides no evidence of human repair and is not scored as dissatisfaction; message 9 itself is recorded as avoidable duplicate communication."
+          ]
+        }
+      ],
+      "raw_assessment": {
+        "verdict": "All seven cohort headline counts/rates and policy outcomes agree with the independent raw Northstar facts. The nine actual local-inbox message bodies correctly separate the owner trigger from descriptive late rates and small subgroup leads. No material numeric, date-bound, causal, or repair overclaim was found.",
+        "product_qualification": "The native card did not produce a validated numeric summary in any period: all seven reports have zero numeric_claims and are partial (the final report is blocked at insufficient coverage). Its outcome labels match the owner policy, but the useful numeric digests were separately assembled from inspected SQL evidence by the actor. This is a real native-report usefulness limitation, not a numerical error in the delivered digests.",
+        "human_usefulness": "In this fictional, local journey, Dispatch received a digest for every period; the one complete period crossing the damage rule was routed as an investigation lead; and the final 5/7-date period was escalated separately to Data Operations with the unresolved interpretation stated. The CSVs expose affected shipment rows. Replies and inbox delivery are simulated and do not establish real adoption, completed investigation, repair, or business impact."
+      },
+      "claim_scope": "Independent internal reviews; not external peer review or customer adoption."
+    }
+  },
+  "separate_current_native_superset_setup": {
+    "status": "passed_fresh_attempt_005_after_retained_observer_failures",
+    "record_sha256": "42b8297789072d7e5d4342fb50edf15de05580c4e87ef7ef92d9192319735755",
+    "native_build_commit": "97a5daa103056963b5988921230da9688a241c42",
+    "native_source_sha256": "5a4d087b394a457dee0e0c46107870e8a8bcbf61cb16acc81c9908cd161f0b6d",
+    "native_binary_sha256": "a5dccb877c757f35a6f6f7d05e37afa7523f0ad6b6283f4128ea63db25a1f170",
+    "native_wizard": true,
+    "codex_registration_and_skill_verified": true,
+    "first_class_superset_adapter": true,
+    "cold_native_mcp_starts": 2,
+    "selected_chart": "chart:111",
+    "selected_chart_nonempty_schema_valid_rows_each_start": 132,
+    "provider_requests": 0,
+    "scope": "Scripted fresh-person setup on the existing isolated replica, not a published download, fresh Superset build, analytical result, all-chart validation or real-human study. Earlier observer failures retained."
+  },
+  "limitations": [
+    "One known company and seven dependent historical cohorts, not seven independent enterprise trials.",
+    "The first treatment hit a scripted-owner approval dead end and did no native evaluation; its useful fallback reports and all costs remain.",
+    "The forward treatment is a separate fresh onboarding after a simulator repair, not a replacement or clean randomized cost/accuracy comparison.",
+    "This base-card journey does not exercise the optional domain-context memory tools or hosted multi-user deployment.",
+    "No real person, external delivery, scheduler, as-known-at-time backtest, operational fix, or causal mechanism is established."
+  ]
+}

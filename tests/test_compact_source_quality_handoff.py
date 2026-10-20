@@ -246,12 +246,12 @@ async def test_approved_evaluation_receipt_keeps_exact_four_source_quality_snaps
     assert factory.inspect_calls == inspections_after
     assert judger.judge_calls == judgments_after
 
-    page = tool(server, "get_decision_receipt")(
+    page = (await tool(server, "get_decision_receipt")(
         receipt_id=receipt.receipt_id,
         result_path=["source_contracts"],
         offset=0,
         limit=10,
-    )["result_page"]
+    ))["result_page"]
     assert page["items"] == expected
     assert page["coverage"] == "complete_section"
     assert page["next_offset"] is None
@@ -282,15 +282,29 @@ async def test_legacy_receipt_without_source_quality_does_not_invent_today_catal
     assert replay["replayed"] is True
     compact_legacy_result = deepcopy(legacy_result)
     had_markdown = isinstance(compact_legacy_result.pop("report_markdown", None), str)
-    assert replay["result"] == compact_legacy_result
+    restored = deepcopy(replay["result"])
+    for parent, field in (("report", "evidence"), ("workflow", "evidence_plan")):
+        reference = restored[parent].pop(f"{field}_ref", None)
+        if reference is not None:
+            assert reference == {"result_path": [field]}
+            restored[parent][field] = deepcopy(restored[field])
+    report_ref = restored["report"]["full_report_ref"]
+    assert report_ref == {"result_path": ["report"]}
+    for field in ("blockers", "warnings", "source_boundaries", "coverage", "numeric_conditions"):
+        assert restored["report"][field] == legacy_result["report"][field]
+    report_page = await tool(server, "get_decision_receipt")(
+        receipt_id=receipt.receipt_id, result_path=report_ref["result_path"], limit=100,
+    )
+    restored["report"] = {entry["key"]: entry["value"] for entry in report_page["result_page"]["items"]}
+    assert restored == compact_legacy_result
     assert replay["report_markdown_available"] is had_markdown
     assert "source_contracts" not in replay["result"]
-    full_receipt = tool(server, "get_decision_receipt")(
+    full_receipt = await tool(server, "get_decision_receipt")(
         receipt_id=receipt.receipt_id
     )
     assert full_receipt["result"] == legacy_result
     with pytest.raises(ValueError, match="does not exist"):
-        tool(server, "get_decision_receipt")(
+        await tool(server, "get_decision_receipt")(
             receipt_id=receipt.receipt_id,
             result_path=["source_contracts"],
         )

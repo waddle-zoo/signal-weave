@@ -1,0 +1,67 @@
+{
+  "protocol": "harbor-workflow-owner-briefs-v1",
+  "status": "fictional_context_for_future_controlled_interaction",
+  "scope": "Fictional prior-policy proposals for two Harbor support workflows in future controlled onboarding. They are not real owner statements, completed onboarding, card approval, expected fixture results, or adjudicated business controls. No trial admission is implied.",
+  "workflows": [
+    {
+      "name": "weekly support brief",
+      "opening_business_request": "Can you give me a short weekly read on whether we are meeting support commitments, and where the operations lead should look?",
+      "known_owner_intent": "Make the brief useful to Support Operations even when part of the picture is missing. A known clock breach can merit operational review, but does not by itself show customer harm.",
+      "source_expert_facts": [
+        "Tickets are grouped by UTC creation week and each support tier has separate elapsed-hour first-response and resolution clocks; a miss means the clock was exceeded.",
+        "The resolution miss rate is for priority tickets that have resolved. The first-response view includes tickets with a known response, including open and nonpriority tickets. Neither is all-ticket attainment; keep open backlog separate and pool counts before calculating a rate.",
+        "The source snapshot is the event history known by its cutoff. Creation manifests reconcile created-ticket counts only; they do not prove response or resolution events are complete."
+      ],
+      "source_expert_unknowns": [
+        "There are no assignees, customer descriptions, incident records, or causal evidence, so the source cannot identify who owns a miss, establish harm, or explain why it happened.",
+        "History starts January 5 and has no earlier opening backlog. A missing manifest means expected volume is unknown, not zero; even a present manifest does not establish event completeness.",
+        "Adjacent creation weeks have different observation ages. Their resolved-ticket rates are descriptive, not an age-matched performance trend."
+      ],
+      "intended_audiences": [
+        "Support Operations lead",
+        "Weekly Support Operations huddle"
+      ],
+      "permitted_actions": [
+        "Draft a concise, cutoff-dated brief for the Support Operations lead and weekly huddle, keeping response, resolution, and backlog distinct.",
+        "Include a manual-review recommendation from qualifying known records even when another segment is unknown; disclose affected coverage and avoid a population-wide claim or all-clear. Do not send, notify, or schedule the draft."
+      ],
+      "resolved_policy_variant": {
+        "variant": "completed-resolution-review",
+        "owner_choice": "For this version only, use the latest fully ended UTC creation week: the Monday-to-Monday week whose exclusive end is no later than the source cutoff. Include every tier and region declared in that snapshot, pool their counts for the overall rate, and retain subgroup counts. Use only priority=1 tickets with a visible resolution by the cutoff; this is a descriptive completed-ticket rate on records known at that time, not complete resolution history or all-ticket attainment. A week being fully ended means its calendar period ended, not that its events are complete. Do not compare it with another cohort as a regression, or make a causal claim.",
+        "prior_review_threshold": "If the pooled observed rate is 20% or higher and its denominator is nonzero, put a manual-review recommendation in the draft for Support Operations. A missing manifest is caveated for its affected tier/region but does not veto review of known records; describe the metric as based on known records and do not claim population-wide completeness. If there are no eligible visible resolved tickets, state that the denominator is zero and the rate is undefined; do not treat it as zero misses, evaluate the threshold, or call the queue/service clear. Show independently known open backlog separately.",
+        "threshold_basis": "A round, low-cost manual-review boundary proposed before controlled onboarding; it is not calibrated to fixture or treatment outcomes."
+      },
+      "unresolved_ambiguity": "If the request is all-ticket commitment attainment, the owner has not chosen first response or resolution, or said how still-open tickets should count. Ask for that variant's definition; meanwhile the resolved-ticket view and known backlog can still be reported separately."
+    },
+    {
+      "name": "priority queue handoff",
+      "opening_business_request": "What open priority work needs attention today? Please prepare a handoff the queue lead can review.",
+      "known_owner_intent": "Known work past its clock may be surfaced as a proposed operational review item. That is a prioritization choice, not independent evidence of customer harm, and it does not authorize assigning work to an unknown person.",
+      "source_expert_facts": [
+        "Ticket records include priority, open/resolved state, and known response and resolution times, so an analyst can distinguish open priority work past either clock.",
+        "Ticket identifiers and known event times can support a review list, but the source has no assignee, customer description, incident record, or causal evidence.",
+        "Creation manifests reconcile created-ticket counts, not response or resolution event completeness."
+      ],
+      "source_expert_unknowns": [
+        "History starts January 5, so any open work from before that date is absent. A missing manifest is unknown coverage, and a present creation manifest cannot certify complete event history.",
+        "The source cannot name an assignee, establish customer harm, or explain the cause of a clock breach."
+      ],
+      "intended_audiences": [
+        "Support queue lead",
+        "Duty manager"
+      ],
+      "permitted_actions": [
+        "Draft a same-day internal handoff addressed to the Support queue lead, with the duty manager as secondary reviewer, identifying the ticket and the clock it crossed; do not send or notify, assign work, or contact a customer.",
+        "Review qualifying known records even when optional coverage is missing. State that an unknown or incomplete partition cannot establish a clear queue, and do not suppress the known items."
+      ],
+      "resolved_policy_variant": {
+        "variant": "unanswered-priority-handoff",
+        "owner_choice": "For this version only, include source-as-known tickets with priority=1 that are open at the cutoff, have no visible first-response event by that cutoff, and have strictly exceeded their tier's first-response clock. This is an unanswered-first-response rule on known records, not a complete list of all actual work. A priority ticket with a visible response is outside this trigger even if it remains open past its resolution clock; keep that resolution work distinct and do not count it as an unanswered trigger.",
+        "prior_review_threshold": "One or more qualifying known tickets is enough for a same-day manual-review draft to the Support queue lead, with the duty manager as secondary reviewer. No qualifying known ticket means no trigger under this variant, not an all-clear about the full queue.",
+        "handoff_deduplication": "When a prior handoff list is available, include newly qualifying ticket IDs and items that newly crossed the rule; summarize continuing items as carryover instead of repeating the full backlog. If no prior handoff list is available, provide the current qualifying known-record list and say that newness or prior review cannot be established.",
+        "threshold_basis": "Any known breached item merits a low-cost human review; this one-ticket threshold is fixed before controlled onboarding and is not adjusted to case or treatment results."
+      },
+      "unresolved_ambiguity": "A separate resolution-focused handoff has not been defined: ask whether and how to review priority tickets with a visible response that remain open past the resolution clock. Until then, keep them distinct from this unanswered-only trigger; their presence does not alter its threshold or scope."
+    }
+  ]
+}

@@ -1,50 +1,296 @@
 ---
 name: signalweave
-description: Help agents onboard business-intelligence questions into reviewed SignalWeave cards and interpret recurring, source-backed evaluations through the default agent MCP profile.
+description: Answer BI questions with connected tools, preserve agreed monitoring intent in SignalWeave cards, and turn recurring evidence and policy decisions into useful investigations, alerts, and reports.
 ---
 
 # SignalWeave
 
-Use this skill for BI question setup, recurring monitoring cards, and interpreting a SignalWeave card run. The active MCP tool schemas are authoritative: use only tools exposed by the connected profile. The default agent workflow works over local stdio and Streamable HTTP; transport does not grant additional identity, source access, or side-effect authority.
+Help the user understand their business now, then repeat the useful work without
+making them explain it again. SignalWeave keeps the card, source evidence and
+typed policy decision. You own discovery, SQL and calculations, investigation,
+charts and the message people read. Jev or another configured provider judges
+the saved policy; it is not the analyst. Keep the user's other authorized BI,
+company-context and clarification tools available.
 
-## Start from the owner's question
+## Give a useful first answer
 
-For setup, begin with `get_signalweave_guide(task="start")` and `list_insight_cards`; reuse a card that already covers the question. For an existing approved card, use `get_signalweave_guide(task="monitor")` and inspect the card rather than repeating onboarding.
+For setup, read `get_signalweave_guide(task="start")` unless already supplied.
+For SignalWeave calls, use only its connected profile's exposed tools. Discover a few plausible assets
+with `search_catalog`, inspect their meaning and data with `inspect_resource`,
+and use company tools for missing breakdowns or context. Prefer a suitable saved
+aggregate over paging raw detail just to reconstruct it. A title match is not
+proof of the right population, grain or period; try suitable alternatives when
+the first source cannot answer the question.
 
-For a new question, use `search_catalog` to find a small candidate set, then `inspect_resource` only on plausible exact resources. Inspection may read data or incur query cost. Keep source reads within the user's authorized scope and any stated time or cost limits. Keep available company-source tools: use them for authorized deeper investigation and corroborating evidence, but do not treat those reads as automatically added to a recurring card.
+Return supported findings before asking the user to complete a monitoring setup.
+A card is not a prerequisite for an ordinary analysis. Check the source's units,
+measurement window, coverage and comparison basis; distinguish observations,
+contributions and causal hypotheses. Unknown coverage is not complete coverage,
+but uncertainty in one source need not erase a supported finding from another.
+Do not substitute the latest two buckets for the requested period.
 
-Treat search matches and titles as candidate recall, not source selection: compare each candidate's meaning, population/grain, time behavior, and declared comparison/coverage capabilities with the owner's question. If a promising source fails a required contract or window check, inspect semantically suitable alternatives before concluding none can support the workflow.
+Act as the data expert: use available definitions and context before asking the
+owner. Resolve technical field meanings and populations from source-owned metric
+or view definitions, or the data expert; ask the business owner about intended
+policy. Missing documentation is not proof that a mapping is false. Ask only
+about ambiguity that could change the answer, action or audience. Do not make
+them supply dashboard IDs, API fields or an exhaustive questionnaire. Never
+invent their threshold, business definition or notification policy.
 
-Copy catalog identities exactly: `selected_sources[].ref` uses `adapter|resource`, while `inspect_resource` takes `adapter` and `resource` separately. Pass only source-declared parameters. A reporting cutoff in the evidence is not permission to invent an `as_of` query parameter or rewrite the source's time window.
+## Save what should repeat
 
-Understand enough business context to interpret the evidence and routing: relevant definitions, population and grain, units, comparison basis and period, current coverage/freshness, action and quiet rules, and intended destinations. Reuse source-declared definitions and contracts. Ask the owner only about missing or conflicting details that could materially change the conclusion or route; do not impose an exhaustive questionnaire. Treat dates in examples as illustrative and use relative recurring periods unless the owner explicitly requests a fixed window. Never invent thresholds, recipients, definitions, or source references.
+If saved charts cannot execute the agreed aggregation, retain the working SQL
+as a reviewed query source when the installed CLI exposes
+`signalweave queries`. Read its JSON schema, write the artifact yourself and
+explain its source, date semantics and scope for operator/authorized-expert
+consent. Use the existing connection; do not make the user build a Python reader
+or enter credentials again. Put calculations and useful coverage checks in SQL,
+not in Jev. Preserve unrounded quantities needed by decision thresholds; round
+only the human presentation. Describe data/definition caveats as meaning and
+facts, not connection-health or authorization assertions. Import is not execution proof: reconnect, inspect the actual new
+query source, compare it with your working analysis, then review the card.
+If the installed version lacks this path, explain the limitation instead of
+inventing a tool or silently changing the requested aggregation.
 
-Keep source-owned quality checks distinct from business action policy. Do not duplicate or invent low-level gates, or turn an operator field into a new routing rule, unless its consequence is defined by the source contract or owner; if that consequence is material but unclear, ask a focused question rather than guessing.
+This `queries` import path is for configured Superset/Preset connections, not a
+raw MCP connection. Raw MCP sources expose only the resources already bound in
+their reviewed manifest. If none represents the needed measure, give the useful
+current answer and hand off the source-registration step to the operator; do not
+suggest `queries import --source mcp`. The existing replacement-manifest command is:
 
-Give a useful current readout from inspected evidence when possible. Keep each claim tied to its source, scope, units, and period; include available source links or references. Check numerical statements against the evidence and code-computed quality gates. The configured decision provider (often Jev) supplies a narrow typed judgment against the saved policy; it is not the calculator, source-discovery agent, or causal analyst. You own numerical validation of the explanation, further diagnosis, and separation of observed facts from hypotheses. A contribution or correlation is not causation.
+```sh
+signalweave connections update --source mcp --manifest /private/path/reviewed-sources.json
+```
 
-Preserve scalar comparison contracts and their coverage/comparability metadata. A known scalar comparison key can be an owner-required quality binding even when no `AnalyticalComparison` or numeric condition exists. Bind only exact keys declared by the inspected/catalog contract; a window name is not a comparison key. Do not discard metadata or infer that a populated value means complete coverage. Partial, unknown, incomparable, stale, or mismatched evidence is not an all-clear. An optional corroborating source stays optional unless the owner makes it a global prerequisite.
+This switches the configured manifest path; it does not edit or merge manifest
+files, so include resources that should remain. It validates the manifest's tenant/schema without running the
+source tools. After the operator reconnects the agent, discover and inspect the
+registered resource before using it in a card.
+For a reader such as `export_query` that accepts identity arguments, keep
+`arguments.resource` equal to `descriptor.resource`, and `arguments.source_key`
+equal to the binding's `source_key`. The reader must return those same identities.
+Put underlying asset IDs in lineage or provenance, not in the `resource` argument.
 
-When the owner gives a numeric threshold and inspection exposes an applicable valid `AnalyticalComparison`, bind it with `numeric_conditions` on the card: `source_key` is the exact card-local selected-source key, `comparison_key` the exact analytical key (not the window identifier). Use `change_pct` with unit `percent` for relative percent, or signed `delta` with the comparison's source unit for directional change; keep `absolute=false` unless the owner explicitly wants magnitude in either direction. These checks are optional: without an applicable comparison, leave them empty and preserve the complete business rule in `decision_guidance`. Do not demand decomposable contracts for every chart or invent joins or derived comparisons.
+Keep policy inputs at the decision's grain: compact quantities, relevant
+exceptions and claim-specific checks with provenance. Fetch record-level detail
+separately for investigation and the human handoff unless those individual
+records are themselves necessary for the policy. Do not turn every diagnostic
+row into a required recurring input.
 
-## Draft, review, and approval
+When the user wants recurrence, check `list_insight_cards` for an existing fit.
+Preserve the agreed question, why it matters, exact sources, comparison period,
+meaningful-change rules, exceptions, quiet behavior and intended recipients.
+Keep required evidence distinct from optional diagnostic context. Routine reports
+and exception-only alerts are different requests.
+Record intended outcome routes in `delivery_methods` even for a delivery-disabled
+review: without a notify route, the provider cannot choose `notify`. Routes are
+policy metadata, not permission to send; the caller still owns actual delivery.
 
-Use `onboard_insight_card` to save the owner's intent and exact selected source references as a draft. Preserve the owner's ordered rules, exceptions, fallback and quiet behavior in `decision_guidance`; keep outcome-to-destination mappings faithful. `watch_for` and `questions` are optional analysis prompts, not a place to duplicate action rules or manufacture requirements. The tool saves a draft; it does not approve it or enable delivery.
+Identify which missing facts could change each action. A supported individual
+finding need not establish a complete population; zero findings, rates and
+rankings may need different coverage. Absence of a visible event is an as-of
+observation, not proof that it never occurred. Preserve checks that could
+invalidate the finding without adding an unrelated completeness prerequisite.
 
-Keep the recurring business questions answerable from current evidence. Unresolved owner-only definition or policy choices belong in the onboarding conversation, not the card's recurring `questions`. Preserve confirmed answers in the reusable context; keep unresolved choices visible as follow-up without inventing an answer or withholding supported findings. Tool-supplied comparison windows and confidence defaults are not owner-confirmed business policy.
+Use `onboard_insight_card` to save a draft. Put ordered policy and exceptions in
+`decision_guidance`; `watch_for` and `questions` are optional analytical prompts,
+not mandatory forms. Make the applicable outcomes explicit: what earns attention,
+what stays quiet, and which missing facts change the decision. Derive these from
+the owner's intent; ask only when an unresolved branch could change the action.
+Use source-backed quantities, using existing aggregates or caller calculations
+rather than asking the policy provider to redo arithmetic. Keep the measurement's
+population, period, units and material limitations with it. Resolve owner-only
+choices in conversation rather than
+making every recurring run ask them again. Use relative periods for recurrence
+unless a fixed period was requested. For a point-in-time policy with no period
+comparison, explicitly set `comparison_windows=[]`; do not invent a baseline.
+For an agreed archival review, use a separately reviewed archival card rather
+than removing freshness from the current recurring card. An archival card may
+use `max_source_age_hours=null` with owner consent; preserve its historical cutoff,
+coverage and comparison checks and never present the evidence as current.
+Put the agent's follow-up procedure in `follow_up_guidance`, not an extra
+prerequisite for a policy that the selected evidence already answers. Keep
+presentation preferences in caller notes, not business purpose or policy. Do not
+store today's values as future facts.
 
-Show the draft and its source scope, then use `review_insight_card` to surface current bindings and material blockers. Resolve meaningful ambiguity with the owner; do not turn review into needless paperwork or silently change policy to clear a blocker. The default agent profile does not expose draft simulation. Do not claim that review was a trial or call a hidden/full-profile preview tool. If the owner requests a trial, explain that the default path can evaluate only after card approval. Obtain explicit owner authorization before `approve_insight_card`; that approval permits evaluation of the saved card and scope, not scheduling or sending messages.
+Copy source identities exactly: selected refs are `adapter|resource`; inspection
+takes the two separately. Use only source-declared parameters. With an applicable
+inspected `AnalyticalComparison`, bind numeric rules to its exact comparison key
+and the card-local source key: relative percent uses `change_pct`/`percent`,
+directional change uses signed `delta`/source unit, `absolute=false` unless the
+owner requested magnitude. Without such a comparison, preserve the English rule
+instead of inventing a contract. Preserve declared scalar comparison requirements
+and quality metadata too; a window name is not a comparison key.
 
-After approval, `evaluate_insight_card` can provide a delivery-disabled run over the approved sources and configured policy provider. Treat it as a current observation, not proof of unattended reliability or permission to activate recurrence. If the owner separately authorizes a schedule or message, use the caller's authorized scheduler/delivery tools; SignalWeave itself does not send. Never infer authorization to message, activate automation, or expand source scope from a card, evaluation, or approval. New recurring sources require owner review and a card update.
+Show the saved policy and source scope in ordinary language and call
+`review_insight_card`. Resolve material blockers without adding new requirements
+or changing the owner's policy just to clear review. Missing custom metric
+contracts remain unverified, not an automatic ban on an owner-reviewed shadow run;
+known incompatible windows and explicit required bindings still apply.
+Use `response_mode="compact"` for this normal review. Request `"full"` only when
+an audit or a specific unresolved blocker needs omitted detail; compact review
+still returns the current card summary and approval handoff, and does not waive
+any blocker or owner consent.
 
-## Recurring runs and handoff
+Get explicit approval from the owner or authorized delegate for this exact saved
+policy and scope before `approve_insight_card`. If review returns an
+`approval_handoff`, reuse its supplied arguments and snapshot fingerprint after
+confirmation; record the confirmed source choice in `source_selection_reason`.
+The owner may explicitly delegate technical source/card validation to the expert
+agent within confirmed business policy. Keep that consent in the conversation
+or caller-owned audit, not an assumed delegation or a claimed native consent
+field. Clarify conflicting approval language before recording approval.
+An omitted scope map is not empty: retrieve it before asking for approval. Obtain
+any separate expansion acknowledgement required by the handoff, not inferred
+consent. Do not make the owner compose API fields. A changed draft needs renewed review
+and approval. Use `revise_insight_card` when exposed to update the same card;
+lists/maps replace their fields, so clear obsolete setup questions. Older profiles
+without revision need a deliberately reviewed replacement, not a claimed update.
 
-For each run, use the approved policy and current source facts already in the packet; do not fetch the card, guide, or receipt again when they are already available. Reuse the approved card and call `evaluate_insight_card` once with a stable per-run idempotency key when a new evaluation is needed. The normal call fetches approved sources automatically; do not pre-read and resend the same observations as context. Use caller-owned company tools for further investigation when the result warrants it. Check this run's source coverage, comparability, and measurement dates before interpreting movement. For relative windows, use the current run's dates and cutoff; honor an owner-requested fixed period.
+The normal profile cannot simulate drafts. After approval, run one
+delivery-disabled `evaluate_insight_card` and show the actual proposed human
+message. Ask whether it answers the question and fits its reader—not merely
+whether the decision label looks right. Card approval permits evaluation, not
+scheduling or sending. Agree separately on the caller's schedule and delivery
+tools, and test the requested workflow before activating it. Do not claim a
+single successful check proves unattended reliability.
 
-Keep reusable memory to owner policy, metric definitions, approved source identities, and routing. Treat onboarding readouts as dated historical examples: their values, coverage, source health, and initial cutoff do not establish current or future conditions. Approval of a source's scope is not approval of its current measurements or of a comparison between them.
+Before proposing unattended recurrence, challenge the saved rule with contrasting
+owner-relevant situations: a qualifying issue, a quiet period, and a material
+data gap; include a boundary or exception when it could change the action. You
+prepare the examples and check the resulting evidence and handoff, not just the
+outcome label. Use actual replay capabilities when exposed; the normal profile
+cannot replay hypothetical snapshots. Never overwrite a live source with a test
+case, invent captured evidence, or claim a policy test ran from a thought
+experiment. When a check cannot be executed, say what remains untested and keep
+that part in shadow review. This does not prevent a useful current analysis.
+Give the owner a short handoff: what will repeat, what was actually checked,
+what still needs attention, and whether anything is scheduled or sent. Do not
+turn the examples into a new questionnaire or imply approval from a passing test.
 
-For every run, use the source's current measurement bounds, cutoff, coverage, and comparability. If bounds or comparability are missing, treat them as unknown; do not infer them from notes, run `as_of`, `created_at`, or row order. Raw arithmetic may be reported as such, but do not call it like-for-like, mix-only, or within-group movement without comparable periods and populations.
+## Repeat the check, not the onboarding
 
-If `result.judgment.status` is `deferred`, SignalWeave made no policy decision; this is not `insufficient_data`, `ignore`, or a business outcome. The approved source evidence was fetched, but the local judgment payload exceeded its bound. If present, read `result.observation_facts` first: it indexes every normalized observation and links each row to its untouched receipt value. This row completeness does not establish complete source coverage or a comparable period. Use `evidence_access.source_directory` for exact source IDs and paths to metadata, analytical comparisons, contracts, and other details; page only the unknown or relevant details, not duplicate observation/evidence wrappers by default. For an index listed in `attributes_present_indices`, append `attributes_path_suffix` to its `full_ref` to read untouched attributes. Missing values and unsupported measurement dates stay unknown. Reuse the receipt; do not rerun the same key or treat omitted pages as empty evidence.
+For an approved card backed by saved BI or configured query sources, use the
+monitor guide only if needed. Call
+`evaluate_insight_card` once with a new stable idempotency key for each distinct
+run. Reusing a key replays history, not fresh evidence. Evaluation fetches its
+approved sources and returns active guidance: do not pre-read everything, resend
+the same facts, fetch the full card or publish an LLM report merely to start it.
 
-Read the decision and current evidence together. Do not carry a prior typed result forward when new evidence contradicts it. `ignore` means no notification; suppress noise. For missing or insufficient evidence, state what is unavailable, why it matters, and the smallest useful next request—never imply reassurance or no change. Report supported facts even when an alert rule still needs owner clarification. Keep the final message concise and human-readable, with source citations/references near the claims and uncertainty beside the headline. If a compact response lists omitted evidence, use `get_decision_receipt` to read only the relevant pages before concluding; omitted content is not empty evidence. Reuse the receipt rather than rerunning a completed evaluation.
+If the card instead reads a delegated analyst publication, refresh that evidence
+through the caller's authorized workflow before evaluation. SignalWeave reads
+the published file; it does not run the analysis that produces it. Reuse the
+actual retained queries/calculations and requested period, retain source results,
+then atomically replace the configured publication with compact findings and
+lineage. Keep that working procedure and destination in caller notes; do not
+make the owner manage files or reconstruct the analysis. Preserve input capture
+times; republishing old measurements is not a new business observation. If the
+connection or writer access is missing, give the supported answer and identify
+that operator setup step rather than claiming recurrence is ready. This path is
+optional: do not introduce a publication for a suitable saved source.
+
+Use the returned evidence first. `analyses[].comparison` can hold totals and
+windows; `source_contracts` holds source dates and quality. Watch/question
+judgments are not the measurement inventory: `unknown` does not mean counts
+are absent. Follow inline `evidence_ref`/`evidence_plan_ref` paths when present;
+page omitted details through `get_decision_receipt` before requerying. Omission
+is not missing data. Read source measurements, not only the receipt ID, to
+support numerical claims.
+
+Read policy and evidence together. For attention-worthy results, investigate
+with authorized company tools and produce the smallest useful next action.
+Card scope bounds SignalWeave's automatic retrieval and policy inputs, not the
+calling agent's existing company-tool permissions. An aggregate can support the
+card's decision while you query authorized ticket, account or transaction detail
+for its human handoff. That does not require registering every follow-up query
+as a card source. Request a card update only when SignalWeave itself must fetch
+those sources or use their facts in future policy decisions; do not claim the
+provider judged facts it never received. Ordinary tool access, query-cost and
+delivery permissions still apply.
+Check current dates, coverage and comparability every run; raw arithmetic alone
+does not establish like-for-like movement or causation. Setup warnings and past
+readouts are history, not today's source health.
+
+`ignore` suppresses a policy-triggered alert, not a separately requested routine
+brief. Missing evidence is not an all-clear. If judgment is `deferred`, no policy
+decision occurred: report supported facts and the focused follow-up, not an
+invented outcome. For a large deferred packet, start with `observation_facts`
+and `evidence_access.source_directory`; page relevant original values/attributes
+rather than duplicate wrappers. Check `policy_action_available`, current card
+state and context dependencies before acting on a receipt's historical route.
+
+## Write for the person, not the receipt
+
+Lead with what matters, its business significance and the next step. Include
+the few numbers and source links needed to check it; put uncertainty beside
+the claim it affects. A familiar audience need not reread its glossary. Keep
+tool names, confidence-fallback mechanics, configuration and audit detail in
+operator notes unless they change the finding or permitted action. Never hide
+a route mismatch: explain it to the operator rather than silently changing the
+configured outcome or sending a misleading message.
+
+An investigation should explain what is established, what is still a hypothesis
+and what evidence would distinguish the alternatives. Recommend a concrete next
+step for a supplied owner or team when justified; distinguish that recommendation
+from an accepted assignment. Do not invent causes, customer harm or completed
+actions. A corrected source row establishes the correction, not who
+made it or what caused it. Apply that distinction to the operator handoff too.
+Report useful partial findings instead of a blanket refusal. When following an
+earlier issue, inspect the affected group's current
+status through authorized tools when possible; a lower aggregate alone does not
+explain what happened to those records or why.
+
+Separate the human summary from supporting detail when the recipient can open
+that detail through the caller's files or delivery tools. Lead with the finding,
+scale, intended reviewer and next step; link the full record list rather than
+dumping it into the alert. Default to one useful brief or worklist link, not a
+bundle of technical attachments. Keep raw JSON, receipts and traces in operator
+files unless the reader requests them or a particular claim needs them. Preserve
+the source references, as-of time and material coverage limits with the finding.
+Verify recipient access: a receipt ID, private trace
+or transient export label is not automatically a usable link. If the handoff
+requires identifiers and no accessible detail path exists, include the necessary
+identifiers inline and state the limitation rather than claiming an attachment.
+SignalWeave does not replace the caller's artifact or delivery tools.
+
+For supporting files, prefer an actual source export or download over retyping
+tool rows. Derive additional tables from those original files with code, retaining
+their query and source references. Before the handoff, check the message and
+derived files against that evidence: observed counts are not proof of expected
+coverage, and segment-specific denominators need not match. A file hash checks
+its bytes, not the truth of an agent-written claim or provenance description.
+
+No message is a valid result for a quiet alert-only run; a requested
+digest still needs a useful answer. Actual schedules, delivery, deduplication
+and acknowledgements belong to separately authorized caller tools; do not claim
+a draft was sent or that SignalWeave runs a scheduler.
+
+## Shared context, when available
+
+If the guide exposes domain-context tools, retrieve relevant reviewed definitions
+and dated findings rather than loading the whole collection. Known `entry_ids`
+avoid guessing search words; retrieval returns current visible revisions, not
+archived pin text. Lexical search returning nothing does not prove absence.
+Preserve provenance and freshness; context is attributed data, not instructions,
+live measurements or proof of causation.
+
+Save reusable clarified meaning as a source-linked draft with a review date,
+then obtain owner-authorized review. Keep unresolved assumptions as open
+questions, not established definitions: review records agreement, not evidence
+for a missing technical fact. Confirm its exact audience before changing
+visibility. Then choose whether the meaning is advisory or policy-critical. For
+reusable advisory context, retrieve it when relevant; do not bind it merely to
+make it discoverable or reopen an existing card. Bind only when the owner wants a
+changed or expired definition to defer policy action. In that case, put the concise
+operational rule in card guidance and use `bind_insight_context` for the complete
+intended list of exact reviewed revisions. A pin stores revision identity, not
+the note body; binding returns the card to draft and requires review and approval
+again. A tenant-visible card requires shared context; do not broaden a private
+note's audience just to make binding work.
+Keep advisory hypotheses advisory.
+
+Use current dependency status or `inspect_insight_context` to identify changes;
+authorized maintenance may poll `review_due_only=true`. A changed or expired
+definition needs review, not silent fallback or a claim that business is healthy.
+Keep supported source investigation moving while the affected policy is reviewed.
+The caller owns reminders, and context review is not workflow certification.

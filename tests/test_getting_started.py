@@ -24,9 +24,9 @@ def test_agent_guide_distinguishes_bucket_arithmetic_from_comparable_changes(tas
 def test_recurring_agent_guide_uses_existing_card_bundle_without_repeating_onboarding(provider):
     guide = agent_getting_started("monitor", decision_provider=provider)
     assert [step["tool"] for step in guide["steps"]] == [
-        "get_insight_card", "evaluate_insight_card", "get_decision_receipt",
+        "evaluate_insight_card", "get_insight_card", "get_decision_receipt",
     ]
-    assert "Start here" in guide["steps"][1]["purpose"]
+    assert "Start here" in guide["steps"][0]["purpose"]
     assert "when needed" in guide["repeat"]
     assert "onboarding examples are not permanent date restrictions" in guide["repeat"]
     assert "explicit owner-requested fixed window" in guide["repeat"]
@@ -49,6 +49,62 @@ def test_first_use_guide_still_exposes_discovery_and_owner_approval():
     steps = {step["tool"] for step in agent_getting_started("start")["steps"]}
     assert {"search_catalog", "inspect_resource", "onboard_insight_card",
             "review_insight_card", "approve_insight_card"} <= steps
+
+
+@pytest.mark.parametrize("task", ["start", "monitor"])
+@pytest.mark.parametrize("provider", ["jev-latest", "openai-decisions", "chatgpt-plan-responses"])
+def test_agent_guidance_distinguishes_replay_routes_and_bounded_delegation(task, provider):
+    guide = agent_getting_started(task, decision_provider=provider)
+    limits = " ".join(guide["limits"])
+    assert "Without a notify route" in limits
+    assert "does not authorize or send" in limits
+    assert "historical measurement cutoff" in limits
+    assert "separately reviewed archival card" in limits
+    assert "preserving the current recurring card's freshness limit" in limits
+    assert "does not make evidence current" in limits
+    assert "explicitly delegate" in limits and "clarify conflicting approval language" in limits
+    assert "does not grant new source access" in limits
+    assert "conversation or caller-owned audit" in limits
+    assert guide["inference_performed"] is False
+
+
+def test_onboarding_verifies_the_actual_repeating_source_without_a_new_tool_or_gate():
+    guide = agent_getting_started("start")
+    limits = " ".join(guide["limits"])
+    assert "exact proposed source parameters with inspect_resource" in limits
+    assert "unfiltered inspection does not verify a filtered recurring source" in limits
+    assert "actual analytical SQL and procedure in caller notes" in limits
+    assert "Structural review alone does not demonstrate" in limits
+
+
+@pytest.mark.parametrize("provider", ["jev-latest", "openai-decisions", "chatgpt-plan-responses"])
+def test_first_readout_distinguishes_initial_answer_from_approved_recurring_demonstration(provider):
+    guide = agent_getting_started("start", decision_provider=provider)
+    readout = guide["first_readout"]
+    assert "initial source-backed answer before recurring card setup or approval" in readout
+    assert "When the owner requests recurrence and explicitly approves the reviewed card" in readout
+    assert "first delivery-disabled evaluation as the recurring demonstration" in readout
+    assert "If the person wants recurrence" in guide["next"]
+    assert "Feedback is not new approval, scheduling or delivery permission" in readout
+    assert "useful example is not proof of unattended reliability" in readout
+    assert guide["inference_performed"] is False
+
+
+def test_monitor_guide_explains_existing_publication_source_without_granting_authority():
+    text = agent_getting_started("monitor")["analyst_publications"]
+    assert "already an owner-approved source" in text
+    assert "own authorized tools" in text and "grants no" in text
+    assert "does not verify" in text and "label hypotheses" in text
+    assert "not a trust relabel" in text
+
+
+def test_monitor_guide_does_not_evaluate_an_unrefreshed_analyst_publication():
+    guide = agent_getting_started("monitor")
+    assert "saved BI or configured query sources" in guide["steps"][0]["purpose"]
+    assert "refresh it through the authorized caller workflow first" in guide["steps"][0]["purpose"]
+    assert "first rerun the retained queries/calculations" in guide["repeat"]
+    assert "does not refresh its underlying analysis" in guide["repeat"]
+    assert "old measurements is not a new business observation" in guide["repeat"]
 
 
 @pytest.fixture

@@ -1,0 +1,26 @@
+{
+  "protocol": "frontier-publication-v1",
+  "execution_status": "closed",
+  "scope": "One formative end-to-end historical Northstar workflow: actual raw-source frontier analysis and publication, scripted source/card consent, one native Jev judgment, fresh frontier human-message author. Known development fixture, no paired baseline, comparative benefit, human usability, schedule or external send claim.",
+  "source_url": "http://127.0.0.1:18089",
+  "owner_reference": "evaluations/data/raw-northstar-onboarding-v1.json",
+  "owner_reference_sha256": "2aa2750d9a57d46fd47ad7abe1cee52a6d1ddc9ad88b90644bf8648e389ce8cf",
+  "scripted_owner_directory": "For this shadow trial only, Leadership=agent://leadership, Analytics=agent://analytics, Data Trust=agent://data-trust. These are local preview labels, not real delivery endpoints. Scripted consent approves these configured routes and the exact report source, not sending, scheduling or claim truth.",
+  "limits": {
+    "frontier_invocations": 2,
+    "model": "gpt-6-luna",
+    "effort": "xhigh",
+    "analyst_tools": 36,
+    "analyst_seconds": 360,
+    "writer_tools": 12,
+    "writer_seconds": 180,
+    "jev_attempts": 1,
+    "between_invocation_input_stop": 500000,
+    "between_invocation_uncached_stop": 100000,
+    "automatic_retries": 0
+  },
+  "admission": "Require scoped independent method review, normal software verification, matching current native source/binary and pinned Codex identity, successful zero-inference fresh-home/source/card preflight, fixed method/input fingerprints and exclusive one-shot closure before any frontier invocation. Unknown usage, incomplete actor, changed input or failed provider closes this attempt; no retries, repairs or unused-allowance transfer inside the live cohort. Token stops apply between invocations, not as hard within-invocation ceilings; CLI has no turn/output-token cap.",
+  "analysis_request": "Explain the apparent online-sales hit and its contribution to net sales. Establish current historical coverage from the source, report the approved calendar-month comparison, and separately investigate the latest month versus the prior month through the same observed day-of-month. Discover the actual saved assets; publish compact evidence and a useful next check, not an invented cause. Retain source scope, units and measurement windows. Do not schedule or send.",
+  "freshness": "Historical analysis only. Source queries use the production client's saved-context or saved-params reconstruction path with force=True, no actor-supplied SQL or dashboard-filter claim. The reconstruction mode and exact executed-context fingerprint are explicit, not mislabeled as a byte-identical stored query. Per-chart request bounds, definition/row fingerprints and provider cache metadata enter receipt-visible provenance evidence. Only when every provider envelope explicitly confirms is_cached:false is source_captured_at a conservative request-start lower bound; otherwise it stays null with an explicit unknown-capture reason. Report production time is not proof of upstream data freshness; no card freshness SLA is enabled. Revisions must preserve their input capture bounds, and publication does not validate claims.",
+  "acceptance": "Actual source reads and independently verified math; publication comes from the analyst rather than a prepared finding; exact source version/hash in native receipt; unchanged owner policy and approved source scope; configured route supported by that policy; final concise human message with source references, valid periods/units, uncertainty and useful next step. Transport success alone is not analytical or business success. Independent review required after closure."
+}

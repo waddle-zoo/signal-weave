@@ -21,6 +21,8 @@ from .hosted import (
     InMemoryCredentialVault,
     build_hosted_adapters,
 )
+from .knowledge import KnowledgeService
+from .knowledge_store import SQLiteKnowledgeStore
 from .models import PrincipalContext, ResourceDescriptor
 from .sources import SourceAdapter, SourceRegistry
 from .store import (
@@ -57,6 +59,7 @@ class Runtime:
     certification_reports: CertificationReportStore | None = None
     context_provider: ContextProvider | None = None
     principal: PrincipalContext | None = None
+    knowledge: KnowledgeService | None = None
 
 
 class AgentOwnedJudger:
@@ -490,6 +493,16 @@ def build_runtime(
         default_authorized_tenants = []
     else:
         default_authorized_tenants = None
+    for source, setting in (("superset", "SUPERSET_QUERY_SOURCES_FILE"), ("preset", "PRESET_QUERY_SOURCES_FILE")):
+        query_file = os.getenv(setting)
+        if query_file:
+            from .query_source import SupersetQueryAdapter, load_query_catalog
+
+            candidates = [adapter for adapter in configured_adapters if isinstance(adapter, SupersetAdapter)
+                          and adapter.provider_name == source]
+            if len(candidates) != 1:
+                raise RuntimeError(f"{setting} requires exactly one configured {source} connection")
+            configured_adapters.append(SupersetQueryAdapter(candidates[0], load_query_catalog(query_file)))
     registry = SourceRegistry(
         configured_adapters,
         authorized_tenants=default_authorized_tenants,
@@ -545,6 +558,11 @@ def build_runtime(
         )
     else:
         raise ValueError("SIGNALWEAVE_STORE_BACKEND must be sqlite or json")
+    knowledge = None
+    if _env_flag("SIGNALWEAVE_KNOWLEDGE_ENABLED"):
+        if store_backend != "sqlite":
+            raise ValueError("domain context requires SIGNALWEAVE_STORE_BACKEND=sqlite")
+        knowledge = KnowledgeService(SQLiteKnowledgeStore(store_path), registry)
     return Runtime(
         card_store=card_store,
         sources=registry,
@@ -559,6 +577,7 @@ def build_runtime(
         decision_feedback=decision_feedback,
         certification_reports=certification_reports,
         context_provider=context_provider,
+        knowledge=knowledge,
         principal=(
             PrincipalContext(principal_id=principal_id, tenant_id=tenant_id)
             if principal_id and tenant_id

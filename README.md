@@ -45,8 +45,9 @@ connect your BI sources, and register with Codex or Claude. Credentials stay in
 your private `~/.signalweave` directory. Then ask your agent:
 
 > Use SignalWeave to set up a daily online-sales check. Help me choose the
-> sources and alert criteria, and ask about missing context. Show me the card
-> for review; after I approve it, run one check without sending a message.
+> sources and first show me what changed and what needs attention. Then help me
+> save a reusable check: clarify only the missing business context, show the
+> card and proposed update for review, and don't send or schedule anything yet.
 
 [Local setup guide](docs/local-install.md) · [Server deployment](docs/server-deployment.md)
 
@@ -57,7 +58,8 @@ To remove the native executable, run `signalweave uninstall`; local data stays
 for a reinstall. See [uninstall instructions](docs/local-install.md#uninstall)
 to remove the agent connection or permanently purge local data.
 
-Install the bundled workflow skill in your project:
+Setup also offers the bundled workflow skill for your agent. If you skipped it,
+install a project-local copy:
 
 ```sh
 signalweave skills install --agent codex   # or: --agent claude
@@ -103,6 +105,10 @@ and `questions` focus the investigation; `decision_guidance` defines the policy;
 and `delivery_methods` names the destinations for each outcome.
 See an [example card](examples/insight-card.json) and the
 [onboarding walkthrough](docs/local-investigations.md#set-up-a-card).
+
+For definitions shared across cards, use optional
+[domain context](docs/domain-context.md): source-linked notes with review dates
+and revision history, available to your connected agents.
 
 ## Evidence + decisions + your agent
 

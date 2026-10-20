@@ -11,6 +11,25 @@ The example is intentionally outside `src/signalweave`. SignalWeave remains the
 decision boundary. The agent does not choose the final outcome, invent Slack
 destinations, generate SQL, or treat an LLM explanation as evidence.
 
+This bounded example is not a general frontier analyst. Its MCP context is always
+unverified: a fixture collector's trust label does not authorize a later
+`notify`/`escalate`. A deployed policy follow-up needs updated approved source
+evidence or a trusted runtime context provider. A full Codex/Claude agent can
+also perform and report independent authorized analysis without waiting for
+that policy repair. A mapped `insufficient_data` delivery is only the configured
+data-gap notice; it is not a completed business investigation.
+
+The machine gateway requests a full response. If an alternative gateway supplies
+compact output, the example resolves an inline canonical evidence plan through
+its advertised reference; missing or malformed plans stop the loop rather than
+becoming empty evidence. It does not implement receipt paging.
+
+For `insufficient_data`, its mechanical delivery formatter emits a restricted
+data-gap notice with card/source IDs and required pending checks. It does not
+copy unverified assertions, their evidence duplicates, movements or causal
+claims into that notice. The complete result remains available to the caller's
+analyst; other outcomes visibly label any unverified context.
+
 ## What is included
 
 - `agent.py` — the bounded loop and typed extension points;

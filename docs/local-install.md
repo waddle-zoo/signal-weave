@@ -68,6 +68,19 @@ Use `--decision-provider` for a scripted choice. For example,
 `signalweave setup --decision-provider chatgpt-plan --source preset` saves local
 setup, then opens browser consent.
 
+To switch an existing installation to OpenAI Decisions, run:
+
+```sh
+signalweave setup --update --decision-provider openai-decisions
+signalweave health
+```
+
+Enter the API key at the hidden prompt; no Jev key or TOML editing is needed.
+`signalweave credentials set openai` rotates that credential later. Reconnect
+your agent after changing provider. Card discovery, review and recurring runs
+use the same workflow; your agent still writes the useful report or alert.
+See the [live integration checks](evidence/openai-decisions-live-2026-10-19.md).
+
 The normal `agent` profile exposes the card-and-agent workflow;
 `signalweave setup --profile full` adds advanced metric-query, evaluation,
 certification, and webhook tools.

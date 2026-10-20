@@ -1,0 +1,22 @@
+{
+  "source_seed": 90219,
+  "files": {
+    "data_quality_checks.csv": "4da5377c08af0da4e77adba74c2506eb66eb0d0c340d8ff24b08ab8df687a879",
+    "dim_campaign.csv": "35e681d123abe5daf917b8a3c38a1f92bd489342405a3823422353c60dff9dd1",
+    "dim_customer.csv": "ee64061ae8dbcb1aabac7ed591053fa9ee88ae903711eedd56ceb317cd367383",
+    "dim_date.csv": "c772a6b609c6f363d79293319fd6f412c825d3bfe5f496d58ea3842c68721a51",
+    "dim_product.csv": "8beb82e0309425953f4a3d57a227121ae6d658a9608199a782ec7fa62d129ae9",
+    "dim_store.csv": "b33a1d67c83b370f1d5a3ad61232397f5812d9ef072a1c4d3af66ee57081a3a3",
+    "dim_supplier.csv": "c1f353212e34483b58506c252b305f1aa2af0de011211f4d42ffc3bc50e9cdf0",
+    "fct_delivery.csv": "1374921434f385fb29075de0e465eb16619e4b49ff11193b2be0ad63a827928c",
+    "fct_employee_shift.csv": "ea552611286678da8dfd998e813ba9fab8acc0acff38bd1764baec13ee58563b",
+    "fct_finance_daily.csv": "da827211d2d82453c0ceac2a0fd6faf2511be6228d55740ba5a57ebe5386e1a0",
+    "fct_inventory_snapshot.csv": "c0677bc97a14237cf6fd11790417ae349aede80159cdcbc16273b537559bf9f0",
+    "fct_marketing_daily.csv": "5c1362ed75bbfef68e9789cd962fa0de3dd1a95862b3fbf76f4d97e51fd079e0",
+    "fct_purchase_order_line.csv": "dad19ee8fe4cf93fbe4d59183607ae75a9c298420d0b9eda3526219b4bebf06d",
+    "fct_sales_order_line.csv": "b0c106baf577ad3d13172f64d7df4911b94333c70fcaeb27720809b20fc966a6",
+    "fct_support_ticket.csv": "5fdfcc4b2287f5ac55cf2432fd2a7fc464ef3fd6a9d7bcc3310a75646c4d7999",
+    "fct_web_session.csv": "1a7e4237a0f7c698f7b4233bdb933eec985b9817fe51862a1be2859b50977831"
+  },
+  "verification_note": "SHA-256 values were calculated from the original seeded inputs; CSV data is not packaged."
+}

@@ -1,0 +1,27 @@
+{
+  "enterprise": "Northstar Outfitters Co.",
+  "synthetic": true,
+  "seed": 90219,
+  "date_start": "2024-01-01",
+  "date_end": "2026-09-19",
+  "table_row_counts": {
+    "dim_date": 993,
+    "dim_store": 54,
+    "dim_product": 360,
+    "dim_customer": 25000,
+    "dim_supplier": 80,
+    "dim_campaign": 120,
+    "fct_sales_order_line": 284319,
+    "fct_inventory_snapshot": 50490,
+    "fct_purchase_order_line": 45000,
+    "fct_web_session": 220000,
+    "fct_marketing_daily": 480,
+    "fct_support_ticket": 30000,
+    "fct_delivery": 70000,
+    "fct_employee_shift": 100000,
+    "fct_finance_daily": 993,
+    "data_quality_checks": 994
+  },
+  "total_rows": 828883,
+  "generated_at": "deterministic-local-build"
+}

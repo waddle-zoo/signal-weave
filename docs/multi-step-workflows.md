@@ -1,7 +1,7 @@
 # Multi-step workflows
 
 SignalWeave does not become a workflow runner. It gives a caller-owned agent a
-small typed handoff after each Jev judgment so the agent knows what to do next
+small typed handoff after each configured policy judgment so the agent knows what to do next
 without turning the card into a hidden prompt or allowing an early notification.
 
 The human-authored card stays free-form:
@@ -20,14 +20,15 @@ Every `InsightResult` now has an additive `workflow` field:
 
 | Outcome | Handoff action | Meaning |
 | --- | --- | --- |
-| `ignore` | `suppress` | Record the result; no delivery is required. |
+| `ignore` | `suppress` | Suppress a triggered alert; a separately requested routine report can still include supported findings. |
 | `investigate` with guidance | `retrieve_evidence` | The agent may gather the named diagnostic context and submit it back for re-evaluation. |
 | `investigate` without guidance and a configured route | `deliver` | Preserve the existing single-step delivery behavior. |
 | `investigate` without guidance or a configured route | `request_review` | The system refuses to invent the next step. |
-| `insufficient_data` | `repair_source` | Fix or validate the source, then re-evaluate. |
+| `insufficient_data` with an eligible configured route | `deliver` | Prepare the configured missing-data notice, not a business regression alert. Repair is still unresolved. |
+| `insufficient_data` without an eligible configured route | `repair_source` | Repair before changing the policy conclusion; supported analysis may continue. |
 | `notify` / `escalate` | `deliver` | The caller may deliver to the card's configured destinations. |
 
-The handoff is derived from the final Jev outcome and safety gates. Jev does
+The handoff is derived from the final policy outcome and safety gates. Jev does
 not get to invent destinations, source keys, or arbitrary actions. The caller
 must still own source access, tool execution, Slack/email/ticketing side
 effects, and any remediation.
@@ -81,17 +82,41 @@ opaque “investigate” instruction.
 
 The intended sequence is:
 
-1. Call `evaluate_insight_card` with the approved card and current source data.
+1. Call `evaluate_insight_card` with the approved card ID and a stable run key.
+   SignalWeave fetches the approved sources; callers need not supply source data.
 2. Inspect `result.workflow`.
 3. If the action is `retrieve_evidence`, use the caller's authorized tools to
    inspect the sources named by `required_source_keys` and the free-form
    `instructions`.
-4. Create a versioned `ContextSnapshot` containing only the evidence the agent
-   is authorized to return, including provenance for each fact.
-5. Call `evaluate_insight_card` again with that context. Pass the first
-   receipt's `parent_receipt_id` and a stable `workflow_step_key` such as
-   `investigate` when using the MCP server.
-6. Deliver only when the new handoff action is `deliver`.
+4. Use the evidence to produce supported analysis and a focused next request.
+   Missing policy evidence does not require withholding all useful findings.
+5. For a new policy decision, re-evaluate after the approved sources or trusted
+   runtime context provider return the needed evidence. Pass the first receipt
+   ID as `parent_receipt_id`, a new evaluation key, and a stable
+   `workflow_step_key` such as `investigate`.
+6. Follow a `deliver` handoff only with separate caller authorization. A configured
+   missing-data route can deliver a data-gap notice while business analysis
+   remains unresolved; it does not authorize a leadership regression alert.
+
+Caller-submitted `ContextSnapshot` facts can accompany review, but the MCP
+endpoint always marks them **unverified**, regardless of a claimed trust value,
+source URL or slot tag. Such facts cannot promote a result to automatic
+`notify`/`escalate`. A version label is not source verification. For recurring
+policy evidence, bind the source through normal owner review and approval, or
+configure a trusted runtime context provider; do not relabel caller findings as
+trusted. The frontier agent can still investigate through its other authorized
+tools and explain those findings separately.
+
+`ContextProvider` is a Python runtime extension (`build_runtime(context_provider=...)`),
+not a stock native-CLI connection setting. The stock CLI can instead read an
+**explicitly approved analyst publication through the company MCP source bridge**.
+The caller's authorized analyst publishes a versioned evidence snapshot; the
+card reads that same approved report resource on its next evaluation. See the
+[publication gateway example](../examples/analysis_publication/README.md).
+That is a declared source delegation, not a `trust=true` switch: the publisher
+owns write authority, scope and the reliability of its claims. A reviewed
+knowledge note does not automatically become current measurement evidence.
+Source capture time must not be refreshed merely by republishing old findings.
 
 The caller should use `workflow.evidence_plan.missing_slot_keys` to decide
 which authorized tools to run. A fact can set `slot_key` to the corresponding
@@ -101,8 +126,10 @@ whether the combined evidence answers the question or establishes presence or
 absence. A trusted fact may truthfully describe missing or conflicting evidence.
 
 If the second result is still `retrieve_evidence`, the agent can continue the
-bounded loop. If it is `repair_source` or `request_review`, no leadership
-delivery is implied. A parent receipt mismatch is rejected before evaluation.
+bounded loop when it has a concrete new evidence request. Repeatedly resubmitting
+the same unverified context will not resolve the policy route. If it is
+`repair_source` or `request_review`, no leadership delivery is implied. A parent
+receipt mismatch is rejected before evaluation.
 
 ## Deferred judgment handoff
 
@@ -143,11 +170,13 @@ The first evaluation can return:
 }
 ```
 
-After the agent returns evidence that checkout failures rose after a payment
-deployment, the same card can return `notify` with a `deliver` handoff and the
+After evidence that checkout failures rose after a payment deployment is available
+from the card's approved sources—including a separately approved analyst feed—the
+same card can return `notify` with a `deliver` handoff and the
 configured leadership destination. If the returned evidence instead shows a
 finance posting lag or remains inconclusive, the result stays `investigate`;
-SignalWeave does not manufacture certainty.
+SignalWeave does not manufacture certainty. Raw caller context alone cannot
+make that transition, and correlation still does not establish a cause.
 
 ## Compatibility and boundaries
 
@@ -155,8 +184,8 @@ Evidence admission policy version **1** is a breaking change. Required semantic
 slots always gate automatic `notify` and `escalate`, whether or not the card has
 `follow_up_guidance`. That prose describes follow-up after an inconclusive result;
 adding or removing it must not change evidence admission. Multi-step handoff
-instructions remain opt-in, and source retrieval and action execution remain
-outside SignalWeave.
+instructions remain opt-in. SignalWeave fetches approved card sources; the caller
+owns additional investigation tools and action execution.
 
 Cards declare `evidence_requirements: dict[str, StrictBool]`, defaulting to `{}`.
 Only exact keys for existing, one-based `question:N` and `watch:N` slots are
@@ -211,4 +240,4 @@ The historical live trial for the earlier handoff contract is in
 `evaluations/northstar_multistep_trial.py` and
 `examples/northstar-multistep-trial.json`. It uses live Jev over the same local
 Northstar rows as the single-step historical replay; expected dispositions stay
-outside the Jev state. Those retained results do not certify the current version 4.
+outside the Jev state. Those retained results do not certify the current version 6.

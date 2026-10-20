@@ -1,0 +1,29 @@
+{
+  "scope": "Exploratory six-call component diagnosis on two known historical quiet cases. Canonicalized JSON controls, not byte-identical native replays, workflow acceptance, causal proof or a repair. Original four-actor cohort and its incorrect second Jev outcome remain unchanged. One sample per configuration, no retries or adaptive variants. All failure attempts count.",
+  "seed": 20261018,
+  "max_requests": 6,
+  "resolved_model": "jev-1.13.0",
+  "sources": [
+    {
+      "id": "checkpoint_1",
+      "path": "artifacts/northstar-rolling-analysis-v1/2026-09-05-signalweave.jsonl",
+      "expected_outcomes": ["ignore"]
+    },
+    {
+      "id": "checkpoint_2",
+      "path": "artifacts/northstar-rolling-analysis-v1/2026-09-12-signalweave.jsonl",
+      "expected_outcomes": ["ignore"]
+    }
+  ],
+  "variants": [
+    {"name": "canonical_control"},
+    {
+      "name": "omit_plan_progress",
+      "remove_plan_slot_fields": ["status", "evidence_fact_ids", "evidence_source_keys"]
+    },
+    {
+      "name": "explicit_quiet_branch",
+      "append_policy": "If both windows pass the seven-date gate and the observed all-digital change does not satisfy the owner's decline criterion, select ignore; unknown optional diagnostics are not additional investigation triggers."
+    }
+  ]
+}

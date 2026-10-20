@@ -24,7 +24,19 @@ from .local_setup import (
     validate_decision_configuration,
 )
 from .local_status import local_status
-from .runtime import build_runtime, load_deployment_secret
+
+
+def build_runtime(*args, **kwargs):
+    """Load decision/source dependencies only when a runtime is requested."""
+    from .runtime import build_runtime as create_runtime
+
+    return create_runtime(*args, **kwargs)
+
+
+def load_deployment_secret(name: str) -> str | None:
+    from .runtime import load_deployment_secret as load_secret
+
+    return load_secret(name)
 
 
 def _is_loopback_host(host: str) -> bool:
@@ -140,6 +152,28 @@ def main() -> None:
     status = commands.add_parser("status", help="Show secret-free local setup status")
     status.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")
     status.add_argument("--json", action="store_true", help="Print a machine-readable report")
+    context = commands.add_parser(
+        "context",
+        help="Enable, disable, or inspect optional domain-context configuration",
+        description=(
+            "Manage the optional domain-context feature flag in a configured local home. "
+            "This reports configuration only; it does not check live service health."
+        ),
+    )
+    context_sub = context.add_subparsers(dest="context_command", required=True)
+    for action, help_text in (
+        ("enable", "Enable optional domain context"),
+        ("disable", "Disable optional domain context"),
+        ("status", "Show domain-context configuration status"),
+    ):
+        context_action = context_sub.add_parser(action, help=help_text)
+        context_action.add_argument(
+            "--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)"
+        )
+        if action == "status":
+            context_action.add_argument(
+                "--json", action="store_true", help="Print a machine-readable report"
+            )
     credentials = commands.add_parser(
         "credentials", help="List or rotate private credentials without editing config"
     )
@@ -243,8 +277,33 @@ def main() -> None:
         selected_home = Path(os.environ.get("SIGNALWEAVE_HOME") or Path.home() / ".signalweave").expanduser()
         existing_home = selected_home / "config.toml"
         sys.argv.append("status" if existing_home.is_file() else "setup")
+    queries = commands.add_parser("queries", help="Reuse reviewed SQL through an existing BI connection")
+    queries_sub = queries.add_subparsers(dest="queries_command", required=True)
+    queries_sub.add_parser("schema", help="Print the reviewed query artifact JSON schema")
+    query_import = queries_sub.add_parser("import", help="Review and import fixed query sources; never executes SQL")
+    query_import.add_argument("--source", choices=["superset", "preset"], required=True)
+    query_import.add_argument("--file", required=True, help="Agent-authored reviewed query catalog JSON")
+    query_import.add_argument("--home")
+    query_import.add_argument("--yes", action="store_true", help="Confirm this exact reviewed source artifact non-interactively")
+    query_import.add_argument("--allow-live-queries", action="store_true", help="Explicitly enable live queries/refresh on the configured Preset connection")
+    query_list = queries_sub.add_parser("list", help="List imported queries without executing them")
+    query_list.add_argument("--home")
     args = parser.parse_args()
     try:
+        if args.command == "queries":
+            from .local_queries import import_queries, list_queries
+            from .query_source import QueryCatalog
+
+            if args.queries_command == "schema":
+                print(json.dumps(QueryCatalog.model_json_schema(), indent=2))
+            elif args.queries_command == "list":
+                print(json.dumps(list_queries(args.home), indent=2))
+            else:
+                catalog = import_queries(args.home, args.source, args.file, yes=args.yes,
+                                         allow_live_queries=args.allow_live_queries)
+                print(f"{len(catalog.queries)} reviewed queries active. Reconnect your agent to load them.")
+                print("Ask your agent to inspect the new query sources, review a card, and show a delivery-disabled report.")
+            return
         if args.command == "uninstall":
             from .uninstall import uninstall
 
@@ -384,6 +443,32 @@ def main() -> None:
                 print(json.dumps(report, ensure_ascii=False, indent=2))
             else:
                 _print_status(report)
+            return
+        if args.command == "context":
+            from .local_status import context_status
+
+            if args.context_command == "status":
+                report = context_status(args.home)
+                if args.json:
+                    print(json.dumps(report, ensure_ascii=False, indent=2))
+                else:
+                    _print_domain_context_status(
+                        report, configuration_only=True, heading="Domain-context status:"
+                    )
+                return
+
+            from .local_setup import configure_domain_context
+
+            enabled = args.context_command == "enable"
+            saved_home = configure_domain_context(args.home, enabled=enabled)
+            report = context_status(saved_home)
+            print(f"Saved domain-context setting: {'enabled' if enabled else 'disabled'}")
+            _print_domain_context_status(
+                report, configuration_only=True, heading="Effective domain-context configuration:"
+            )
+            if not enabled:
+                print("Stored domain context, cards, and history are kept.")
+            print("Restart or reconnect the SignalWeave MCP process for this setting to take effect.")
             return
         if args.command == "credentials":
             if args.credentials_command == "list":
@@ -566,6 +651,9 @@ def _print_status(report: dict[str, object]) -> None:
     agents = report.get("agents")
     if isinstance(agents, dict):
         print(f"Agent: {agents.get('selected', 'not selected')}")
+    domain_context = report.get("domain_context")
+    if isinstance(domain_context, dict):
+        _print_domain_context_status(domain_context, configuration_only=True)
     _print_connections(report)
     credentials = report.get("credentials")
     if isinstance(credentials, dict):
@@ -577,6 +665,29 @@ def _print_status(report: dict[str, object]) -> None:
         print("Next:")
         for step in next_steps:
             print(f"  {step}")
+
+
+def _print_domain_context_status(
+    report: dict[str, object], *, configuration_only: bool, heading: str = "Domain context:",
+) -> None:
+    """Print only the bounded, nonsecret domain-context status fields."""
+    print(heading)
+    print(f"  configured: {'yes' if report.get('configured') is True else 'no'}")
+    print(f"  enabled: {'yes' if report.get('enabled') is True else 'no'}")
+    status = report.get("status")
+    if isinstance(status, str) and status in {"enabled", "disabled", "blocked", "invalid"}:
+        print(f"  status: {status}")
+    else:
+        print("  status: invalid")
+    print(f"  environment override: {'yes' if report.get('environment_override') is True else 'no'}")
+    reason = report.get("reason")
+    if isinstance(reason, str) and reason:
+        print(f"  reason: {reason}")
+    scope = report.get("scope")
+    if isinstance(scope, str) and scope:
+        print(f"  scope: {scope}")
+    if configuration_only:
+        print("  Configuration only; this does not check live health.")
 
 
 def _ask_yes_no(prompt: str, *, default: bool = False) -> bool:

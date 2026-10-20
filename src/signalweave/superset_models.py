@@ -33,6 +33,7 @@ class SupersetChartSnapshot(BaseModel):
     dashboard_filters: dict[str, Any] | None = None
     observations: list[Observation] = Field(default_factory=list)
     related_chart_ids: list[str] = Field(default_factory=list)
+    saved_query_definition: dict[str, Any] | None = None
 
 
 class SupersetDashboardSnapshot(BaseModel):

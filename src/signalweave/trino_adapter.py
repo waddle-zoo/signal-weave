@@ -15,6 +15,7 @@ from .models import (
     SourceRef,
 )
 from .query_planner import QueryWindow, compile_query
+from .source_identity import namespace_fingerprint, namespace_uri
 
 
 class TrinoExecutor(Protocol):
@@ -118,6 +119,24 @@ class TrinoQueryAdapter:
         self.max_rows = max_rows
         if any(resource.adapter != self.name for resource in self.resources):
             raise ValueError("TrinoQueryAdapter resources must use adapter='trino'")
+
+    @property
+    def binding_namespace(self) -> str | None:
+        base_url = getattr(self.executor, "base_url", None)
+        if not isinstance(base_url, str) or not base_url.strip():
+            return None
+        try:
+            endpoint = namespace_uri(base_url)
+        except (TypeError, ValueError):
+            return None
+        if not endpoint:
+            return None
+        return namespace_fingerprint({
+            "provider": "trino",
+            "endpoint": endpoint,
+            "catalog": getattr(self.executor, "catalog", None),
+            "schema": getattr(self.executor, "schema", None),
+        })
 
     async def list_resources(self) -> list[ResourceDescriptor]:
         return list(self.resources)

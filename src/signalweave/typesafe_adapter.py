@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import json
 import math
 import os
@@ -150,6 +151,7 @@ class JevPayloadError(ValueError):
     def __init__(
         self, *, stage: str, observed_bytes: int, budget_bytes: int,
         observed_tokens: int | None = None, budget_tokens: int | None = None,
+        provider: str = "Jev",
     ) -> None:
         self.stage = stage
         self.observed_bytes = observed_bytes
@@ -163,7 +165,7 @@ class JevPayloadError(ValueError):
             else ""
         )
         super().__init__(
-            f"{stage} Jev payload exceeded the configured budget "
+            f"{stage} {provider} payload exceeded the configured budget "
             f"({observed_bytes} > {budget_bytes} bytes{token_detail})"
         )
 
@@ -1473,7 +1475,8 @@ class JevJudger:
             optional_metadata = {
                 key: item
                 for key, item in metadata.items()
-                if key not in contract_values or item != contract_values[key]
+                if key not in contract_values
+                or not JevJudger._json_values_equal_for_deduplication(item, contract_values[key])
             }
             payload["metadata"] = compact_json_value(
                 JevJudger._ordered_json_value(optional_metadata),
@@ -1535,7 +1538,10 @@ class JevJudger:
                     payload["values"] = {
                         key: value
                         for key, value in values.items()
-                        if key not in canonical_values or value != canonical_values[key]
+                        if key not in canonical_values
+                        or not JevJudger._json_values_equal_for_deduplication(
+                            value, canonical_values[key]
+                        )
                     }
                     if payload.get("provenance") == canonical.get("attributes", {}).get(
                         "record_ids"
@@ -1545,6 +1551,59 @@ class JevJudger:
                         payload.pop("source_url")
             selected.append(payload)
         return selected
+
+    @staticmethod
+    def _json_values_equal_for_deduplication(left: Any, right: Any) -> bool:
+        """Compare bounded JSON values without equating booleans to numbers."""
+        pending = [(left, right)]
+        remaining_nodes = 4_096
+        while pending:
+            remaining_nodes -= 1
+            if remaining_nodes < 0:
+                return False
+            left_value, right_value = pending.pop()
+
+            if type(left_value) is bool or type(right_value) is bool:
+                if type(left_value) is not bool or type(right_value) is not bool:
+                    return False
+                if left_value != right_value:
+                    return False
+                continue
+
+            if isinstance(left_value, Mapping) or isinstance(right_value, Mapping):
+                if not isinstance(left_value, Mapping) or not isinstance(right_value, Mapping):
+                    return False
+                if len(left_value) != len(right_value):
+                    return False
+                if len(left_value) > remaining_nodes - len(pending):
+                    return False
+                if any(type(key) is not str for key in left_value) or any(
+                    type(key) is not str for key in right_value
+                ):
+                    return False
+                if left_value.keys() != right_value.keys():
+                    return False
+                pending.extend((left_value[key], right_value[key]) for key in left_value)
+                continue
+
+            if type(left_value) is list or type(right_value) is list:
+                if (type(left_value) is not list or type(right_value) is not list
+                        or len(left_value) != len(right_value)
+                        or len(left_value) > remaining_nodes - len(pending)):
+                    return False
+                pending.extend(zip(left_value, right_value, strict=True))
+                continue
+
+            if type(left_value) in (int, float) and type(right_value) in (int, float):
+                if left_value != right_value:
+                    return False
+                continue
+
+            if (type(left_value) is not type(right_value)
+                    or type(left_value) not in (str, type(None))
+                    or left_value != right_value):
+                return False
+        return True
 
     @staticmethod
     def _judgment_analysis_payload(value: Any) -> list[dict[str, Any]]:
@@ -1742,6 +1801,120 @@ class JevJudger:
             if key in state:
                 result[key] = state[key]
         return result
+
+    @staticmethod
+    def _factor_judgment_evidence(
+        state: Mapping[str, Any],
+    ) -> dict[str, Any] | None:
+        """Factor exact common evidence-envelope metadata for an over-budget request.
+
+        Rows remain ordered. Reconstruct each row by copying ``common`` and
+        applying its ``overrides``; overrides replace inherited values,
+        including null. Keys absent from both stay absent. Nested values and
+        array order are literal. Only repeated ``origin``, ``provenance``,
+        ``source_key``, and ``source_url`` can be inherited; decision-bearing
+        values and row identities remain inline. This changes only the request
+        representation, never the retained result.
+        """
+        evidence = state.get("evidence")
+        if type(evidence) is not list or not evidence or len(evidence) > 50_000:
+            return None
+
+        visited = 0
+
+        def is_json_value(value: Any, depth: int = 0) -> bool:
+            nonlocal visited
+            visited += 1
+            if visited > 200_000 or depth > 64:
+                return False
+            if value is None or type(value) in (str, bool, int):
+                return True
+            if type(value) is float:
+                return math.isfinite(value)
+            if type(value) is list:
+                return all(is_json_value(item, depth + 1) for item in value)
+            if type(value) is dict:
+                return all(
+                    type(key) is str and is_json_value(item, depth + 1)
+                    for key, item in value.items()
+                )
+            return False
+
+        def encoded(value: Any) -> bytes:
+            return json.dumps(
+                value,
+                ensure_ascii=False,
+                allow_nan=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+
+        try:
+            if (any(type(row) is not dict for row in evidence)
+                    or not is_json_value(evidence)):
+                return None
+            original_bytes = encoded(evidence)
+            if len(original_bytes) > DEFAULT_MAX_JEV_PAYLOAD_BYTES:
+                return None
+
+            rows: list[dict[str, Any]] = evidence
+            common: dict[str, Any] = {}
+            common_metadata_fields = {
+                "origin",
+                "provenance",
+                "source_key",
+                "source_url",
+            }
+            first = rows[0]
+            for key, value in first.items():
+                if key not in common_metadata_fields:
+                    continue
+                value_bytes = encoded(value)
+                if all(
+                    key in row and encoded(row[key]) == value_bytes
+                    for row in rows[1:]
+                ):
+                    common[key] = copy.deepcopy(value)
+
+            packed_evidence = {
+                "encoding": "signalweave.lossless_common_fields.v1",
+                "contract": (
+                    "Rows remain ordered. common contains only repeated evidence "
+                    "envelope metadata: origin, provenance, source_key, source_url. "
+                    "Business values, statements, subject IDs, and labels stay "
+                    "inline in each row. "
+                    "Reconstruct each row by copying common "
+                    "then applying that row's overrides; an override replaces the "
+                    "inherited value, including null. A key absent from both stays "
+                    "absent. Nested values and array order are literal."
+                ),
+                "common": common,
+                "rows": [
+                    {
+                        "overrides": {
+                            key: copy.deepcopy(value)
+                            for key, value in row.items()
+                            if key not in common
+                        }
+                    }
+                    for row in rows
+                ],
+            }
+            restored = []
+            for row in packed_evidence["rows"]:
+                restored_row = copy.deepcopy(common)
+                restored_row.update(copy.deepcopy(row["overrides"]))
+                restored.append(restored_row)
+            if encoded(restored) != original_bytes:
+                return None
+            if len(encoded(packed_evidence)) >= len(original_bytes):
+                return None
+        except (OverflowError, RecursionError, TypeError, ValueError):
+            return None
+
+        candidate = dict(state)
+        candidate["evidence"] = packed_evidence
+        return candidate
 
     async def _judge_evidence_roles(
         self,
@@ -2242,10 +2415,25 @@ class JevJudger:
                 }
             question_batches = [questions]
         elif split_evidence:
-            # Keep the complete owner policy and normalized facts identical in
-            # every request; only independent typed questions are partitioned.
-            judgment_state = self._compact_judgment_state(state, card, observations)
-            question_batches = self._judgment_question_batches(judgment_state, full_questions)
+            # Preserve the established compact request whenever it already
+            # fits. Only introduce the new representation under continuing
+            # budget pressure.
+            compact_state = self._compact_judgment_state(state, card, observations)
+            if not self._request_over_budget(compact_state, full_questions):
+                judgment_state = compact_state
+                question_batches = [full_questions]
+            else:
+                factored_state = self._factor_judgment_evidence(judgment_state)
+                if (factored_state is not None
+                        and not self._request_over_budget(factored_state, full_questions)):
+                    judgment_state = factored_state
+                    question_batches = [full_questions]
+                else:
+                    factored_compact = self._factor_judgment_evidence(compact_state)
+                    judgment_state = factored_compact or compact_state
+                    question_batches = self._judgment_question_batches(
+                        judgment_state, full_questions
+                    )
         else:
             # Preserve the efficient single decision request for ordinary
             # cards. Per-observation role judgments are not part of the
@@ -2341,12 +2529,20 @@ class JevJudger:
         selected_probability = action_probabilities.get(selected_outcome, 0.0)
         outcome = Outcome(selected_outcome)
         confidence = selected_probability
-        if confidence < card.action_confidence_threshold:
+        # Match the engine's action gate: a data-gap handoff is not a confident
+        # business conclusion. Do not replace its configured owner with the
+        # unrelated investigation route merely because support is low.
+        confidence_fallback = (outcome in (Outcome.IGNORE, Outcome.NOTIFY, Outcome.ESCALATE)
+                               and confidence < card.action_confidence_threshold)
+        if confidence_fallback:
             outcome = Outcome.INVESTIGATE
         source_keys = plan.selected_source_keys or [source.key for source in card.sources]
+        evidence = [Evidence.model_validate(item) for item in state["evidence"]]
+        source_evidence_count = sum(item.origin == "source" for item in evidence)
         summary = (
-            f"Evaluated {len(observations)} observations and {len(state.get('analyses', []))} "
-            f"computed analyses across {len(source_keys)} sources; "
+            f"Evaluated {source_evidence_count} source evidence items, {len(observations)} "
+            f"normalized observations, and {len(state.get('analyses', []))} computed analyses "
+            f"across {len(source_keys)} sources (counts may overlap); "
             f"{len(watch_results)} watch items and {len(question_results)} questions were checked."
         )
         return InsightResult(
@@ -2358,7 +2554,7 @@ class JevJudger:
                 f"selected={selected_outcome}, support={confidence:.2f}; routed={outcome.value}."
                 + (
                     " Code used the investigation fallback because support was below the card's confidence threshold."
-                    if confidence < card.action_confidence_threshold
+                    if confidence_fallback
                     else ""
                 )
             ),
@@ -2367,7 +2563,7 @@ class JevJudger:
             watch_results=watch_results,
             question_results=question_results,
             evidence_findings=evidence_findings,
-            evidence=[Evidence.model_validate(item) for item in state["evidence"]],
+            evidence=evidence,
             observations=observations,
             source_keys=source_keys,
             evaluator=self.name,

@@ -1,0 +1,23 @@
+{
+  "title": "Executive sales comparison source-readiness diagnostic",
+  "what_to_watch": "Executive net_sales for the latest reported month versus the prior calendar month, with channel contribution to total movement.",
+  "why_watch": "Prepare a reusable sales check without mistaking an incomplete reporting month for a business decline.",
+  "selected_sources": [
+    {"ref": "superset|chart:1", "key": "sales", "required": true},
+    {"ref": "superset|chart:10", "key": "coverage", "required": true}
+  ],
+  "questions": [
+    "Does the Executive daily model establish full coverage of both calendar months?",
+    "For comparable complete months, how did total net_sales change and how much did each channel contribute?"
+  ],
+  "decision_guidance": "The Executive net_sales model is the official management sales figure, not GAAP revenue or settled cash. The historical owner's coverage declaration applies only to Executive daily reporting: all dates through its latest order_date are complete, including earlier calendar months. Verify this cutoff rather than using request time. If the latest reported month is partial or coverage cannot be established, use insufficient_data for that comparison, proposed to Data Trust. Still explain the latest two fully covered months if supported. On a complete comparable primary comparison, a net-sales decline of at least 15 percent means notify Leadership; otherwise an absolute change of at least 10 percent means investigate with Analytics; smaller movements mean ignore. Channel detail explains the total, not extra alerts. Do not combine marketing-attributed revenue with Executive net_sales or infer causes from correlation. No messages or scheduling are authorized.",
+  "comparison_windows": ["prior_calendar_month"],
+  "delivery_methods": [
+    {"key": "coverage", "outcome": "insufficient_data", "label": "Data Trust", "destination": "agent://data-trust"},
+    {"key": "change", "outcome": "investigate", "label": "Analytics", "destination": "agent://analytics"},
+    {"key": "decline", "outcome": "notify", "label": "Leadership", "destination": "agent://leadership"}
+  ],
+  "retrieval_mode": "fixed",
+  "investigation_mode": "none",
+  "max_source_age_hours": null
+}

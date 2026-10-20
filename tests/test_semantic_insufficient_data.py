@@ -194,19 +194,24 @@ async def test_unoffered_outcome_cannot_invent_an_automatic_route(sdk, selected)
     assert "model-invented" not in run.result.model_dump_json()
 
 
-@pytest.mark.parametrize("selected", ["insufficient_data", "ignore", "notify", "escalate"])
-@pytest.mark.parametrize("support", [0.55, 0.699])
-async def test_low_support_never_becomes_an_automatic_action(sdk, selected, support):
-    sdk.choice, sdk.probability = selected, support
-    review_route = route(Outcome.INVESTIGATE)
+@pytest.mark.parametrize("selected", list(Outcome))
+@pytest.mark.parametrize("support", [0.55, 0.699, 0.70])
+async def test_support_floor_gates_business_actions_without_swapping_review_owners(sdk, selected, support):
+    sdk.choice, sdk.probability = selected.value, support
+    # Missing information already selects a review workflow. Uncertainty must
+    # not replace its configured data owner with an unrelated business team.
+    fallback = support < .7 and selected in (Outcome.IGNORE, Outcome.NOTIFY, Outcome.ESCALATE)
+    expected = Outcome.INVESTIGATE if fallback else selected
+    review_route = route(expected)
     card, snapshot = card_and_snapshot([route(outcome) for outcome in Outcome])
 
     run = await engine().evaluate(card, [snapshot])
 
-    assert run.result.outcome == Outcome.INVESTIGATE
-    assert run.result.delivery_methods == [review_route]
+    assert run.result.outcome == expected
+    assert run.result.delivery_methods == ([] if expected == Outcome.IGNORE else [review_route])
     assert run.result.confidence == pytest.approx(support)
-    assert run.result.probabilities[selected] == pytest.approx(support)
+    assert run.result.probabilities[selected.value] == pytest.approx(support)
+    assert "model-invented" not in run.result.model_dump_json()
 
 
 @pytest.mark.parametrize("defect,expected", [

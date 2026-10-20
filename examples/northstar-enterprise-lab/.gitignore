@@ -1,0 +1,4 @@
+/warehouse/init/*.csv
+/warehouse/init/00_schema_and_load.sql
+__pycache__/
+*.py[cod]

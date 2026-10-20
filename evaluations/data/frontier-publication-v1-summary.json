@@ -1,0 +1,55 @@
+{
+  "protocol": "frontier-publication-v1",
+  "execution_status": "closed",
+  "method_commit": "2eff1b5",
+  "scope": "Attempted formative raw analyst to publication, native policy and fresh human-message workflow on the known fictional Northstar company. Not a baseline comparison, human onboarding study or product accuracy estimate.",
+  "completed": false,
+  "stopped_stage": "analyst",
+  "attempted_frontier_invocations": 1,
+  "completed_frontier_invocations": 0,
+  "model": "gpt-6-luna",
+  "effort": "xhigh",
+  "actor_seconds": 12.581612957990728,
+  "successful_company_tool_calls": 5,
+  "company_tools": ["find_dashboards", "find_dashboards", "list_dashboard_charts", "profile_saved_chart", "profile_saved_chart"],
+  "terminal_cli_event": {
+    "type": "item.started",
+    "item": {
+      "type": "mcp_tool_call",
+      "server": "codex",
+      "tool": "list_mcp_resource_templates",
+      "arguments": {},
+      "status": "in_progress"
+    }
+  },
+  "stop_reason": "The research transport classified the built-in Codex MCP metadata listing as a foreign-server tool and terminated the process. No completed metadata response, analyst publication, native Jev judgment or final human report was observed.",
+  "usage": {
+    "known": false,
+    "reason": "The harness terminated the CLI before turn.completed supplied aggregate usage. Missing usage is not zero cost; no token or dollar total is asserted."
+  },
+  "jev_attempts": 0,
+  "writer_invocations": 0,
+  "delivery_enabled": false,
+  "schedule_created": false,
+  "native_setup": {
+    "card_status": "approved",
+    "card_id": "card-historical-sales-publication-check-00b420ee",
+    "card_version": 1,
+    "consent": "Scripted fictional owner, not human usability or semantic certification",
+    "build_git_commit": "865502901a5e3bcafedad3317552132f96b23dca",
+    "source_sha256": "ee737966781ca8478cc4f7d3736b1a78ef329943ebffcd56941b50296070a45f",
+    "binary_sha256": "11bb3ab1166d89b11936f79443fc61e463d697468d2683c0c9512af64ff9c40b"
+  },
+  "source_accounting": {
+    "logical_calls_including_coordinator_probe": 6,
+    "chart_query_http_requests_including_coordinator_probe": 2,
+    "note": "The pre-actor probe warmed daily chart 10 in this live trial's private cache. The actor subsequently read it from that cache and queried monthly chart 1. No cold-start or query-saving claim."
+  },
+  "private_artifacts": {
+    "report_sha256": "690b8fea8eb7a1ab985bb9fde5546ac01a02252e07f1fdc1efed3400a788968b",
+    "trace_sha256": "b9de66b596872df2e53539ae39819c16686b8d27c2f93ec58f9744a5dd8cb666"
+  },
+  "disposition": "Retain as a censored harness attempt, not a SignalWeave analytical success or failure. The cohort and its unused allowance remain closed. The unknown-cost invocation must not disappear from later accounting.",
+  "forward_repair": "A separately opt-in transport path recognizes scoped metadata listing only after native configured-registry verification, admits four unique discovery calls and audits any fifth attempt. Resource reads, other servers and other built-ins still trigger actor termination; the event monitor is not a pre-dispatch security firewall. The closed runner does not enable that option. Offline checks/review do not substitute for a completed native frontier workflow.",
+  "remaining": "The actual analyst-publication-policy-human-message path is still unproven. Any corrected live method needs a distinct preregistration and review; it is not a retry, rescore or transfer of unused allowance. No overall business benefit or enterprise readiness follows."
+}

@@ -825,7 +825,8 @@ def test_front_matter_is_compact_and_route_audience_has_quiet_fallback():
     markdown = render_investigation_report(report)
     front_matter = markdown.split("<details>", 1)[0]
     assert len(front_matter) < 1200
-    assert "Intended route audience: No notification intended \\(quiet outcome\\)." in markdown
+    assert "Intended route audience: No policy-triggered notification \\(quiet outcome\\)" in markdown
+    assert "requested routine reports are separate" in markdown
     assert "## Policy checks" not in front_matter
 
 
@@ -1102,3 +1103,48 @@ def test_decision_purpose_and_handoff_are_exposed_without_using_summary_as_fact(
     assert report.next_step == "Check the approved source before delivery."
     assert "Invented narrative" not in markdown
     assert "## Next step" in markdown
+
+
+def test_rendered_report_exposes_exact_source_locators_without_new_url_trust():
+    resources = healthy_resources()
+    resources[0].source_url = "javascript:do-not-render-this"
+    report = build_investigation_report(card(), result(complete_analysis()), resources)
+    rendered = render_investigation_report(report)
+    front = rendered.split("<details>")[0]
+    assert "## Sources" in front
+    assert "test\\|query:sales (source key sales)" in front
+    assert "javascript:" not in rendered
+    assert rendered.count("test\\|query:sales") == 2
+
+
+def test_source_locator_overview_is_bounded_but_appendix_retains_every_declared_source():
+    policy = card()
+    template = policy.sources[0]
+    policy.sources = [template.model_copy(update={"key": f"key-{i}", "resource": f"query:{i}"})
+                      for i in range(8)]
+    report = build_investigation_report(policy, result())
+    rendered = render_investigation_report(report)
+    front, appendix = rendered.split("<details>", 1)
+    assert front.count("(source key") == 5
+    assert "3 more source reference(s)" in front
+    for i in range(8):
+        assert f"test\\|query:{i}" in appendix
+    assert all(item.population_status == "not_returned" for item in report.source_boundaries)
+    assert "not\\_returned" in appendix  # Locators do not claim successful retrieval.
+
+
+def test_legacy_source_free_report_does_not_invent_a_locator():
+    report = build_investigation_report(card(), result())
+    report.source_boundaries = []
+    assert "## Sources" not in render_investigation_report(report)
+
+
+def test_locator_markdown_escapes_source_text_without_corrupting_literal_identifiers():
+    policy = card()
+    policy.sources[0].resource = "query:net_sales[region]`<img>"
+    report = build_investigation_report(policy, result())
+    rendered = render_investigation_report(report)
+    assert "test\\|query:net\\_sales\\[region\\]\\`&lt;img&gt;" in rendered
+    assert "<img>" not in rendered
+    # Escapes belong to Markdown prose, not code spans (where '\\_' is literal).
+    assert "`test\\|query:net\\_sales" not in rendered

@@ -51,6 +51,14 @@ The earlier Northstar run's useful prose is tied to the superseded `01293548… 
 
 ### P1. Candidate source contract strictness is a safety gate; the Northstar blocker was fixture parity
 
+Historical finding, superseded in part by the [later real-source diagnostic](evidence/domain-context-preview-2026-10-14.md#full-raw-source-workflow-attempt-first-answers-worked-onboarding-unfinished):
+ordinary Superset inspection was subsequently shown to lack these custom
+contracts even when its saved aggregation was valid. Current onboarding keeps
+missing declarations unverified but permits owner-approved, delivery-disabled
+evaluation with recipient mappings intact. Known incompatible windows and
+required comparison checks remain enforced. Neither the older strict gate nor
+the newer warning path certifies unattended delivery.
+
 For automatic routes, onboarding requires typed source-owned metric/comparison/population/grain/window evidence. Do not relax that gate based on owner prose. In the Northstar replay, the public catalog omitted a typed comparison contract that the private replay snapshot carried; `MCPSourceAdapter.inspect()` trusts the catalog descriptor and replaces the response contract. That is a fixture/catalog mismatch, not proof that the live Superset adapter lacks the contract. For report-only work, retain the useful report path without pretending the automatic card is ready. If a required contract is missing, say which exact field/resource is absent and ask whether the source has an adapter-owned definition; do not make the agent invent “versioned typed contract” metadata the actual schema does not support.
 
 Separate source defect remains in numeric-condition binding: `onboard_insight_card()` binds caller-proposed comparison keys into a source's `required_comparison_keys` before validating the condition against that set ([`onboarding.py`](../src/signalweave/onboarding.py#L1970), [`onboarding.py`](../src/signalweave/onboarding.py#L1988)). A bounded in-memory probe previously showed a catalog key `checkout-conversion` and proposed key `invented-change-key` both ending up in the saved source requirement. Validate against the immutable inspected contract before binding. Regression counterexample: a model supplies a plausible but nonexistent comparison key and receives a saved card instead of an authoring-time rejection. Keep numeric conditions optional when the connector has no exact typed comparison.

@@ -1,0 +1,15 @@
+{
+  "protocol": "retained-owner-periods-v1",
+  "prior_protocol": "public-explicit-owner-v5",
+  "prior_report_sha256": "a1f036455b1f4a9afb1f1ee07c21934a2646d711169bfa1d936b3960cc23f354",
+  "prior_trace_sha256": "2dc4dbdb37dda90aedb4dc8f8f558fe74bc2d76adabad185365c462f5b5d07ba",
+  "period_indices": [0, 1],
+  "arms_by_period": [["baseline", "signalweave"], ["signalweave", "baseline"]],
+  "limits": {
+    "agent_invocations": 4,
+    "jev_attempts": 2,
+    "between_invocation_input_stop": 600000,
+    "between_invocation_uncached_stop": 150000
+  },
+  "scope": "Two previously unreported historical source periods with the actual agent-authored setup; no new approval, imported card, prior-study retry or contiguous-history claim. Current policy is replayed retrospectively, not asserted to have been approved at the historical date."
+}

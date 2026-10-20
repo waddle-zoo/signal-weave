@@ -44,13 +44,14 @@ _STORE_PATHS = {
 }
 _PATH_NAMES = {
     *_STORE_PATHS, "TRINO_CATALOG_FILE", "SIGNALWEAVE_MCP_SOURCES_FILE",
+    "SUPERSET_QUERY_SOURCES_FILE", "PRESET_QUERY_SOURCES_FILE",
     *(f"{n}_FILE" for n in _SECRET_NAMES),
 }
 _ENV_NAMES = {
     *_PATH_NAMES, *_SECRET_NAMES,
     "TYPESAFE_MODE", "SIGNALWEAVE_DECISION_PROVIDER", "OPENAI_DECISIONS_MODEL",
     "OPENAI_RESPONSES_MODEL", "SIGNALWEAVE_MAX_DECISION_INPUT_TOKENS",
-    "SIGNALWEAVE_STORE_BACKEND", "SIGNALWEAVE_TENANT_ID",
+    "SIGNALWEAVE_STORE_BACKEND", "SIGNALWEAVE_TENANT_ID", "SIGNALWEAVE_KNOWLEDGE_ENABLED",
     "TYPESAFE_TIMEOUT_SECONDS", "TYPESAFE_MAX_RETRIES", "TYPESAFE_RETRY_BACKOFF_SECONDS",
     "SIGNALWEAVE_ALLOW_EMPTY_SOURCES",
     "SIGNALWEAVE_AGENT",
@@ -64,6 +65,7 @@ _ENV_NAMES = {
     "PRESET_RETAIN_RAW_RESULTS", "PRESET_RETENTION_HOURS", "SIGNALWEAVE_AUTH_MODE",
     "SIGNALWEAVE_ALLOW_INSECURE_HTTP", "SIGNALWEAVE_ALLOW_INSECURE_OIDC",
     "SIGNALWEAVE_MCP_PROFILE",
+    "SIGNALWEAVE_QUERY_AS_OF_DATE",
     "SIGNALWEAVE_OIDC_ISSUER_URL", "SIGNALWEAVE_OIDC_AUDIENCE",
     "SIGNALWEAVE_OIDC_TENANT_CLAIM", "SIGNALWEAVE_OIDC_REQUIRED_SCOPES",
     "SIGNALWEAVE_OIDC_JWKS_URL", "SIGNALWEAVE_OIDC_ALGORITHMS",
@@ -124,9 +126,14 @@ def _private_path(path: Path, *, directory: bool = False) -> None:
     if not valid_type:
         raise SetupError("Local files and directories must not be symlinks or special files")
     if os.name == "posix":
-        if info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) & 0o077:
+        kind = "directory" if directory else "file"
+        if info.st_uid != os.getuid():
+            raise SetupError(f"Local {kind} must be owned by the current user")
+        if stat.S_IMODE(info.st_mode) & 0o077:
             mode = "0700" if directory else "0600"
-            raise SetupError(f"Local files must be owned by the current user; use chmod {mode}")
+            raise SetupError(
+                f"Local {kind} must be private (mode {mode}; no group or other access)"
+            )
 
 
 def _private_directory(path: Path) -> None:
@@ -415,6 +422,51 @@ def _config_text(values: dict[str, str]) -> str:
         f"{name} = {json.dumps(value, ensure_ascii=False)}\n"
         for name, value in values.items()
     )
+
+
+def configure_domain_context(home: str | Path | None, *, enabled: bool) -> Path:
+    """Persist the optional context tools without touching credentials or state.
+
+    This changes configuration only. Existing processes must reconnect, and the
+    process environment still takes precedence over the saved setting.
+    """
+    if type(enabled) is not bool:
+        raise SetupError("Context enablement must be a boolean")
+    root, _ = read_config(home)
+    lock = root / ".setup.lock"
+    try:
+        fd = os.open(lock, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except FileExistsError:
+        raise SetupError("Setup is already running or has an unreviewed stale setup lock") from None
+    os.close(fd)
+    try:
+        # Re-read under the same lock as setup to preserve any completed edit.
+        _, configured = read_config(root)
+        if enabled and configured.get("SIGNALWEAVE_STORE_BACKEND", "sqlite").strip().lower() != "sqlite":
+            raise SetupError("Domain context requires the SQLite store; no storage backend or data was changed")
+        desired = "1" if enabled else "0"
+        if configured.get("SIGNALWEAVE_KNOWLEDGE_ENABLED") != desired:
+            configured["SIGNALWEAVE_KNOWLEDGE_ENABLED"] = desired
+            original = _read_private(root / "config.toml")
+            # Keep human comments/layout for the ordinary [environment] form.
+            # Validate the whole parsed candidate before using a textual edit:
+            # a matching line inside another multiline string is not a setting.
+            pattern = r'''(?m)^[ \t]*(?:SIGNALWEAVE_KNOWLEDGE_ENABLED|"SIGNALWEAVE_KNOWLEDGE_ENABLED"|'SIGNALWEAVE_KNOWLEDGE_ENABLED')[ \t]*=[ \t]*(["'])([^\r\n]*?)\1[ \t]*(?:\#.*)?$'''
+            candidates = [original + f'\nSIGNALWEAVE_KNOWLEDGE_ENABLED = "{desired}"\n']
+            candidates.extend(original[:m.start(2)] + desired + original[m.end(2):]
+                              for m in re.finditer(pattern, original))
+            content = _config_text(configured)
+            for candidate in candidates:
+                try:
+                    if tomllib.loads(candidate) == {"version": 1, "environment": configured}:
+                        content = candidate
+                        break
+                except tomllib.TOMLDecodeError:
+                    pass
+            _publish_config(root / "config.toml", content)
+        return root
+    finally:
+        lock.unlink(missing_ok=True)
 
 
 def _credential_name(name: str) -> str:
@@ -754,6 +806,7 @@ def setup_local(
         if source == "mcp":
             selected = manifest or values.get("SIGNALWEAVE_MCP_SOURCES_FILE")
             if not selected and not non_interactive:
+                print("Use a private manifest file readable by your account; on POSIX, mode 0400 or 0600 is appropriate.")
                 selected = _ask("Reviewed MCP manifest path (normalized read-only sources only)")
             if not selected:
                 raise SetupError("A reviewed MCP manifest is required")
@@ -768,7 +821,7 @@ def setup_local(
             else:
                 previous = Path(values["SIGNALWEAVE_MCP_SOURCES_FILE"]).expanduser()
                 if (previous if previous.is_absolute() else root / previous).absolute() != path:
-                    raise SetupError("Setup will not replace an existing MCP manifest")
+                    add("SIGNALWEAVE_MCP_SOURCES_FILE", str(path))
         for prefix in ("SUPERSET", "PRESET"):
             if values.get(f"{prefix}_URL"):
                 add(f"{prefix}_TENANT_ID", tenant_id)
@@ -966,7 +1019,7 @@ def _validate_openai_key_configuration() -> str:
         raise SetupError("Set only one of OPENAI_API_KEY or OPENAI_API_KEY_FILE")
     if key_file:
         try:
-            key = _read_private(Path(key_file))
+            key = _read_private(Path(key_file)).strip()
         except SetupError:
             raise SetupError(
                 "OpenAI key file is missing or unreadable; run `signalweave credentials set openai` to repair it"
@@ -1020,6 +1073,13 @@ def doctor(home: str | Path | None = None) -> tuple[bool, list[str]]:
     principal = os.getenv("SIGNALWEAVE_PRINCIPAL_ID", "").strip()
     if bool(tenant) != bool(principal):
         errors.append("SIGNALWEAVE_TENANT_ID and SIGNALWEAVE_PRINCIPAL_ID must be configured together")
+    from .local_status import _context_status
+
+    context = _context_status({})  # Doctor checks the effective deployment environment.
+    if context["status"] in {"blocked", "invalid"}:
+        errors.append(context["reason"])
+    elif context["enabled"]:
+        messages.append("Shared domain context: enabled in configuration (running process and analytical quality not tested).")
     sources = 0
     if os.getenv("SUPERSET_URL"):
         sources += 1
@@ -1069,6 +1129,18 @@ def doctor(home: str | Path | None = None) -> tuple[bool, list[str]]:
             errors.append(str(error))
         except (OSError, ValueError):
             errors.append("Trino configuration invalid; check catalog descriptors, TRINO_USER, and TRINO_MAX_ROWS")
+    for source in ("SUPERSET", "PRESET"):
+        selected = os.getenv(source + "_QUERY_SOURCES_FILE")
+        if selected:
+            from .query_source import load_query_catalog
+
+            try:
+                load_query_catalog(selected)
+                if not os.getenv(source + "_URL"):
+                    raise ValueError("missing connection")
+                messages.append(f"{source} reviewed queries: catalog valid; execution and analytical meaning not tested.")
+            except (OSError, ValueError):
+                errors.append(f"{source} reviewed queries invalid; check the catalog and existing connection")
     if os.getenv("SIGNALWEAVE_MCP_SOURCES_FILE"):
         from .mcp_source import build_mcp_sources
 

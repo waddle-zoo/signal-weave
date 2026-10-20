@@ -493,20 +493,24 @@ async def test_context_cannot_substitute_for_a_missing_required_source():
 
 
 @pytest.mark.parametrize(
-    ("status_key", "status_value"),
+    ("status_key", "status_value", "policy"),
     [
-        ("exception_status", "unresolved"),
-        ("resolution_status", "unknown"),
-        ("status", "ambiguous"),
+        ("approval_status", "pending", "Notify Operations about approvals pending longer than 36 hours."),
+        ("resolution_status", "unresolved", "Notify Operations about incidents unresolved longer than 36 hours."),
+        ("owner_status", "unknown", "Notify Operations about records with unknown ownership for over 36 hours."),
+        ("exception_status", "unresolved", "Notify Operations about unresolved exceptions older than 36 hours."),
+        ("status", "ambiguous", "Notify Operations about ambiguous mappings older than 36 hours."),
     ],
 )
-async def test_unresolved_required_context_cannot_authorize_automatic_action(
-    status_key, status_value
+@pytest.mark.parametrize("nested", [False, True])
+@pytest.mark.parametrize("outcome", [Outcome.NOTIFY, Outcome.ESCALATE])
+async def test_observed_business_status_does_not_override_the_policy_judgment(
+    status_key, status_value, policy, nested, outcome
 ):
     class NotifyJudger(SafetyTestDouble):
         async def judge(self, state, card, plan, observations):
             result = await super().judge(state, card, plan, observations)
-            return result.model_copy(update={"outcome": Outcome.NOTIFY, "confidence": 0.99})
+            return result.model_copy(update={"outcome": outcome, "confidence": 0.99})
 
     source = SourceRef(
         key="owner-context",
@@ -522,7 +526,7 @@ async def test_unresolved_required_context_cannot_authorize_automatic_action(
         delivery_methods=[
             DeliveryMethod(
                 key="ops",
-                outcome=Outcome.NOTIFY,
+                outcome=outcome,
                 label="Operations",
                 destination="slack://ops",
             ),
@@ -534,6 +538,8 @@ async def test_unresolved_required_context_cannot_authorize_automatic_action(
             ),
         ],
     )
+    card.decision_guidance = policy.replace("Notify", "Escalate to") if outcome == Outcome.ESCALATE else policy
+    values = {status_key: status_value, "age_hours": 48}
     resource = ResourceSnapshot(
         source_key=source.key,
         adapter=source.adapter,
@@ -544,17 +550,17 @@ async def test_unresolved_required_context_cannot_authorize_automatic_action(
                 source_key=source.key,
                 subject_id="closed-period",
                 subject_label="Closed period context",
-                statement="The source is reachable but the required context is unresolved.",
-                values={status_key: status_value},
+                statement="The source reports an observed business condition with its age.",
+                values={"records": [{"workflow": values}]} if nested else values,
             )
         ],
     )
 
     run = await InsightEngine(NotifyJudger()).evaluate(card, [resource])
 
-    assert run.result.outcome == Outcome.INVESTIGATE
-    assert [method.key for method in run.result.delivery_methods] == ["data"]
-    assert "unresolved semantic context" in run.result.rationale
+    assert run.result.outcome == outcome
+    assert [method.key for method in run.result.delivery_methods] == ["ops"]
+    assert run.result.evidence[0].values == ({"records": [{"workflow": values}]} if nested else values)
 
 
 async def test_resolved_required_context_does_not_block_automatic_action():
@@ -666,6 +672,34 @@ async def test_low_confidence_notify_is_safely_downgraded():
     run = await InsightEngine(LowConfidenceJudger()).evaluate(case.card, case.resources)
     assert run.result.outcome == Outcome.INVESTIGATE
     assert run.result.delivery_methods == []
+
+
+async def test_low_support_data_gap_keeps_its_configured_review_owner():
+    class GapJudger:
+        name = "test-gap-handoff"
+
+        async def judge(self, state, card, plan, observations):
+            return InsightResult(card_id=card.id, outcome=Outcome.INSUFFICIENT_DATA,
+                                 summary="Comparison coverage needs review", rationale="A supported data gap",
+                                 confidence=.47, probabilities={"insufficient_data": .47, "ignore": .38, "investigate": .15},
+                                 evidence=[Evidence.model_validate(item) for item in state["evidence"]],
+                                 observations=observations, source_keys=plan.selected_source_keys,
+                                 evaluator=self.name)
+
+    source = SourceRef(key="brief", adapter="reviewed", resource="report:coverage", label="Coverage brief")
+    gap_route = DeliveryMethod(key="quality_owner", label="Data quality owner", outcome=Outcome.INSUFFICIENT_DATA,
+                               destination="agent://quality")
+    other_route = DeliveryMethod(key="business_owner", label="Business investigation owner", outcome=Outcome.INVESTIGATE,
+                                 destination="agent://business")
+    card = InsightCard(id="coverage-review", title="Coverage review", what_to_watch="Comparable reporting periods",
+                       why_watch="Route coverage questions to the data owner", sources=[source],
+                       delivery_methods=[gap_route, other_route])
+    snapshot = ResourceSnapshot(source_key=source.key, adapter=source.adapter, resource=source.resource,
+                                title=source.label, evidence=[Evidence(source_key=source.key, statement="Latest period is partial")])
+    run = await InsightEngine(GapJudger()).evaluate(card, [snapshot])
+    assert run.result.outcome == Outcome.INSUFFICIENT_DATA
+    assert run.result.delivery_methods == [gap_route]
+    assert run.result.confidence == .47
 
 
 async def test_missing_baseline_preserves_investigation_instead_of_forcing_insufficient_data():
@@ -781,7 +815,7 @@ async def test_explicit_required_comparison_still_blocks_without_that_comparison
     result = (await InsightEngine(SafetyTestDouble()).evaluate(card, [resource])).result
     assert result.outcome == Outcome.INSUFFICIENT_DATA
     assert result.delivery_methods == []
-    assert "unavailable" in result.rationale
+    assert "quality-limited evidence" in result.rationale
 
 
 async def test_unavailable_comparison_window_preserves_adapter_baseline():
@@ -860,6 +894,36 @@ async def test_source_failure_is_not_treated_as_ignore():
     assert run.result.outcome == Outcome.INSUFFICIENT_DATA
     assert run.result.delivery_methods == []
     assert "timeout" in run.result.evidence[-1].statement
+    assert "sources were unavailable" in run.result.rationale
+
+
+async def test_missing_required_source_is_reported_as_unavailable():
+    source = SourceRef(
+        key="missing-query",
+        adapter="sql",
+        resource="query:revenue",
+        label="Revenue query",
+    )
+    card = card_for(
+        card_id="card-missing-source",
+        title="Missing source insight",
+        source=source,
+        delivery_methods=[
+            DeliveryMethod(
+                key="ops",
+                outcome=Outcome.NOTIFY,
+                label="Ops",
+                destination="slack://ops",
+            )
+        ],
+    )
+
+    run = await InsightEngine(SafetyTestDouble()).evaluate(card, [])
+
+    assert run.result.outcome == Outcome.INSUFFICIENT_DATA
+    assert run.result.delivery_methods == []
+    assert "Source missing-query was not returned" in run.result.evidence[-1].statement
+    assert "sources were unavailable" in run.result.rationale
 
 
 async def test_oversized_source_payload_cannot_trigger_automatic_delivery():
@@ -1327,6 +1391,7 @@ async def test_empty_required_source_is_not_automatic():
 
 
 async def test_old_required_source_snapshot_is_not_automatic():
+    fixed_now = datetime(2026, 10, 19, 12, tzinfo=timezone.utc)
     source = SourceRef(
         key="old-source",
         adapter="sql",
@@ -1351,7 +1416,7 @@ async def test_old_required_source_snapshot_is_not_automatic():
         adapter=source.adapter,
         resource=source.resource,
         title=source.label,
-        captured_at=datetime.now(timezone.utc) - timedelta(hours=25),
+        captured_at=fixed_now - timedelta(hours=25),
         observations=[
             Observation(
                 source_key=source.key,
@@ -1364,10 +1429,18 @@ async def test_old_required_source_snapshot_is_not_automatic():
             )
         ],
     )
-    run = await InsightEngine(SafetyTestDouble()).evaluate(card, [resource])
+    run = await InsightEngine(
+        SafetyTestDouble(), clock=lambda: fixed_now
+    ).evaluate(card, [resource])
     assert run.result.outcome == Outcome.INSUFFICIENT_DATA
     assert run.result.delivery_methods == []
-    assert "hours old" in run.result.evidence[-1].statement
+    assert run.result.confidence == 0.99
+    assert "returned stale or quality-limited evidence" in run.result.rationale
+    stale_evidence = next(
+        item for item in run.result.evidence if "hours old" in item.statement
+    )
+    assert stale_evidence.origin == "derived"
+    assert stale_evidence.values["quality_status"] == "stale"
 
 
 async def test_provider_capture_time_controls_freshness_over_retrieval_time():

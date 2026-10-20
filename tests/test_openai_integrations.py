@@ -9,12 +9,15 @@ import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
 
 from signalweave import chatgpt_auth
+from signalweave.compiler import base_plan
 from signalweave.local_setup import SetupError, read_config, setup_local
 from signalweave.local_status import local_status
 from signalweave.models import (
     DeliveryMethod,
+    Evidence,
     InsightCard,
     InsightPlan,
+    Observation,
     Outcome,
     SourceRef,
 )
@@ -23,6 +26,144 @@ from signalweave.openai_judger import (
     OpenAIDecisionJudger,
     OpenAIDecisionsTransport,
 )
+from signalweave.typesafe_adapter import JevPayloadError
+
+
+def test_openai_policy_packet_preserves_all_facts_without_unrequested_role_sampling():
+    source = SourceRef(key="measure", adapter="mcp", resource="measure:1", label="Measure")
+    card = InsightCard(id="preserve-policy-facts", title="Policy facts",
+                       what_to_watch="Source-defined measures", why_watch="Repeat the agreed policy",
+                       sources=[source], decision_guidance="Apply the confirmed rule.")
+    observations = [Observation(source_key=source.key, subject_id=f"row-{i}",
+                                subject_label=f"Row {i}", metric=f"measure-{i}",
+                                current=i, attributes={"late_detail": "x" * 1100})
+                    for i in range(29)]
+    evidence = [Evidence(source_key=source.key, subject_id="sql-only", subject_label="SQL row",
+                         statement="Source SQL values", values={f"field-{i}": i for i in range(30)},
+                         provenance=["source:query-definition"]).model_dump(mode="json")]
+    state = {"observations": [o.model_dump(mode="json") for o in observations],
+             "evidence": evidence, "source_errors": [{"source_key": "optional", "blocking": False}],
+             "analyses": [], "context": None}
+    packet = OpenAIDecisionJudger._input_state(state, card, base_plan(card), observations)
+    bundle = packet["evidence_bundle"]
+    assert bundle["observations"] == state["observations"]
+    assert bundle["evidence"] == evidence
+    assert bundle["source_errors"] == state["source_errors"]
+    assert "evidence_rollup" not in bundle and "source_details" not in bundle
+    assert bundle["card"]["decision_guidance"] == card.decision_guidance
+
+
+@pytest.mark.asyncio
+async def test_openai_oversized_packet_uses_receipt_backed_frontier_handoff(tmp_path, monkeypatch):
+    from tests.test_deferred_judgment_handoff import configured_server, read_all_pages, tool
+
+    class NoInferenceTransport:
+        name = "openai-decisions"
+
+        async def decide(self, *_):
+            raise AssertionError("Oversized input must not reach the provider")
+
+    monkeypatch.setenv("SIGNALWEAVE_MAX_DECISION_INPUT_TOKENS", "1024")
+    judger = OpenAIDecisionJudger(NoInferenceTransport())
+    server, catalog = configured_server(tmp_path, observation_count=29, judger=judger)
+    response = await tool(server, "evaluate_insight_card")(
+        card_id="deferred-card", idempotency_key="openai-wide:1", response_mode="compact",
+    )
+    assert response["result"]["judgment"]["status"] == "deferred"
+    assert response["result"]["outcome"] is None
+    assert response["receipt"]["delivery_enabled"] is False
+    rows = await read_all_pages(server, response["receipt"]["receipt_id"],
+                                ["judgment_state", "observations"])
+    assert len(rows) == 29
+    assert rows[-1]["subject_id"] == "row-0028"
+    before = catalog.inspect_count
+    replay = await tool(server, "evaluate_insight_card")(
+        card_id="deferred-card", idempotency_key="openai-wide:1", response_mode="compact",
+    )
+    assert replay["replayed"] is True and catalog.inspect_count == before
+
+
+@pytest.mark.asyncio
+async def test_openai_local_budget_failure_names_actual_provider(monkeypatch):
+    monkeypatch.setenv("SIGNALWEAVE_MAX_DECISION_INPUT_TOKENS", "1")
+    judger = OpenAIDecisionJudger(type("NoCalls", (), {"name": "openai-decisions"})())
+    with pytest.raises(JevPayloadError, match="openai-decisions payload") as failure:
+        await judger._ask({"fact": "keep this entire fact"}, [{"name": "outcome"}])
+    assert failure.value.stage == "judgment"
+    assert failure.value.budget_tokens == 1
+    assert failure.value.observed_tokens > 1
+
+
+@pytest.mark.asyncio
+async def test_openai_engine_byte_budget_also_defers_without_dropping_source_facts(tmp_path, monkeypatch):
+    from tests.test_deferred_judgment_handoff import configured_server, read_all_pages, tool
+
+    class NoInferenceTransport:
+        name = "openai-decisions"
+
+        async def decide(self, *_):
+            raise AssertionError("The engine byte guard must run before inference")
+
+    monkeypatch.setenv("SIGNALWEAVE_MAX_DECISION_INPUT_TOKENS", "1000000")
+    server, catalog = configured_server(tmp_path, observation_count=333,
+                                        judger=OpenAIDecisionJudger(NoInferenceTransport()))
+    store = server._test_runtime.card_store
+    card = store.get_card("deferred-card")
+    anchor = card.sources[0]
+    store.save_card(card.model_copy(update={"sources": [anchor, *[
+        anchor.model_copy(update={"key": f"growth-{i}", "resource": f"dashboard:{7+i}"})
+        for i in (1, 2)
+    ]]}))
+    catalog.resources.extend([
+        catalog.resources[0].model_copy(update={"resource": f"dashboard:{7+i}"})
+        for i in (1, 2)
+    ])
+    original_inspect = catalog.inspect
+
+    async def wide_inspect(source):
+        snapshot = await original_inspect(source)
+        return snapshot.model_copy(update={"observations": [
+            row.model_copy(update={"attributes": {**row.attributes, "detail": "x" * 2500}})
+            for row in snapshot.observations
+        ]})
+
+    monkeypatch.setattr(catalog, "inspect", wide_inspect)
+    response = await tool(server, "evaluate_insight_card")(
+        card_id="deferred-card", idempotency_key="openai-byte-wide:1", response_mode="compact",
+    )
+    assert response["result"]["judgment"]["status"] == "deferred"
+    budget = response["result"]["judgment"]["input_budget"]
+    assert budget["stage"] == "judgment"
+    assert budget["observed_bytes"] > budget["budget_bytes"] == 4_000_000
+    assert budget["observed_tokens"] is None
+    rows = await read_all_pages(server, response["receipt"]["receipt_id"],
+                                ["judgment_state", "observations"])
+    assert len(rows) == 999 and rows[-1]["attributes"]["detail"] == "x" * 2500
+    assert response["receipt"]["delivery_enabled"] is False
+    assert response["result"]["outcome"] is None
+
+
+@pytest.mark.asyncio
+async def test_openai_budget_counts_decoded_input_not_http_string_escaping(monkeypatch):
+    from signalweave.typesafe_adapter import estimate_json_tokens
+
+    state = {"facts": [{"field": "a quoted value", "value": i} for i in range(30)]}
+    questions = [{"name": "outcome", "type": "choice", "choices": [{"value": "review"}]}]
+    decoded = estimate_json_tokens({"input": state, "questions": questions})
+    escaped = estimate_json_tokens({"input": json.dumps(state, separators=(",", ":")),
+                                    "questions": questions})
+    assert escaped > decoded
+    monkeypatch.setenv("SIGNALWEAVE_MAX_DECISION_INPUT_TOKENS", str(decoded))
+
+    class CaptureTransport:
+        name = "openai-decisions"
+
+        async def decide(self, input_text, received_questions):
+            assert json.loads(input_text) == state
+            assert received_questions == questions
+            return {"outcome": {"type": "choice", "choice": "review"}}
+
+    assert (await OpenAIDecisionJudger(CaptureTransport())._ask(state, questions))["outcome"]["choice"] == "review"
 
 
 def _choice(name: str, selected: str, distribution: dict[str, float]) -> dict:
@@ -198,72 +339,234 @@ def test_chatgpt_plan_transport_uses_streaming_nonstored_responses_and_marks_est
     assert answers["outcome"]["probabilities"]["investigate"] == 0.9
 
 
-def test_judger_routes_only_configured_outcome():
-    class FakeTransport:
+@pytest.mark.parametrize(
+    ("selected", "support", "expected"),
+    [
+        pytest.param(Outcome.IGNORE, 0.6, Outcome.INVESTIGATE, id="low-support-ignore"),
+        pytest.param(Outcome.INVESTIGATE, 0.6, Outcome.INVESTIGATE, id="low-support-investigate"),
+        pytest.param(
+            Outcome.INSUFFICIENT_DATA,
+            0.6,
+            Outcome.INSUFFICIENT_DATA,
+            id="low-support-insufficient-data-handoff",
+        ),
+        pytest.param(Outcome.NOTIFY, 0.6, Outcome.INVESTIGATE, id="low-support-notify"),
+        pytest.param(Outcome.ESCALATE, 0.6, Outcome.INVESTIGATE, id="low-support-escalate"),
+        pytest.param(Outcome.IGNORE, 0.7, Outcome.IGNORE, id="threshold-ignore"),
+        pytest.param(Outcome.INVESTIGATE, 0.7, Outcome.INVESTIGATE, id="threshold-investigate"),
+        pytest.param(
+            Outcome.INSUFFICIENT_DATA,
+            0.7,
+            Outcome.INSUFFICIENT_DATA,
+            id="threshold-insufficient-data",
+        ),
+        pytest.param(Outcome.NOTIFY, 0.7, Outcome.NOTIFY, id="threshold-notify"),
+        pytest.param(Outcome.ESCALATE, 0.7, Outcome.ESCALATE, id="threshold-escalate"),
+    ],
+)
+def test_judger_routes_by_support_floor_and_preserves_typed_handoff(
+    selected: Outcome, support: float, expected: Outcome
+):
+    """Route low support safely while preserving the provider's handoff support."""
+
+    configured_outcomes = [
+        Outcome.IGNORE,
+        Outcome.INVESTIGATE,
+        Outcome.INSUFFICIENT_DATA,
+        Outcome.NOTIFY,
+        Outcome.ESCALATE,
+    ]
+    outcome_values = [outcome.value for outcome in configured_outcomes]
+
+    def distribution(values: list[str], choice: str, choice_support: float) -> dict[str, float]:
+        other_support = (1.0 - choice_support) / (len(values) - 1)
+        return {
+            value: choice_support if value == choice else other_support
+            for value in values
+        }
+
+    class FakeTypedTransport:
         name = "test-provider"
 
+        def __init__(self):
+            self.questions: list[dict] = []
+
         async def decide(self, _input: str, questions: list[dict]) -> dict:
+            self.questions = questions
             answers = {}
             for question in questions:
                 name = question["name"]
-                if name == "watch_0":
-                    answers[name] = {
-                        "type": "choice",
-                        "choice": "present",
-                        "probabilities": {"present": 0.9, "absent": 0.05, "unknown": 0.05},
-                    }
-                elif name == "question_0":
+                if question["type"] == "predicate":
                     answers[name] = {"type": "predicate", "probability": 0.8}
-                elif name == "outcome":
-                    answers[name] = {
-                        "type": "choice",
-                        "choice": "notify",
-                        "probabilities": {
-                            "ignore": 0.05,
-                            "investigate": 0.05,
-                            "insufficient_data": 0.05,
-                            "notify": 0.85,
-                        },
-                    }
+                    continue
+
+                choices = [item["value"] for item in question["choices"]]
+                choice = selected.value if name == "outcome" else choices[0]
+                choice_support = support if name == "outcome" else 0.8
+                probabilities = distribution(choices, choice, choice_support)
+                answers[name] = {
+                    "type": "choice",
+                    "choice": choice,
+                    "probabilities": probabilities,
+                    "confidence": probabilities[choice],
+                }
             return answers
 
     card = InsightCard(
-        id="sales-watch",
-        title="Sales watch",
-        what_to_watch="Material online sales decline",
-        why_watch="Alert the owner only when the evidence meets the policy.",
-        watch_for=["Online sales fell materially"],
-        questions=["Is the decline supported by comparable data?"],
-        decision_guidance="Ignore normal movement; notify on a supported material decline.",
-        sources=[SourceRef(key="sales", adapter="superset", resource="chart:1", label="Sales")],
+        id="generic-watch",
+        title="Generic watch",
+        what_to_watch="A generic monitored condition",
+        why_watch="Route only when the typed decision supports it.",
+        watch_for=["A generic condition is present"],
+        questions=["Is the generic condition supported?"],
+        decision_guidance="Apply the configured policy to the supplied evidence.",
+        action_confidence_threshold=0.7,
+        sources=[SourceRef(key="source", adapter="superset", resource="chart:1", label="Source")],
         delivery_methods=[
             DeliveryMethod(
-                key="growth",
+                key="notify-route",
                 outcome=Outcome.NOTIFY,
-                label="Growth",
-                destination="slack://growth",
-                instructions="Notify Growth.",
-            )
+                label="Notify route",
+                destination="slack://generic-notify",
+            ),
+            DeliveryMethod(
+                key="escalate-route",
+                outcome=Outcome.ESCALATE,
+                label="Escalate route",
+                destination="slack://generic-escalate",
+            ),
         ],
     )
     plan = InsightPlan(
         card_id=card.id,
-        selected_source_keys=["sales"],
+        selected_source_keys=["source"],
         comparison_windows=["previous_period"],
         capabilities=[],
-        card_scope="sales",
+        card_scope="generic",
     )
+    transport = FakeTypedTransport()
     result = asyncio.run(
-        OpenAIDecisionJudger(FakeTransport()).judge(
+        OpenAIDecisionJudger(transport).judge(
             {"evidence": [], "analyses": []}, card, plan, []
         )
     )
 
-    assert result.outcome == Outcome.NOTIFY
-    assert result.probabilities["notify"] == 0.85
+    expected_distribution = distribution(outcome_values, selected.value, support)
+    outcome_question = next(item for item in transport.questions if item["name"] == "outcome")
+    assert {item["value"] for item in outcome_question["choices"]} == set(outcome_values)
+    assert result.outcome == expected
+    assert result.confidence == pytest.approx(support)
+    assert result.probabilities == pytest.approx(expected_distribution)
+    assert set(result.probabilities) == set(outcome_values)
+    assert sum(result.probabilities.values()) == pytest.approx(1.0)
     assert result.watch_results[0].status.value == "present"
     assert result.question_results[0].status.value == "supported"
-    assert "not native or calibrated" not in result.rationale
+
+    if selected == Outcome.INSUFFICIENT_DATA and support < card.action_confidence_threshold:
+        # Keep provider support with the data-gap handoff; it is not a business
+        # confidence guarantee.
+        assert result.outcome == Outcome.INSUFFICIENT_DATA
+        assert result.confidence == pytest.approx(0.6)
+        assert result.probabilities == pytest.approx(expected_distribution)
+        assert "selected=insufficient_data, support=0.60; routed=insufficient_data." in result.rationale
+
+
+@pytest.mark.parametrize(
+    ("origins", "analysis_count", "source_evidence_count"),
+    [
+        pytest.param(["source"] * 6, 0, 6, id="sql-evidence-only"),
+        pytest.param(["derived", "context"], 2, 0, id="derived-and-context-only"),
+    ],
+)
+def test_openai_judger_summary_counts_source_evidence_separately(
+    origins, analysis_count, source_evidence_count
+):
+    class FakeTypedTransport:
+        name = "openai-decisions-test-double"
+
+        async def decide(self, _input: str, questions: list[dict]) -> dict:
+            answers = {}
+            for question in questions:
+                choices = [item["value"] for item in question["choices"]]
+                selected = "notify" if question["name"] == "outcome" else choices[0]
+                support = 0.9
+                remainder = (1.0 - support) / (len(choices) - 1)
+                probabilities = {
+                    choice: support if choice == selected else remainder
+                    for choice in choices
+                }
+                answers[question["name"]] = {
+                    "type": "choice",
+                    "choice": selected,
+                    "probabilities": probabilities,
+                    "confidence": support,
+                }
+            return answers
+
+    source = SourceRef(
+        key="sql-records", adapter="sql", resource="query:records", label="SQL records"
+    )
+    card = InsightCard(
+        id="sql-evidence-summary",
+        title="SQL evidence summary",
+        what_to_watch="The supplied SQL evidence.",
+        why_watch="Apply the configured policy.",
+        sources=[source],
+        decision_guidance="Notify when the supplied evidence supports the policy.",
+        delivery_methods=[
+            DeliveryMethod(
+                key="ops",
+                outcome=Outcome.NOTIFY,
+                label="Ops",
+                destination="agent://ops",
+            )
+        ],
+    )
+    evidence = [
+        Evidence(
+            source_key=source.key,
+            subject_id=f"row-{index}",
+            subject_label=f"Row {index}",
+            statement=f"Evidence record {index}.",
+            origin=origin,
+        ).model_dump(mode="json")
+        for index, origin in enumerate(origins)
+    ]
+    state = {
+        "evidence": evidence,
+        "analyses": [
+            {"source_key": source.key, "status": "complete"}
+            for _ in range(analysis_count)
+        ],
+        "source_errors": (
+            [{"source_key": source.key, "message": "Stale source evidence."}]
+            if "derived" in origins
+            else []
+        ),
+        "context": None,
+    }
+
+    result = asyncio.run(
+        OpenAIDecisionJudger(FakeTypedTransport()).judge(
+            state,
+            card,
+            InsightPlan(
+                card_id=card.id,
+                selected_source_keys=[source.key],
+                comparison_windows=["previous_period"],
+                capabilities=[],
+                card_scope="sql-records",
+            ),
+            [],
+        )
+    )
+
+    assert (
+        f"Evaluated {source_evidence_count} source evidence items, 0 normalized "
+        f"observations, and {analysis_count} computed analyses"
+    ) in result.summary
+    assert [item.model_dump(mode="json") for item in result.evidence] == evidence
+    assert result.outcome == Outcome.NOTIFY
 
 
 def test_setup_stores_openai_key_privately_and_selects_requested_provider(tmp_path):

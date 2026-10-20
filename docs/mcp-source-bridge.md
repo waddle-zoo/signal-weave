@@ -7,8 +7,9 @@ For local setup, use tenant `local` consistently for the connection, descriptor,
 snapshot, and local principal. Change all four together for another tenant.
 
 The bridge provides reusable company MCP connectivity with an explicit typed
-measurement contract. An MCP server must expose a reviewed read tool returning
-a SignalWeave `ResourceSnapshot` in `CallToolResult.structuredContent`. A company
+source-evidence envelope. An MCP server must expose a reviewed read tool returning
+a SignalWeave `ResourceSnapshot` in `CallToolResult.structuredContent`, or as
+one JSON text block when structured content is omitted or null. A company
 gateway can perform this normalization when the upstream API has a different
 shape. The bridge does not infer metric definitions, convert arbitrary API
 responses, or discover arbitrary tools to execute.
@@ -73,6 +74,11 @@ as `readOnlyHint` are not authority. MCP cannot prove a tool lacks side effects.
 Protect the manifest like executable deployment configuration, and scope server
 credentials to the named tenant and approved reads.
 
+For a plain-English measurement definition, use the descriptor's `description`
+and contract `population`, `grain` and `scope`. The optional `metric_definitions`
+field takes structured warehouse compiler definitions, not strings; do not invent
+table/aggregation bindings just to register an ordinary evidence source.
+
 For stdio, replace the transport with:
 
 ```json
@@ -123,11 +129,33 @@ An example tool's `structuredContent` is:
 }
 ```
 
-`snapshot_pointer` is an RFC 6901 JSON pointer relative to `structuredContent`:
+`snapshot_pointer` is an RFC 6901 JSON pointer relative to the decoded result:
 the empty string selects the whole object; `/data/snapshot` selects a wrapper.
 Object keys support `~0` and `~1`; arrays use nonnegative decimal indices.
-Text content is never parsed as a fallback, and arbitrary field mapping is not
-supported. The server must supply the typed measurement meaning and values.
+Any non-null `structuredContent` is authoritative, including when invalid; a
+different text payload never overrides it. With an omitted or null value, the bridge
+accepts exactly one text block containing a complete JSON value. Prose, code
+fences, multiple/mixed blocks, duplicate keys and non-finite/unrepresentable numbers are
+rejected. The same whole-response byte budget, pointer, typed snapshot, identity
+and tenant checks apply. This compatibility choice supports JSON-text servers
+without inferring arbitrary field mappings or asking a model to normalize them.
+Null and omission both mean no structured snapshot for this bridge; this avoids
+requiring callers to change an SDK's optional-field serialization. Null is never
+interpreted as zero observations or an all-clear. The server still supplies the
+typed measurement meaning and values. MCP permits
+text results and an optional structured channel; see the
+[tool result specification](https://modelcontextprotocol.io/specification/2025-06-18/server/tools#tool-result).
+
+The envelope can also carry qualitative or agent-produced report evidence in
+`evidence`, without a fixed metric schema or an `AnalyticalComparison` for every
+finding. An owner may explicitly delegate an analyst publication as a source;
+the [publication gateway example](../examples/analysis_publication/README.md)
+shows a fixed read and versioned claims. This does not grant publisher write
+access, validate its claims, or approve all underlying datasets mentioned in
+its lineage. Label interpretations and hypotheses, preserve real input-result
+capture time, and let the already-reviewed card define the decision policy.
+Native quantitative recomputation still requires its applicable typed comparison
+contract; source-supplied prose or values do not become code-verified analysis.
 
 Snapshots may also supply `analytical_comparisons`, the typed
 `list[AnalyticalComparison]` contract in `diagnostics.py`, for additive or rate
@@ -182,6 +210,56 @@ closed. After validation, all these keys are rebound to the calling card's
 The descriptor owns the returned title, description, and contract. Remote
 non-healthy source status is retained conservatively, and a healthy response
 cannot erase a configured non-healthy status.
+
+### Connector binding namespace
+
+The adapter exposes an opaque `binding_namespace` for checking whether saved
+context still refers to the same configured source. For a literal HTTP URL with
+no query and no environment-backed headers, it is derived from the normalized
+origin and path. Routing that cannot be established from those non-secret
+parts fails closed: stdio always needs an explicit namespace, as do HTTP
+connections whose URL comes from an environment reference, has a query string,
+or uses environment-backed headers. In those cases `binding_namespace` is
+`None` until the operator supplies `context_namespace` on the connection:
+
+Add this field to the connection object:
+
+```json
+"context_namespace": "production/finance"
+```
+
+Use a stable, non-secret identifier for the upstream workspace or tenant, not a
+token, password, or URL containing credentials. The bridge does not resolve or
+hash environment-variable values to derive this identity. The explicit value
+is an operator-reviewed assertion, not an independently verified guarantee:
+the operator must update it when hidden routing changes. Credential rotation
+alone need not change it; if a credential also selects a workspace, update the
+namespace when that routing changes. `None` means identity continuity cannot be
+proven for context binding; it does not disable otherwise authorized source
+reads.
+
+### Saved-query definition revisions
+
+For a fixed SQL export, put a stable, non-secret definition revision in
+`resources[].descriptor.contract.lineage`, for example:
+
+```json
+{"lineage": ["saved-sql-sha256:<sha256-of-the-exact-reviewed-sql>"]}
+```
+
+Update that declaration when the query changes. Context pins fingerprint this
+lineage; a changed declaration marks the old source binding `source_changed`
+and requires review before a card can use it as current required context.
+A hash in `descriptor.metadata` alone does **not** provide that check.
+The [SQL export example](../examples/harbor_help/README.md) constructs both from
+the same query text.
+
+This is declared definition continuity, not automatic SQL lineage discovery.
+An exact-text hash conservatively changes even for formatting-only edits; it
+does not detect changes to an underlying view or business definition unless
+their revisions are also declared in the contract. Normal measurement updates,
+capture timestamps and health metadata are not definition revisions. Context
+currency does not establish measurement freshness or analytical correctness.
 
 `SourceRef.parameters` must be empty. Even apparently harmless limits are
 rejected, since this version declares no caller argument bounds. The caller

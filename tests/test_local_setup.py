@@ -57,6 +57,28 @@ def test_key_file_is_copied_and_survives_original_removal(tmp_path):
     assert (root / "typesafe.key").read_text() == "test-file-key\n"
 
 
+def test_openai_setup_file_passes_offline_health_and_rotation(tmp_path):
+    source = private_file(tmp_path / "openai-input", "test-openai-private-key\n")
+    root, _ = setup.setup_local(tmp_path / "openai-home", decision_provider="openai-decisions",
+                                openai_key_file=source, source="skip", non_interactive=True)
+    source.unlink()
+    assert (root / "openai.key").read_text() == "test-openai-private-key\n"
+    assert not (root / "typesafe.key").exists()
+    with setup.local_environment(root):
+        assert setup.validate_decision_configuration(root) == ("openai-decisions", "readable private file")
+        healthy, messages = setup.doctor(root)
+        assert healthy, messages
+    setup.set_credential(root, "openai", value="test-rotated-openai-key")
+    with setup.local_environment(root):
+        assert setup.doctor(root)[0]
+    private_file(root / "openai.key", "test-invalid embedded-key\n")
+    with setup.local_environment(root):
+        healthy, messages = setup.doctor(root)
+        assert not healthy
+        assert any("OpenAI API key is invalid" in message for message in messages)
+        assert all("embedded-key" not in message for message in messages)
+
+
 def test_repeated_init_preserves_config_key_and_database(home, monkeypatch):
     add_config(home, 'SUPERSET_URL = "http://localhost:8088"')
     database = private_file(home / "state" / "signalweave.db", "existing-state")
@@ -107,13 +129,86 @@ def test_init_never_falls_back_to_echoing_stdin(tmp_path, monkeypatch):
 
 
 @pytest.mark.skipif(os.name != "posix", reason="POSIX permission bits")
-@pytest.mark.parametrize("target", ["home", "state", "config.toml", "typesafe.key"])
-def test_group_or_world_access_is_rejected(home, target):
+@pytest.mark.parametrize(("target", "required_mode"), [
+    ("home", "0700"), ("state", "0700"), ("config.toml", "0600"), ("typesafe.key", "0600"),
+])
+def test_group_or_world_access_is_rejected(home, target, required_mode):
     path = home if target == "home" else home / target
     path.chmod(0o755 if path.is_dir() else 0o644)
-    with pytest.raises(setup.SetupError, match="chmod"):
+    with pytest.raises(setup.SetupError, match=rf"private.*{required_mode}.*group or other access"):
         with setup.local_environment(home):
             setup.validate_key_configuration()
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX ownership and permission bits")
+def test_wrong_file_owner_has_separate_error_without_chmod_remedy(tmp_path, monkeypatch):
+    path = private_file(tmp_path / "owner-key", "preserve this key")
+    original = path.read_bytes(), stat.S_IMODE(path.stat().st_mode)
+    monkeypatch.setattr(setup.os, "getuid", lambda: path.stat().st_uid + 1)
+
+    with pytest.raises(setup.SetupError, match="owned by the current user") as error:
+        setup._private_path(path)
+
+    assert "chmod" not in str(error.value)
+    assert (path.read_bytes(), stat.S_IMODE(path.stat().st_mode)) == original
+
+
+def _valid_local_mcp_manifest(path):
+    payload = {"version": 1, "connections": [{
+        "name": "internal", "tenant_id": "local", "read_only": True,
+        "transport": {"type": "stdio", "command": ["/never/execute/this"]},
+        "resources": [{"source_key": "revenue", "tool": "read_snapshot", "descriptor": {
+            "adapter": "internal", "resource": "revenue", "kind": "metric", "title": "Revenue",
+            "contract": {"tenant_id": "local"},
+        }}],
+    }]}
+    return private_file(path, json.dumps(payload))
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX permission bits")
+@pytest.mark.parametrize("mode", [0o400, 0o600])
+def test_owner_readable_private_mcp_manifest_is_accepted(home, tmp_path, mode):
+    manifest = _valid_local_mcp_manifest(tmp_path / "sources.json")
+    manifest.chmod(mode)
+    original = manifest.read_bytes()
+
+    setup.setup_local(home, source="mcp", manifest=manifest,
+                      agent="codex", non_interactive=True)
+
+    assert setup.read_config(home)[1]["SIGNALWEAVE_MCP_SOURCES_FILE"] == str(manifest)
+    assert manifest.read_bytes() == original
+    assert stat.S_IMODE(manifest.stat().st_mode) == mode
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX permission bits")
+def test_group_readable_mcp_manifest_is_rejected_without_mutation(home, tmp_path):
+    manifest = _valid_local_mcp_manifest(tmp_path / "public-sources.json")
+    manifest.chmod(0o444)
+    original = manifest.read_bytes(), stat.S_IMODE(manifest.stat().st_mode)
+    config = (home / "config.toml").read_bytes()
+
+    with pytest.raises(setup.SetupError, match=r"private.*0600.*group or other access"):
+        setup.setup_local(home, source="mcp", manifest=manifest,
+                          agent="codex", non_interactive=True)
+
+    assert (manifest.read_bytes(), stat.S_IMODE(manifest.stat().st_mode)) == original
+    assert (home / "config.toml").read_bytes() == config
+
+
+def test_manifest_prompt_explains_private_readable_file_and_keeps_pty_matcher(home, tmp_path,
+                                                                              monkeypatch, capsys):
+    manifest = _valid_local_mcp_manifest(tmp_path / "sources.json")
+    prompts = []
+
+    def answer(prompt):
+        prompts.append(prompt)
+        return str(manifest)
+
+    monkeypatch.setattr("builtins.input", answer)
+    setup.setup_local(home, source="mcp", agent="codex")
+
+    assert "private manifest file readable by your account" in capsys.readouterr().out
+    assert prompts == ["Reviewed MCP manifest path (normalized read-only sources only): "]
 
 
 @pytest.mark.skipif(os.name != "posix", reason="POSIX permission bits")
@@ -292,6 +387,41 @@ def test_doctor_reuses_mcp_manifest_validation_offline(home, monkeypatch):
         healthy, messages = setup.doctor()
     assert not healthy
     assert any("valid MCP source manifest" in line for line in messages)
+
+
+@pytest.mark.parametrize("tenant", ["local", "another-tenant"])
+def test_explicit_mcp_connection_update_replaces_manifest_path_only(home, tmp_path, monkeypatch, tenant):
+    def manifest_file(name, resource):
+        payload = {"version": 1, "connections": [{
+            "name": "internal", "tenant_id": "local", "read_only": True,
+            "transport": {"type": "stdio", "command": ["/never/execute/this"]},
+            "resources": [{"source_key": "measure", "tool": "read_snapshot", "descriptor": {
+                "adapter": "internal", "resource": resource, "kind": "metric", "title": "Reviewed measure",
+                "contract": {"tenant_id": "local"},
+            }}],
+        }]}
+        if tenant != "local" and name == "replacement.json":
+            payload["connections"][0]["tenant_id"] = tenant
+            payload["connections"][0]["resources"][0]["descriptor"]["contract"]["tenant_id"] = tenant
+        return private_file(tmp_path / name, json.dumps(payload))
+
+    original, replacement = manifest_file("original.json", "first"), manifest_file("replacement.json", "second")
+    setup.setup_local(home, source="mcp", manifest=original, agent="codex", non_interactive=True)
+    database = private_file(home / "state" / "signalweave.db", "existing-card-state")
+    saved = {p: p.read_bytes() for p in (original, replacement, database, home / "typesafe.key")}
+    config_before = (home / "config.toml").read_bytes()
+    monkeypatch.setattr(socket, "socket", lambda *a, **k: pytest.fail("offline edit contacted network"))
+    if tenant != "local":
+        with pytest.raises(setup.SetupError, match="match the local tenant"):
+            setup.setup_local(home, source="mcp", manifest=replacement, agent="codex", non_interactive=True, update=True)
+        assert (home / "config.toml").read_bytes() == config_before
+    else:
+        with pytest.raises(setup.SetupError, match="replace"):
+            setup.setup_local(home, source="mcp", manifest=replacement, agent="codex", non_interactive=True)
+        assert (home / "config.toml").read_bytes() == config_before
+        setup.setup_local(home, source="mcp", manifest=replacement, agent="codex", non_interactive=True, update=True)
+        assert setup.read_config(home)[1]["SIGNALWEAVE_MCP_SOURCES_FILE"] == str(replacement)
+    assert all(p.read_bytes() == content for p, content in saved.items())
 
 
 def test_agent_snippets_round_trip_spaces_quotes_and_unicode(tmp_path, monkeypatch):

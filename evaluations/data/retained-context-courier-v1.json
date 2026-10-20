@@ -1,0 +1,17 @@
+{
+  "protocol": "retained-context-courier-v1",
+  "prior_protocol": "courier-owner-clarified-v7",
+  "prior_invocations": 4,
+  "prior_report_sha256": "cae539c927d7315a00fd5061728a6e066ecc4d1b590e4377afc62d72cfdb2e37",
+  "prior_trace_sha256": "77c4fa78f0eeeef68c3227c86bf7f97f1295f450169d3ad50391c541e612f2f5",
+  "context_entry_ids": ["990a60615511478db135dbd4c46c94e9"],
+  "period_indices": [1, 2],
+  "arms_by_period": [["signalweave", "baseline"], ["baseline", "signalweave"]],
+  "limits": {
+    "agent_invocations": 4,
+    "jev_attempts": 2,
+    "between_invocation_input_stop": 600000,
+    "between_invocation_uncached_stop": 150000
+  },
+  "scope": "New exploratory readout study over the actual saved courier notes, approved card and separately reviewed unbound context. Prior onboarding remains unqualified; its rejected reviews and zero reports are not rescored. Two known simulated historical observations, not new companies or an unseen holdout. No new card/context/approval import, repair, sending, scheduling or unattended readiness claim. Current native and installed skill; equal common company tools. Context retrieval and useful final reports assessed separately from provider outcomes and onboarding qualification."
+}

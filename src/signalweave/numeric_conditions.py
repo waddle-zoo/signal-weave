@@ -262,6 +262,8 @@ def _evaluate_one(condition: NumericCondition, analyses: Iterable[AnalysisReport
                 reason="A relative change requires finite current and nonzero baseline values.",
             )
         value = (report.current - report.baseline) / abs(report.baseline) * 100
+        if condition.absolute:
+            value = abs(value)
         return _result(
             condition,
             status="true" if _compare(value, condition.comparator, condition.threshold) else "false",

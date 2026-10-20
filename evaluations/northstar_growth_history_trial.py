@@ -328,6 +328,8 @@ async def run_trial(
     seed_dir: Path,
     output: Path,
     typesafe_key_file: Path | None = None,
+    decision_provider: str = "jev",
+    openai_key_file: Path | None = None,
     spec_path: Path = DEFAULT_SPEC,
     judger: Any | None = None,
     superset_validation: dict[str, Any] | None = None,
@@ -344,12 +346,24 @@ async def run_trial(
         raise AssertionError("historical evaluator labels leaked into the Jev card/source payload")
 
     if judger is None:
-        if not typesafe_key_file:
-            raise ValueError("a TypeSafe API key is required for the live Jev arm")
-        api_key = load_api_key(str(typesafe_key_file))
-        if not api_key:
-            raise ValueError("the TypeSafe API key file is empty")
-        judger = JevJudger(api_key=api_key)
+        if decision_provider == "openai-decisions":
+            from signalweave.openai_judger import OpenAIDecisionJudger, OpenAIDecisionsTransport
+
+            if not openai_key_file or typesafe_key_file:
+                raise ValueError("OpenAI Decisions requires only --openai-key-file")
+            api_key = openai_key_file.read_text().strip()
+            if not api_key:
+                raise ValueError("the OpenAI API key file is empty")
+            judger = OpenAIDecisionJudger(OpenAIDecisionsTransport(api_key))
+        elif decision_provider == "jev":
+            if not typesafe_key_file or openai_key_file:
+                raise ValueError("a TypeSafe API key is required for the live Jev arm")
+            api_key = load_api_key(str(typesafe_key_file))
+            if not api_key:
+                raise ValueError("the TypeSafe API key file is empty")
+            judger = JevJudger(api_key=api_key)
+        else:
+            raise ValueError("decision_provider must be jev or openai-decisions")
 
     engine = InsightEngine(judger=judger)
     compile_before = _metrics(judger)
@@ -513,6 +527,8 @@ async def run_trial(
         "schema_version": 1,
         "trial": "northstar-growth-historical-decision-replay",
         "generated_at": datetime.now(timezone.utc).isoformat(),
+        "decision_provider": judger.name,
+        "provider_usage_instrumented": hasattr(judger, "metrics"),
         "team": spec["team"],
         "decision_register": {
             "dataset_id": spec["dataset_id"],
@@ -522,6 +538,7 @@ async def run_trial(
             "case_count": len(cases),
             "splits": Counter(case.split for case in cases),
             "labels_withheld_from_jev": True,
+            "labels_withheld_from_provider": True,
         },
         "dataset": {
             "seed_dir": str(seed_dir),
@@ -538,10 +555,10 @@ async def run_trial(
             ),
         },
         "design": {
-            "signalweave_arm": "the production InsightEngine with live Jev and the same card/resources for every case",
+            "signalweave_arm": f"the production InsightEngine with {judger.name} and the same card/resources for every case",
             "control_arm": "movement-only push at the configured primary revenue threshold; no cross-source interpretation",
             "agent_workflow": "typed outcome -> configured delivery route -> evidence bundle with rationale and probabilities",
-            "historical_labels": "simulated team dispositions in an external decision register, not sent to Jev",
+            "historical_labels": "simulated team dispositions in an external decision register, not sent to the decision provider",
             "promotion_split": "holdout is evaluated without changing the card or thresholds after train/validation",
         },
         "superset_validation": superset_validation or {"status": "not-run"},
@@ -560,7 +577,8 @@ async def run_trial(
             "No Slack, email, or incident system was contacted; agent workflow completion means the typed route and evidence bundle were produced for a caller-owned delivery adapter.",
             "The movement-only control is intentionally simple and represents a current-state alerting pattern, not every possible baseline implementation.",
             "Modeled minutes saved are the decision-register estimates; source query time and downstream human response time are not presented as measured savings.",
-            "One live Jev model run is evidence for this fixture and card, not a guarantee of correctness for every enterprise card without onboarding and holdout review.",
+            "One provider run is evidence for this fixture and card, not a guarantee of correctness for every enterprise card without onboarding and holdout review.",
+            "Legacy jev_metrics fields are not OpenAI billing data; when provider_usage_instrumented is false, token usage is unknown rather than zero.",
         ],
     }
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -616,6 +634,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--seed-dir", type=Path, required=True)
     parser.add_argument("--typesafe-key-file", type=Path)
+    parser.add_argument("--decision-provider", choices=["jev", "openai-decisions"], default="jev")
+    parser.add_argument("--openai-key-file", type=Path)
     parser.add_argument("--spec", type=Path, default=DEFAULT_SPEC)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--dry-run", action="store_true")
@@ -639,13 +659,17 @@ def main() -> None:
             )
         )
         return
-    if not args.typesafe_key_file:
-        parser.error("--typesafe-key-file is required unless --dry-run is supplied")
+    if args.decision_provider == "jev" and (not args.typesafe_key_file or args.openai_key_file):
+        parser.error("Jev requires only --typesafe-key-file unless --dry-run is supplied")
+    if args.decision_provider == "openai-decisions" and (not args.openai_key_file or args.typesafe_key_file):
+        parser.error("OpenAI Decisions requires only --openai-key-file unless --dry-run is supplied")
     report = asyncio.run(
         run_trial(
             seed_dir=args.seed_dir,
             output=args.output,
             typesafe_key_file=args.typesafe_key_file,
+            decision_provider=args.decision_provider,
+            openai_key_file=args.openai_key_file,
             spec_path=args.spec,
         )
     )

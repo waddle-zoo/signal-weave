@@ -1,3 +1,4 @@
+import json
 import ssl
 from types import SimpleNamespace
 
@@ -125,24 +126,135 @@ class FakeClient:
         return FakeResponse(questions)
 
 
-async def test_low_confidence_rationale_separates_jev_selection_from_code_fallback(monkeypatch):
+def _factoring_test_card():
+    source = SourceRef(
+        key="source-a", adapter="fixture", resource="table:records", label="Records"
+    )
+    return InsightCard(
+        id="common-field-test-card",
+        title="Evidence review",
+        what_to_watch="A defined record condition.",
+        why_watch="Apply the configured policy.",
+        watch_for=["The evidence establishes the defined condition."],
+        questions=["Does the supplied evidence support a concrete answer?"],
+        sources=[source],
+        decision_guidance="Notify when the supplied evidence establishes the condition.",
+        delivery_methods=[
+            DeliveryMethod(
+                key="team", outcome=Outcome.NOTIFY, label="Team", destination="agent://team"
+            )
+        ],
+    )
+
+
+def _factoring_test_state(card, evidence, *, sources=None):
+    return {
+        "card": card.model_dump(mode="json"),
+        "insight_plan": base_plan(card).model_dump(mode="json"),
+        "sources": sources or [],
+        "observations": [],
+        "evidence": evidence,
+        "source_errors": [],
+        "analyses": [],
+        "numeric_conditions": [],
+        "context": None,
+    }
+
+
+def _repeated_lineage_evidence(count):
+    provenance = [f"source-table:shared-{index}" for index in range(7)]
+    statement = "Repeated lineage is context; each row keeps its own literal facts."
+    rows = []
+    for index in range(count):
+        rows.append(
+            Evidence(
+                source_key="source-a",
+                subject_id=f"record-{index}",
+                subject_label=f"Record {index}",
+                statement=statement,
+                source_url="https://source.example/records",
+                origin="source",
+                provenance=provenance,
+            ).model_dump(mode="json")
+        )
+    return rows
+
+
+@pytest.mark.parametrize(
+    ("origins", "analysis_count", "source_evidence_count"),
+    [
+        pytest.param(["source"] * 6, 0, 6, id="sql-evidence-only"),
+        pytest.param(["derived", "context"], 2, 0, id="derived-and-context-only"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_jev_summary_counts_source_evidence_separately(
+    monkeypatch, origins, analysis_count, source_evidence_count
+):
+    FakeClient.calls = []
+    monkeypatch.setattr(typesafe_sdk, "AsyncTypeSafeClient", FakeClient)
+    monkeypatch.setattr(typesafe_sdk, "Noul", FakeNoul)
+    source = SourceRef(
+        key="source-a", adapter="sql", resource="query:records", label="SQL records"
+    )
+    card = _factoring_test_card().model_copy(update={"sources": [source]})
+    evidence = [
+        Evidence(
+            source_key=source.key,
+            subject_id=f"row-{index}",
+            subject_label=f"Row {index}",
+            statement=f"Evidence record {index}.",
+            origin=origin,
+        ).model_dump(mode="json")
+        for index, origin in enumerate(origins)
+    ]
+    state = _factoring_test_state(card, evidence)
+    state["analyses"] = [
+        {"source_key": source.key, "status": "complete"}
+        for _ in range(analysis_count)
+    ]
+    if "derived" in origins:
+        state["source_errors"] = [
+            {
+                "source_key": source.key,
+                "message": "A source error was represented as derived evidence.",
+                "quality_status": "stale",
+            }
+        ]
+
+    result = await JevJudger(api_key="offline-test").judge(
+        state, card, base_plan(card), []
+    )
+
+    assert (
+        f"Evaluated {source_evidence_count} source evidence items, 0 normalized "
+        f"observations, and {analysis_count} computed analyses"
+    ) in result.summary
+    assert [item.model_dump(mode="json") for item in result.evidence] == evidence
+    assert result.outcome == Outcome.NOTIFY
+
+
+@pytest.mark.parametrize("selected", list(Outcome))
+@pytest.mark.parametrize("support", [.47, .70])
+async def test_confidence_floor_preserves_review_handoffs_but_gates_business_actions(monkeypatch, selected, support):
     async def transport(self, **kwargs):
+        probabilities = {item.value: (support if item == selected else (1 - support) / (len(Outcome) - 1)) for item in Outcome}
         return SimpleNamespace(
-            choices={"outcome": SimpleNamespace(choice="insufficient_data", probabilities={
-                "ignore": .31, "investigate": .0, "insufficient_data": .69,
-            })}, nouls={}, usage=None,
+            choices={"outcome": SimpleNamespace(choice=selected.value, probabilities=probabilities)}, nouls={}, usage=None,
         )
 
     monkeypatch.setattr(JevJudger, "_system_one_with_retry", transport)
     card = InsightCard(id="uncertain", title="Uncertain evidence", what_to_watch="Supplied context",
-                       why_watch="Review before action", sources=[], action_confidence_threshold=.7)
+                       why_watch="Review before action", sources=[], action_confidence_threshold=.7,
+                       delivery_methods=[DeliveryMethod(key=item.value, label=item.value, outcome=item,
+                                                       destination=f"agent://{item.value}") for item in (Outcome.NOTIFY, Outcome.ESCALATE)])
     result = await JevJudger(api_key="offline-test").judge({"evidence": []}, card, base_plan(card), [])
-    assert result.outcome == Outcome.INVESTIGATE
-    assert result.probabilities["investigate"] == 0
-    assert result.confidence == .69
-    assert "selected=insufficient_data, support=0.69" in result.rationale
-    assert "routed=investigate" in result.rationale
-    assert "confidence threshold" in result.rationale
+    fallback = support < .7 and selected in (Outcome.IGNORE, Outcome.NOTIFY, Outcome.ESCALATE)
+    assert result.outcome == (Outcome.INVESTIGATE if fallback else selected)
+    assert result.probabilities[selected.value] == support
+    assert result.confidence == support
+    assert f"selected={selected.value}, support={support:.2f}" in result.rationale
+    assert ("confidence threshold" in result.rationale) is fallback
 
 
 async def test_computed_contribution_contract_and_action_criteria_are_policy_bound(monkeypatch):
@@ -338,6 +450,349 @@ async def test_jev_question_payload_budget_fails_before_transport(monkeypatch):
     assert FakeClient.calls == []
     assert judger.metrics.requests == 0
     assert judger.metrics.payload_bytes == 0
+
+
+@pytest.mark.asyncio
+async def test_jev_ordinary_judgment_keeps_original_evidence_input(monkeypatch):
+    FakeClient.calls = []
+    monkeypatch.setattr(typesafe_sdk, "AsyncTypeSafeClient", FakeClient)
+    monkeypatch.setattr(typesafe_sdk, "Noul", FakeNoul)
+    card = _factoring_test_card()
+    evidence = _repeated_lineage_evidence(1)
+    state = _factoring_test_state(card, evidence)
+    judger = JevJudger(api_key="offline-test")
+
+    result = await judger.judge(state, card, base_plan(card), [])
+
+    assert len(FakeClient.calls) == 1
+    assert FakeClient.calls[0]["state"]["evidence"] == evidence
+    assert "encoding" not in FakeClient.calls[0]["state"]["evidence"]
+    assert [item.model_dump(mode="json") for item in result.evidence] == evidence
+
+
+@pytest.mark.asyncio
+async def test_jev_repeated_lineage_overflow_factors_losslessly_without_raising_budget(
+    monkeypatch,
+):
+    FakeClient.calls = []
+    monkeypatch.setattr(typesafe_sdk, "AsyncTypeSafeClient", FakeClient)
+    monkeypatch.setattr(typesafe_sdk, "Noul", FakeNoul)
+    card = _factoring_test_card()
+    evidence = _repeated_lineage_evidence(100)
+    state = _factoring_test_state(card, evidence)
+    judger = JevJudger(
+        api_key="offline-test", max_payload_bytes=1_000_000, max_input_tokens=12_000
+    )
+    configured_limit = judger.max_input_tokens
+
+    result = await judger.judge(state, card, base_plan(card), [])
+
+    assert judger.max_input_tokens == configured_limit
+    assert len(FakeClient.calls) == 1
+    request = FakeClient.calls[0]
+    packed = request["state"]["evidence"]
+    assert packed["encoding"] == "signalweave.lossless_common_fields.v1"
+    assert "copying common" in packed["contract"]
+    assert "Business values, statements, subject IDs, and labels stay inline" in packed[
+        "contract"
+    ]
+    assert set(packed["common"]) == {
+        "origin",
+        "provenance",
+        "source_key",
+        "source_url",
+    }
+    assert len(packed["rows"]) == len(evidence)
+    assert all(
+        {"subject_id", "subject_label", "statement"} <= set(row["overrides"])
+        for row in packed["rows"]
+    )
+    assert all("values" in row["overrides"] for row in packed["rows"])
+
+    full_state = judger._lossless_judgment_state(state, card, [])
+    factored_state = judger._factor_judgment_evidence(full_state)
+    assert factored_state is not None
+    questions = request["questions"]
+    assert judger._request_over_budget(full_state, questions)
+    assert not judger._request_over_budget(factored_state, questions)
+    assert [item.model_dump(mode="json") for item in result.evidence] == evidence
+
+
+@pytest.mark.asyncio
+async def test_jev_existing_compact_request_is_unchanged_when_it_fits(monkeypatch):
+    FakeClient.calls = []
+    monkeypatch.setattr(typesafe_sdk, "AsyncTypeSafeClient", FakeClient)
+    monkeypatch.setattr(typesafe_sdk, "Noul", FakeNoul)
+    card = _factoring_test_card()
+    evidence = _repeated_lineage_evidence(20)
+    source = {
+        "source_key": "source-a",
+        "adapter": "fixture",
+        "resource": "table:records",
+        "title": "Records",
+        "metadata": {"catalog_note": "m" * 30_000},
+        "contract": {},
+    }
+    state = _factoring_test_state(card, evidence, sources=[source])
+    judger = JevJudger(
+        api_key="offline-test", max_payload_bytes=25_000, max_input_tokens=12_000
+    )
+    legacy_compact_state = judger._compact_judgment_state(state, card, [])
+
+    result = await judger.judge(state, card, base_plan(card), [])
+
+    assert len(FakeClient.calls) == 1
+    request = FakeClient.calls[0]
+    assert judger._request_over_budget(
+        judger._lossless_judgment_state(state, card, []), request["questions"]
+    )
+    assert not judger._request_over_budget(legacy_compact_state, request["questions"])
+    assert request["state"] == legacy_compact_state
+    assert isinstance(request["state"]["evidence"], list)
+    assert set(request["questions"]) == {"watch_0", "question_0", "outcome"}
+    assert [item.model_dump(mode="json") for item in result.evidence] == evidence
+
+
+@pytest.mark.asyncio
+async def test_jev_overbudget_compact_wire_preserves_booleans_and_dedupes_numbers(monkeypatch):
+    FakeClient.calls = []
+    monkeypatch.setattr(typesafe_sdk, "AsyncTypeSafeClient", FakeClient)
+    monkeypatch.setattr(typesafe_sdk, "Noul", FakeNoul)
+    card = _factoring_test_card()
+    observation = Observation(
+        source_key="source-a",
+        subject_id="record-1",
+        subject_label="Record 1",
+        metric="flag",
+        current=1.0,
+        baseline=0.0,
+        dimensions={
+            "nested_list": [1.0, 2.0],
+            "nested_object": {"flag": 0.0, "count": 2.0},
+            "equivalent_numbers": [1.0, 2.0],
+        },
+        attributes={"equivalent_attribute": 1.0},
+    )
+    evidence = [
+        Evidence(
+            source_key="source-a",
+            subject_id="record-1",
+            subject_label="Record 1",
+            statement="The normalized source row includes typed flags.",
+            values={
+                "metric": "flag",
+                "current": True,
+                "baseline": False,
+                "nested_list": [True, 2.0],
+                "nested_object": {"flag": False, "count": 2.0},
+                "equivalent_numbers": [1, 2.0],
+                "equivalent_attribute": 1,
+            },
+        ).model_dump(mode="json")
+    ]
+    source = {
+        "source_key": "source-a",
+        "adapter": "fixture",
+        "resource": "table:records",
+        "title": "Records",
+        "metadata": {
+            "catalog_note": "m" * 30_000,
+            "typed_flag": True,
+            "typed_false": False,
+            "same_number": 1,
+        },
+        "contract": {"typed_flag": 1, "typed_false": 0, "same_number": 1.0},
+    }
+    state = _factoring_test_state(card, evidence, sources=[source])
+    judger = JevJudger(
+        api_key="offline-test", max_payload_bytes=25_000, max_input_tokens=12_000
+    )
+
+    result = await judger.judge(state, card, base_plan(card), [observation])
+
+    assert len(FakeClient.calls) == 1
+    request = FakeClient.calls[0]
+    full_state = judger._lossless_judgment_state(state, card, [observation])
+    assert judger._request_over_budget(full_state, request["questions"])
+    assert not judger._request_over_budget(request["state"], request["questions"])
+    assert request["state"] == judger._compact_judgment_state(
+        state, card, [observation]
+    )
+    assert request["state"]["evidence"][0]["values"] == {
+        "current": True,
+        "baseline": False,
+        "nested_list": [True, 2.0],
+        "nested_object": {"flag": False, "count": 2.0},
+    }
+    compact_source = request["state"]["sources"][0]
+    assert compact_source["metadata"]["typed_flag"] is True
+    assert compact_source["metadata"]["typed_false"] is False
+    assert "same_number" not in compact_source["metadata"]
+    assert [item.model_dump(mode="json") for item in result.evidence] == evidence
+
+
+def test_jev_json_evidence_equality_is_bounded_and_conservative():
+    assert not JevJudger._json_values_equal_for_deduplication(
+        [0] * 4_096, [0] * 4_096
+    )
+    assert not JevJudger._json_values_equal_for_deduplication(
+        {"value": (True,)}, {"value": (1,)}
+    )
+
+
+@pytest.mark.asyncio
+async def test_jev_compact_projection_factors_evidence_before_question_batching(monkeypatch):
+    FakeClient.calls = []
+    monkeypatch.setattr(typesafe_sdk, "AsyncTypeSafeClient", FakeClient)
+    monkeypatch.setattr(typesafe_sdk, "Noul", FakeNoul)
+    card = _factoring_test_card()
+    evidence = _repeated_lineage_evidence(20)
+    source = {
+        "source_key": "source-a",
+        "adapter": "fixture",
+        "resource": "table:records",
+        "title": "Records",
+        "metadata": {"catalog_note": "m" * 30_000},
+        "contract": {},
+    }
+    state = _factoring_test_state(card, evidence, sources=[source])
+    judger = JevJudger(
+        api_key="offline-test", max_payload_bytes=12_000, max_input_tokens=12_000
+    )
+
+    result = await judger.judge(state, card, base_plan(card), [])
+
+    assert len(FakeClient.calls) == 1
+    request = FakeClient.calls[0]
+    request_state = request["state"]
+    assert request_state["evidence"]["encoding"] == "signalweave.lossless_common_fields.v1"
+    assert len(request_state["sources"][0]["metadata"]["catalog_note"]) < 300
+    full_state = judger._lossless_judgment_state(state, card, [])
+    full_factored = judger._factor_judgment_evidence(full_state)
+    legacy_compact_state = judger._compact_judgment_state(state, card, [])
+    assert full_factored is not None
+    assert judger._request_over_budget(full_factored, request["questions"])
+    assert judger._request_over_budget(legacy_compact_state, request["questions"])
+    assert not judger._request_over_budget(request_state, request["questions"])
+    assert [item.model_dump(mode="json") for item in result.evidence] == evidence
+
+
+def test_jev_factoring_preserves_heterogeneous_null_missing_types_and_order():
+    lineage = ["source-table:" + "a" * 500, "source-table:" + "b" * 500]
+    long_statement = "Owner's exception remains attached to each row. " * 20
+    rows = [
+        {
+            "source_key": "source-a",
+            "origin": "source",
+            "provenance": lineage,
+            "source_url": None,
+            "subject_id": "first",
+            "subject_label": "Account réseau-北",
+            "statement": long_statement,
+            "maybe": None,
+            "typed": True,
+            "values": {
+                "ordered": [3, 1, 2],
+                "empty": None,
+                "movement_note": long_statement,
+            },
+        },
+        {
+            "source_key": "source-a",
+            "origin": "source",
+            "provenance": lineage,
+            "subject_id": "second",
+            "subject_label": "Account réseau-南",
+            "statement": long_statement,
+            "typed": 1,
+            "values": [
+                {"nested": [None, 4.5]},
+                "tail",
+                {"movement_note": long_statement},
+            ],
+        },
+        {
+            "source_key": "source-a",
+            "origin": "source",
+            "provenance": lineage,
+            "source_url": None,
+            "subject_id": "third",
+            "subject_label": "Account réseau-東",
+            "statement": long_statement,
+            "maybe": False,
+            "typed": "1",
+            "values": {"ordered": [1, 2, 3], "movement_note": long_statement},
+        },
+    ]
+    state = JevJudger._factor_judgment_evidence({"evidence": rows})
+    assert state is not None
+    packed = state["evidence"]
+    assert set(packed["common"]) == {"origin", "provenance", "source_key"}
+    assert "statement" not in packed["common"]
+    assert "values" not in packed["common"]
+    assert "subject_id" not in packed["common"]
+    assert "subject_label" not in packed["common"]
+    assert "source_url" not in packed["common"]
+    assert all(
+        {"statement", "subject_id", "subject_label", "values"} <= set(row["overrides"])
+        for row in packed["rows"]
+    )
+    reconstructed = [
+        {**packed["common"], **item["overrides"]} for item in packed["rows"]
+    ]
+
+    def canonical(value):
+        return json.dumps(
+            value, ensure_ascii=False, allow_nan=False, sort_keys=True, separators=(",", ":")
+        )
+
+    assert canonical(reconstructed) == canonical(rows)
+    assert "source_url" in reconstructed[0] and reconstructed[0]["source_url"] is None
+    assert "source_url" not in reconstructed[1]
+    assert reconstructed[0]["values"]["ordered"] == [3, 1, 2]
+    assert isinstance(reconstructed[1]["values"], list)
+    assert reconstructed[0]["statement"] == long_statement
+    assert reconstructed[1]["values"][2]["movement_note"] == long_statement
+    assert type(reconstructed[0]["typed"]) is bool
+    assert type(reconstructed[1]["typed"]) is int
+    assert reconstructed[0]["maybe"] is None
+    assert "maybe" not in reconstructed[1]
+    assert reconstructed[2]["maybe"] is False
+
+    assert JevJudger._factor_judgment_evidence(
+        {"evidence": [{"left": 1}, {"right": 2}]}
+    ) is None
+    assert JevJudger._factor_judgment_evidence(
+        {"evidence": [{"tuple": (1, 2)}, {"tuple": (1, 2)}]}
+    ) is None
+
+
+@pytest.mark.asyncio
+async def test_jev_truly_oversized_evidence_still_defers_before_transport(monkeypatch):
+    FakeClient.calls = []
+    monkeypatch.setattr(typesafe_sdk, "AsyncTypeSafeClient", FakeClient)
+    monkeypatch.setattr(typesafe_sdk, "Noul", FakeNoul)
+    card = _factoring_test_card()
+    evidence = [
+        Evidence(
+            source_key="source-a",
+            subject_id=f"large-{index}",
+            subject_label=f"Large {index}",
+            statement=f"unique-{index}: " + ("x" * 5_000),
+            provenance=["source-table:large"],
+        ).model_dump(mode="json")
+        for index in range(3)
+    ]
+    state = _factoring_test_state(card, evidence)
+    judger = JevJudger(
+        api_key="offline-test", max_payload_bytes=1_000_000, max_input_tokens=1_024
+    )
+
+    with pytest.raises(JevPayloadError, match="judgment Jev payload exceeded"):
+        await judger.judge(state, card, base_plan(card), [])
+
+    assert FakeClient.calls == []
+    assert judger.metrics.request_attempts == 0
 
 
 @pytest.mark.asyncio

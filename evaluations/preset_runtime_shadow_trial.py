@@ -247,7 +247,7 @@ async def _run_workspace(workspace: dict[str, Any], root: Path) -> dict[str, Any
                 idempotency_key=key,
                 actor=f"{workspace['id']}-scheduler",
             )
-            receipt_lookup = get_receipt(idempotency_key=key)
+            receipt_lookup = await get_receipt(idempotency_key=key)
             after_replay_calls = len(ContractClient.calls)
             result = evaluated["result"]
             resources = evaluated.get("resources") or []

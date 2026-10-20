@@ -31,7 +31,7 @@ from .models import (
     WatchStatus,
 )
 from .retrieval import resource_ref
-from .typesafe_adapter import JevJudger, compact_json_value, estimate_json_tokens
+from .typesafe_adapter import JevJudger, JevPayloadError, compact_json_value, estimate_json_tokens
 
 DECISIONS_URL = "https://api.openai.com/v1/decisions"
 RESPONSES_URL = "https://api.openai.com/v1/responses"
@@ -493,12 +493,21 @@ class OpenAIDecisionJudger:
 
     async def _ask(self, state: Any, questions: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
         input_text = json.dumps(state, ensure_ascii=False, separators=(",", ":"), default=str)
-        observed = estimate_json_tokens({"input": input_text, "questions": questions})
+        # The provider reads the decoded input text, not the HTTP envelope's
+        # escaped copy of that JSON string. Do not count every quote/backslash
+        # twice when estimating model input.
+        budget_payload = {"input": state, "questions": questions}
+        observed = estimate_json_tokens(budget_payload)
         budget = int(os.getenv("SIGNALWEAVE_MAX_DECISION_INPUT_TOKENS", str(MAX_INPUT_TOKENS)))
         if budget < 1 or observed > budget:
-            raise RuntimeError(
-                f"Decision request is too large ({observed} estimated tokens; limit {budget}); "
-                "narrow the selected evidence or card scope"
+            raise JevPayloadError(
+                stage="judgment",
+                observed_bytes=len(json.dumps(budget_payload, ensure_ascii=False,
+                                              separators=(",", ":"), default=str).encode()),
+                budget_bytes=max(0, budget) * 3,
+                observed_tokens=observed,
+                budget_tokens=budget,
+                provider=self.name,
             )
         try:
             answers = await self.transport.decide(input_text, questions)
@@ -545,9 +554,12 @@ class OpenAIDecisionJudger:
         plan: InsightPlan,
         observations: list[Observation],
     ) -> dict[str, Any]:
-        compact = JevJudger._compact_synthesis_state(
-            state, card, plan, observations, {}, semantic_roles=False
-        )
+        # Share the ordinary Jev path's lossless projection, not its experimental
+        # sampled/role-classified synthesis. Unrequested role classification is
+        # not missing business evidence. Wide input is deferred, never sampled
+        # into a falsely complete decision packet.
+        del plan
+        compact = JevJudger._lossless_judgment_state(state, card, observations)
         return {
             "evidence_bundle": compact,
             "decision_contract": {
@@ -684,7 +696,10 @@ class OpenAIDecisionJudger:
         selected = outcome_answer.get("choice") if valid_outcome else Outcome.INVESTIGATE.value
         selected_probability = probabilities.get(selected, 0.0) if valid_outcome else 0.0
         routed_outcome = Outcome(selected)
-        if selected_probability < card.action_confidence_threshold:
+        # Preserve the selected data-gap/investigation handoff, just as the
+        # engine does. The support floor gates business conclusions/actions.
+        if (routed_outcome in (Outcome.IGNORE, Outcome.NOTIFY, Outcome.ESCALATE)
+                and selected_probability < card.action_confidence_threshold):
             routed_outcome = Outcome.INVESTIGATE
         source_keys = plan.selected_source_keys or [source.key for source in card.sources]
         provider_note = (
@@ -692,12 +707,15 @@ class OpenAIDecisionJudger:
             if self.name == "chatgpt-plan-responses"
             else "Probabilities are the provider's typed Decisions API distribution."
         )
+        evidence = [Evidence.model_validate(item) for item in state.get("evidence", [])]
+        source_evidence_count = sum(item.origin == "source" for item in evidence)
         return InsightResult(
             card_id=card.id,
             outcome=routed_outcome,
             summary=(
-                f"Evaluated {len(observations)} observations and {len(state.get('analyses', []))} "
-                f"computed analyses across {len(source_keys)} sources."
+                f"Evaluated {source_evidence_count} source evidence items, {len(observations)} "
+                f"normalized observations, and {len(state.get('analyses', []))} computed analyses "
+                f"across {len(source_keys)} sources (counts may overlap)."
             ),
             rationale=(
                 f"{self.name} evaluated the owner's typed watch, question, and outcome policy; "
@@ -709,7 +727,7 @@ class OpenAIDecisionJudger:
             watch_results=watch_results,
             question_results=question_results,
             evidence_findings=[],
-            evidence=[Evidence.model_validate(item) for item in state.get("evidence", [])],
+            evidence=evidence,
             observations=observations,
             source_keys=source_keys,
             evaluator=self.name,

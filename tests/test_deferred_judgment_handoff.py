@@ -215,9 +215,9 @@ async def read_all_pages(server, receipt_id, path, limit=100):
     offset = 0
     total = None
     while True:
-        page = tool(server, "get_decision_receipt")(
+        page = (await tool(server, "get_decision_receipt")(
             receipt_id=receipt_id, result_path=path, offset=offset, limit=limit,
-        )["result_page"]
+        ))["result_page"]
         total = page["total"]
         values.extend(page["items"])
         if not page["has_more"]:
@@ -325,7 +325,7 @@ async def test_overbudget_judgment_persists_complete_state_and_never_calls_sdk(
         result["source_by_key"]["growth"]["contract"]
     )
 
-    durable = tool(server, "get_decision_receipt")(
+    durable = await tool(server, "get_decision_receipt")(
         idempotency_key=f"deferred-{observation_count}"
     )
     assert durable["receipt"]["status"] == "decision_deferred"
@@ -389,16 +389,16 @@ async def test_compact_deferred_handoff_pages_exact_state_and_source_snapshots(t
     assert evidence_coverage["next_offset"] == 0
 
     receipt_id = response["receipt"]["receipt_id"]
-    source_page = tool(server, "get_decision_receipt")(
+    source_page = (await tool(server, "get_decision_receipt")(
         receipt_id=receipt_id, result_path=["source_by_key"], limit=10,
-    )["result_page"]
+    ))["result_page"]
     assert source_page["oversized_item"]["path"] == ["source_by_key", "growth"]
-    full = tool(server, "get_decision_receipt")(receipt_id=receipt_id)
+    full = await tool(server, "get_decision_receipt")(receipt_id=receipt_id)
     stored_source = full["result"]["source_by_key"]["growth"]
-    metadata_items = tool(server, "get_decision_receipt")(
+    metadata_items = (await tool(server, "get_decision_receipt")(
         receipt_id=receipt_id,
         result_path=["source_by_key", "growth", "metadata"],
-    )["result_page"]["items"]
+    ))["result_page"]["items"]
     assert {item["key"]: item["value"] for item in metadata_items} == stored_source["metadata"]
     source_observations = await read_all_pages(
         server, receipt_id, ["source_by_key", "growth", "observations"], limit=25,
@@ -423,10 +423,10 @@ async def test_compact_deferred_handoff_pages_exact_state_and_source_snapshots(t
         assert fact_row["full_ref"] + facts["attributes_path_suffix"] == [
             "judgment_state", "observations", str(index), "attributes",
         ]
-    assert observations[-1]["subject_id"] == tool(server, "get_decision_receipt")(
+    assert observations[-1]["subject_id"] == (await tool(server, "get_decision_receipt")(
         receipt_id=receipt_id,
         result_path=["judgment_state", "observations", "116", "subject_id"],
-    )["result_page"]["items"][0]
+    ))["result_page"]["items"][0]
     contracts = await read_all_pages(server, receipt_id, ["source_contracts"], limit=10)
     assert contracts == full["result"]["source_contracts"]
     assert contracts[0]["contract"] == full["result"]["source_by_key"]["growth"]["contract"]
@@ -503,7 +503,7 @@ async def test_deferred_receipt_replays_without_reads_and_keeps_card_scope_and_v
         )
     )
     with pytest.raises(ValueError, match="outside the authenticated principal tenant"):
-        tool(server, "get_decision_receipt")(
+        await tool(server, "get_decision_receipt")(
             receipt_id=first["receipt"]["receipt_id"],
             result_path=["source_by_key", "growth", "metadata", "chart_definitions"],
         )
@@ -534,7 +534,7 @@ async def test_draft_and_nonpayload_errors_do_not_become_deferred(tmp_path):
         await tool(server, "evaluate_insight_card")(
             "deferred-card", idempotency_key="nonpayload-failure",
         )
-    failed = tool(server, "get_decision_receipt")(idempotency_key="nonpayload-failure")
+    failed = await tool(server, "get_decision_receipt")(idempotency_key="nonpayload-failure")
     assert failed["receipt"]["status"] == "failed"
     assert failed["result"]["error"] == "RuntimeError: unexpected judgment failure"
 

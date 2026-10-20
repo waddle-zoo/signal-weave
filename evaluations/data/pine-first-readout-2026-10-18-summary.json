@@ -1,0 +1,141 @@
+{
+  "protocol": "pine-courier-first-readout-v1",
+  "scope": "Two first-readout/draft actors, one synthetic historical company case. Not approved recurrence, Jev benefit, customer or superiority evidence.",
+  "order": [
+    "baseline",
+    "signalweave"
+  ],
+  "limits": {
+    "actors": 2,
+    "jev_requests": 0,
+    "response_seconds": 480,
+    "mcp_tools": 48,
+    "workspace_tools": 50,
+    "between_actor_input_stop": 3000000,
+    "between_actor_uncached_stop": 250000
+  },
+  "source_sha256": "30c6913e4db97a379bd6a09789837a991204e64eb284204a9bcbdef4c11c860e",
+  "binary": {
+    "dirty": false,
+    "format_version": 1,
+    "frozen": true,
+    "git_commit": "f8b5764d82a6b6cc3d662116b052b856880a6037",
+    "python": "3.12.10",
+    "source_sha256": "f689067880d9a4816ef5bbba80c9688735a70c164f870cee21e47c50e032dfe1",
+    "version": "0.2.0rc3",
+    "binary_sha256": "12a6ebee16b0c1a5f78d721ca67e9a8fe4b988fbeaeb301a4fbfab1d658d57e4"
+  },
+  "codex": {
+    "version": "codex-cli 0.162.0-alpha.17.2",
+    "sha256": "0d5ac7aae20c4eda6242428d5e218c55ba96d8763fda2a271088ff37104b9d28"
+  },
+  "actors": {
+    "baseline": {
+      "process_complete": true,
+      "actor_seconds": 370.09717254199995,
+      "mcp_calls": 33,
+      "workspace_operations": 14,
+      "usage": {
+        "input_tokens": 1503940,
+        "cached_input_tokens": 1356288,
+        "uncached_input_tokens": 147652,
+        "output_tokens": 45102,
+        "responses": 1
+      },
+      "provider_requests": 0,
+      "brief": "# Weekly delivery readout\n\n## Dispatch decision\n\n**No exception notice is indicated by the supplied rule.** Attainment in the latest closed due week was **89.47% (2,550 / 2,850)**, unchanged from **89.47% (2,040 / 2,280)** in the preceding week: a **0.00 percentage point** change. The frozen owner declaration calls for investigation and a Dispatch notice after an overall decline of at least 5 percentage points. This result calls for the short digest only. No message was sent.\n\n| Due week (UTC, half-open) | Expected / registered | Eligible after cancellations | On time | Attainment |\n|---|---:|---:|---:|---:|\n| Sep 7–14, 2026 | 2,400 / 2,400 | 2,280 | 2,040 | 89.47% |\n| Sep 14–21, 2026 | 3,000 / 3,000 | 2,850 | 2,550 | 89.47% |\n\n## What changed\n\nRegistered and eligible volume each rose 25%. On-time parcels rose by the same 25%, from 2,040 to 2,550; late or undelivered parcels rose from 240 to 300. Priority attainment stayed at 90.00%; standard stayed at 89.33%. The tier figures explain the aggregate and do not trigger separate alerts. These counts describe the change; they do not establish its cause.\n\n## Measure and evidence\n\nThe source defines `due_week_delivery_attainment` v1 as noncancelled parcels delivered by their promised UTC time divided by **all** noncancelled parcels due in the half-open UTC week, including overdue undelivered parcels. The source snapshot sets the comparison weeks to Sep 7–14 and Sep 14–21, with an as-of cutoff of **2026-09-21 06:00 UTC**. Manifest registrations reconcile to parcel rows in both weeks. Cached export counts match the direct parcel calculation for both weeks and both tiers.\n\nThe `completed_only_sla` view gives 92.73% then 94.69%, an apparent improvement of 1.96 points. It excludes undelivered parcels, so it is a different denominator and was not used for the decision.\n\nThe connected source identifies itself as a **synthetic as-of snapshot**. Tool metadata reports retrieval at 2026-10-19 00:53 UTC and explicitly says retrieval time is not ingestion freshness. The source cutoff, rather than the retrieval timestamp or host date, controls this readout.\n\n## For owner review\n\nReview the proposed definition, population, week boundaries, 5-point rule and source checks in [working-notes.md](working-notes.md). The owner-note tool returned frozen declarations with `known=false`; they are references, not live owner confirmation or approval. A shared card, recurring schedule and delivery destination remain unapproved.\n\nThe saved SQL and supporting source captures are in [queries.sql](queries.sql) and [evidence.md](evidence.md). The procedure is repeatable against this connected snapshot source. A production recurring check is **not ready**: this source exposes only the fixed Sep 21 historical snapshot and provides no freshness guarantee or future-week access. The proposed Nov 15 review date in the owner reference is not a freshness certification.\n",
+      "business_files": {
+        "brief.md": {
+          "sha256": "41a54703bffc6742cb42ea67b1529cc01aa7e4aa9134adbfed151cbc27de36b9",
+          "bytes": 2934
+        },
+        "connected-source.json": {
+          "sha256": "e9ec96bc1a285bde58ae8b50ab2d66ff162131ce1a6447ee3d1c616bac13d8ce",
+          "bytes": 286
+        },
+        "evidence.md": {
+          "sha256": "6e6210e0ca37a09363fdf4fd86103188c0e4d368fe50c961b6bab1c32ca8e3e5",
+          "bytes": 6831
+        },
+        "queries.sql": {
+          "sha256": "edae24510ec96cd504de8868181e1604192f5815481bb37b6d87700696715c30",
+          "bytes": 12475
+        },
+        "working-notes.md": {
+          "sha256": "44cde2ad62a4ebd6ff39f499cd71cb3d890d8207a1bc1c7c39459dc7aea2950e",
+          "bytes": 5324
+        }
+      }
+    },
+    "signalweave": {
+      "process_complete": true,
+      "actor_seconds": 467.690339667,
+      "mcp_calls": 27,
+      "workspace_operations": 25,
+      "usage": {
+        "input_tokens": 2535050,
+        "cached_input_tokens": 2392576,
+        "uncached_input_tokens": 142474,
+        "output_tokens": 61496,
+        "responses": 1
+      },
+      "provider_requests": 0,
+      "brief": "# Weekly delivery readout\n\n**No Dispatch exception is indicated.** For the latest closed UTC due week, attainment was **89.47%**, unchanged from the preceding week (**0.00 percentage point change**). The owner’s investigation rule is a decline of at least 5 percentage points. Keep this week to the requested short digest; the evidence does not establish a cause or need for service follow-up.\n\n| Closed UTC due week | On time / eligible | Attainment |\n|---|---:|---:|\n| Sep 7–14, 2026 | 2,040 / 2,280 | 89.47% |\n| Sep 14–21, 2026 | 2,550 / 2,850 | 89.47% |\n\nBoth eligible volume and on-time parcels rose 25%. Priority stayed at 90.00% and standard at 89.33%; their shares of eligible volume also stayed the same. Volume growth alone is not the trigger.\n\nThe comparison uses the source’s v1 definition: all noncancelled parcels due in each full Monday-to-Monday UTC week, including overdue undelivered parcels. The cached export reconciles to the parcel records and due-week manifests at the supplied source cutoff. A completed-only view would show a misleading +1.96 pp because it removes undelivered parcels from the denominator.\n\n**Period and evidence.** The fixed source cutoff is `2026-09-21T06:00:00Z`; the measured weeks are Sep 7–14 and Sep 14–21 UTC. The export’s source time is the supplied cutoff. It was retrieved later on Oct 19; retrieval time is not a freshness timestamp, and the source declares no freshness SLA. See the [validated SQL export](tool-responses/response-000023.json), [source definitions and coverage checks](evidence/validation.md), and [owner notes](tool-responses/response-000003.json).\n\n## Draft recurring check for review\n\nSignalWeave draft **`card-weekly-delivery-attainment-dispatch-readout-b9d16006`** proposes: compare the latest closed week to the preceding full UTC week; investigate and notify Dispatch only for a valid overall decline of at least 5 pp; otherwise produce a short routine digest; route a material evidence gap to Data Operations. The saved draft uses the current cached export and records both destinations as draft-only. It is not approved, evaluated, scheduled, or sent.\n\nIt is not ready to repeat the calculation yet. The current registered card source returns raw cached counts; the derived SQL was verified only through a one-off export. The exact proposed resource entry and fixed arguments are in [proposed-source-resource.json](proposed-source-resource.json), alongside the readable [SQL](queries/weekly-delivery-attainment.sql). An operator would need to register that source and the card would then need another review. SignalWeave’s current catalog also leaves the source population and comparison windows undeclared, so review remains open. The draft carries a platform 24-hour source-age default that is not owner-defined; clearing it was rejected by the revision tool.\n\nSee [working notes](working-notes.md) for the reusable procedure, review state, and unresolved choices. No policy replay or delivery evaluation was run.\n",
+      "business_files": {
+        "brief.md": {
+          "sha256": "3fb3bd679237a142e0774c10b28f94ee0ae6a37696d1391f65bf27e49446c225",
+          "bytes": 3012
+        },
+        "connected-source.json": {
+          "sha256": "e9ec96bc1a285bde58ae8b50ab2d66ff162131ce1a6447ee3d1c616bac13d8ce",
+          "bytes": 286
+        },
+        "evidence/validation.md": {
+          "sha256": "77a7b5b72199f2404c91a68a3ef4d7849d379d5be9045f5075dc15cc0e81d744",
+          "bytes": 2967
+        },
+        "mcp-source-bridge.md": {
+          "sha256": "80e40885acfd1fc0fda0e4bc92a0916d6969fc606754137713f7f9a0a7fbac76",
+          "bytes": 17659
+        },
+        "proposed-source-resource.json": {
+          "sha256": "3b82369a47af8be7a56f1473190ce0bdc797e54dc28419d47d282f4f1b97ca63",
+          "bytes": 14378
+        },
+        "queries/weekly-delivery-attainment.sql": {
+          "sha256": "bdfa4430e4f8b514e99e8ec45419284213e5b6fcd8bff38290719ce5314d57a0",
+          "bytes": 12168
+        },
+        "working-notes.md": {
+          "sha256": "24be246a789a84661bc33f8fd33a5c77639ab71900dd497c59d11a058fe5cf2e",
+          "bytes": 7517
+        }
+      }
+    }
+  },
+  "reviews": {
+    "data": "Both first readouts numerically supported; exact saved SQL reproduces this historical snapshot. Derived source is not registered.",
+    "product": "Useful first answers and retained procedures, but onboarding remains incomplete and the SignalWeave card is an unapproved draft. No overall benefit established."
+  },
+  "source_facts": {
+    "source_cutoff": "2026-09-21T06:00:00Z",
+    "baseline_week": "2026-09-07/2026-09-14",
+    "current_week": "2026-09-14/2026-09-21",
+    "baseline_on_time": 2040,
+    "baseline_eligible": 2280,
+    "current_on_time": 2550,
+    "current_eligible": 2850,
+    "attainment_change_pp": 0,
+    "eligible_volume_change_pct": 25
+  },
+  "record_hashes": {
+    "baseline.json": "7a79376ed1ce2303c3788b9511bcd8d7a76f31ac1691f83d5173d15c888a8f68",
+    "signalweave.json": "24a59b7f09993cc0c66a5052ea5acb2621aadd011a375e0feeca9a80b29b3736",
+    "study.json": "7d6cd1022909fa3dbc688e7cd7fddf7ad39a7d5f114766023fbea2dadd22aea5",
+    "preflight.json": "37ae3b5505f24973067d4a505950a338011f97ca682a6acb1e35da8aad98ad86",
+    "admission-review.json": "cf4391d6174fb3c55c4b555efa2f366e2cba420c1ea45134f1b0afc4416a3c69",
+    "review-product.json": "1b6053a7f0f9f5c4b0d063811aa3787b3e5568b76ccc9c5b422dcf428d4681a5",
+    "review-data.md": "f817cec30010acd17b7d39bbc589b3c594a8b5fe45c444f68c9ff9f6a793fbbc"
+  },
+  "accounting_scope": "Actor-stage timing excludes startup/cleanup; setup, operator work and reviewer costs are not amortized or inferred. Fixed order, unequal preparation artifacts and one pair do not establish causal savings."
+}

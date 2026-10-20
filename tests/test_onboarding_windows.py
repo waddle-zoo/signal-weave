@@ -107,12 +107,12 @@ async def test_dispatch_mismatch_cannot_be_confirmed_or_silently_filtered(tmp_pa
 
 
 @pytest.mark.parametrize("name", AUTHORING)
-async def test_mcp_schema_and_dispatch_reject_explicit_empty_windows(tmp_path, name):
-    server = make_server(tmp_path)
+async def test_mcp_schema_and_dispatch_accept_explicit_noncomparative_windows(tmp_path, name):
+    server = make_server(tmp_path, catalog=catalog_with_windows([]))
     spec = next(spec for spec in await server.list_tools() if spec.name == name)
     field = spec.inputSchema["properties"]["comparison_windows"]
     array = next(item for item in field["anyOf"] if item.get("type") == "array")
-    assert array["minItems"] == 1 and array["maxItems"] == 20
+    assert "minItems" not in array and array["maxItems"] == 20
     assert "available_comparison_windows" in json.dumps(field)
     assert "not required_comparison_keys" in json.dumps(field)
     if name == "draft_insight_card":
@@ -122,10 +122,45 @@ async def test_mcp_schema_and_dispatch_reject_explicit_empty_windows(tmp_path, n
         assert "do not invent" in description
     validator = Draft202012Validator(spec.inputSchema)
     assert not list(validator.iter_errors(arguments(name, comparison_windows=[CUSTOM])))
-    assert list(validator.iter_errors(arguments(name, comparison_windows=[])))
-    with pytest.raises(Exception, match="at least 1 item"):
-        await dispatch(server, name, arguments(name, comparison_windows=[]))
-    assert server._test_runtime.card_store.list_cards() == []
+    point_in_time = arguments(
+        name,
+        what_to_watch="Current unanswered ticket count",
+        questions=["How many tickets are currently unanswered?"],
+        comparison_windows=[],
+    )
+    assert not list(validator.iter_errors(point_in_time))
+    response = await dispatch(server, name, point_in_time)
+    assert response["card"]["comparison_windows"] == response["plan"]["comparison_windows"] == []
+    if "setup_questions" in response:
+        assert not any("comparison window" in question.lower() for question in response["setup_questions"])
+    review = (await dispatch(server, "review_insight_card", {
+        "card_id": response["card"]["id"],
+    }))["review"]
+    assert windows_blocker(review) is None
+    assert not any("comparison windows are undeclared" in warning.lower() for warning in review["warnings"])
+
+
+async def test_revision_can_clear_comparison_for_point_in_time_card_and_review_it(tmp_path):
+    server = make_server(tmp_path)
+    created = await dispatch(server, "onboard_insight_card", arguments(
+        "onboard_insight_card",
+        what_to_watch="Current unanswered ticket count",
+        questions=["How many tickets are currently unanswered?"],
+    ))
+    card_id = created["card"]["id"]
+
+    revised = await dispatch(server, "revise_insight_card", {
+        "card_id": card_id,
+        "expected_card_version": created["card"]["version"],
+        "changes": {"comparison_windows": []},
+        "reason": "This is a current-state queue check.",
+    })
+    assert revised["card"]["comparison_windows"] == []
+    assert revised["card"]["compiled_plan"] is None
+
+    review = (await dispatch(server, "review_insight_card", {"card_id": card_id}))["review"]
+    assert windows_blocker(review) is None
+    assert not any("comparison window" in question.lower() for question in review["questions"])
 
 
 @pytest.mark.parametrize("optional", [False, True])
@@ -175,11 +210,16 @@ async def test_undeclared_sources_warn_without_blocking_or_inferring(tmp_path, n
 
 
 @pytest.mark.parametrize("automatic_outcome", ["investigate", "notify", "escalate"])
-async def test_undeclared_sources_block_automatic_routes(tmp_path, automatic_outcome):
+async def test_undeclared_windows_warn_and_owner_can_approve_routed_shadow(tmp_path, automatic_outcome):
     server = make_server(tmp_path, catalog=catalog_with_windows([]))
+    guidance = {
+        "investigate": "Investigate the selected comparison when the evidence is materially abnormal.",
+        "notify": "Notify the owner only when the selected comparison is materially abnormal.",
+        "escalate": "Escalate to the owner when the selected comparison is materially abnormal.",
+    }[automatic_outcome]
     response = await dispatch(server, "onboard_insight_card", arguments(
         "onboard_insight_card",
-        decision_guidance="Notify the owner only when the selected comparison is materially abnormal.",
+        decision_guidance=guidance,
         delivery_methods=[{
             "key": "owner",
             "outcome": automatic_outcome,
@@ -190,11 +230,15 @@ async def test_undeclared_sources_block_automatic_routes(tmp_path, automatic_out
     review = (await dispatch(server, "review_insight_card", {
         "card_id": response["card"]["id"],
     }))["review"]
-    blocker = windows_blocker(review)
-    assert blocker["severity"] == "block"
-    assert "automatic" in blocker["message"]
-    with pytest.raises(Exception, match="comparison-window-mismatch"):
-        await dispatch(server, "approve_insight_card", {"card_id": response["card"]["id"]})
+    assert windows_blocker(review) is None
+    assert not any(item["code"] == "source-contract-required" for item in review["blockers"])
+    assert any("undeclared" in warning and "unverified" in warning for warning in review["warnings"])
+    approved = await dispatch(server, "approve_insight_card", {"card_id": response["card"]["id"]})
+    assert approved["status"] == "approved"
+    stored = tool(server, "get_insight_card")(response["card"]["id"])
+    assert stored["delivery_methods"] == response["card"]["delivery_methods"]
+    assert stored["onboarding_review"]["warnings"] == review["warnings"]
+    assert approved["workflow_acceptance"]["status"] == "unassessed"
 
 
 async def test_undeclared_optional_quality_source_does_not_block_required_metric_route(tmp_path):
@@ -282,7 +326,7 @@ async def test_typed_required_quality_source_does_not_block_metric_window(tmp_pa
     assert any("undeclared" in warning for warning in review["warnings"])
 
 
-async def test_owner_cannot_confirm_undeclared_window_for_fixed_automatic_route(tmp_path):
+async def test_owner_can_approve_undeclared_window_without_inventing_source_guarantees(tmp_path):
     server = make_server(tmp_path, catalog=catalog_with_windows([]))
     response = await dispatch(server, "onboard_insight_card", arguments(
         "onboard_insight_card",
@@ -296,19 +340,23 @@ async def test_owner_cannot_confirm_undeclared_window_for_fixed_automatic_route(
     ))
     card_id = response["card"]["id"]
     review = (await dispatch(server, "review_insight_card", {"card_id": card_id}))["review"]
-    assert windows_blocker(review)["severity"] == "block"
-    with pytest.raises(Exception, match="comparison-window-mismatch"):
-        await dispatch(server, "approve_insight_card", {
-            "card_id": card_id,
-            "source_selection_fingerprint": review["source_selection_fingerprint"],
-            "source_selection_reason": (
-                "The owner reviewed the fixed source and explicitly accepts previous_period "
-                "as the source's comparison contract; runtime evidence must still support it."
-            ),
-        })
+    assert windows_blocker(review) is None
+    warning = next(item for item in review["warnings"] if "undeclared" in item)
+    assert "unverified" in warning
+    assert "previous_period" not in warning
+    approved = await dispatch(server, "approve_insight_card", {
+        "card_id": card_id,
+        "source_selection_fingerprint": review["source_selection_fingerprint"],
+        "source_selection_reason": "I approve this fixed source for a delivery-disabled shadow run.",
+    })
+    assert approved["status"] == "approved"
+    stored = tool(server, "get_insight_card")(card_id)
+    assert stored["delivery_methods"] == response["card"]["delivery_methods"]
+    assert stored["onboarding_review"]["warnings"] == review["warnings"]
+    assert approved["workflow_acceptance"]["status"] == "unassessed"
 
 
-async def test_metric_source_without_typed_contract_cannot_be_owner_confirmed(tmp_path):
+async def test_incomplete_metric_contract_warns_but_owner_can_approve_routed_shadow(tmp_path):
     catalog = catalog_with_windows(["previous_period"])
     catalog.resources[0].contract = ResourceContract(
         metric_names=["checkout_conversion"],
@@ -328,17 +376,29 @@ async def test_metric_source_without_typed_contract_cannot_be_owner_confirmed(tm
     ))
     card_id = response["card"]["id"]
     review = (await dispatch(server, "review_insight_card", {"card_id": card_id}))["review"]
-    blocker = next(
-        item for item in review["blockers"] if item["code"] == "source-contract-required"
+    assert windows_blocker(review) is None
+    assert not any(item["code"] == "source-contract-required" for item in review["blockers"])
+    warning = next(
+        item for item in review["warnings"] if "metric/comparison meaning is unverified" in item
     )
-    assert blocker["severity"] == "block"
-    assert blocker["refs"] == ["superset|dashboard:7"]
-    with pytest.raises(Exception, match="source-contract-required"):
-        await dispatch(server, "approve_insight_card", {
-            "card_id": card_id,
-            "source_selection_fingerprint": review["source_selection_fingerprint"],
-            "source_selection_reason": "The owner accepts this source despite its missing typed contract.",
-        })
+    assert "superset|dashboard:7" in warning
+    assert "does not certify unattended delivery" in warning
+    selected = next(item for item in review["source_candidates"] if item["selected"])
+    contract = selected["metadata"]
+    assert contract["metric_names"] == ["checkout_conversion"]
+    assert contract["available_comparison_windows"] == ["previous_period"]
+    assert not contract.get("metric_definitions")
+    assert not contract.get("comparison_contracts")
+    assert not contract.get("required_comparison_keys")
+    assert not contract.get("population")
+    assert not contract.get("grain")
+
+    approved = await dispatch(server, "approve_insight_card", {"card_id": card_id})
+    assert approved["status"] == "approved"
+    stored = tool(server, "get_insight_card")(card_id)
+    assert stored["delivery_methods"] == response["card"]["delivery_methods"]
+    assert stored["onboarding_review"]["warnings"] == review["warnings"]
+    assert approved["workflow_acceptance"]["status"] == "unassessed"
 
 
 @pytest.mark.parametrize("name", ["propose_insight_card", "onboard_insight_card"])
@@ -434,8 +494,7 @@ def test_declaration_validation_and_exact_runtime_matching():
         with pytest.raises(ValidationError):
             ResourceContract(available_comparison_windows=invalid)
     source = SourceRef(key="metric", adapter="test", resource="opaque", label="Metric")
-    with pytest.raises(ValueError, match="nonempty"):
-        resolve_comparison_windows([], [source], {})
+    assert resolve_comparison_windows([], [source], {}) == []
     measured = comparison(comparison_window=CUSTOM)
     assert analyze_comparison("metric", measured, comparison_window=CUSTOM).status == "complete"
     assert analyze_comparison("metric", measured, comparison_window="previous_period").status == "insufficient_data"

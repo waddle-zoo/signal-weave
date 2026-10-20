@@ -1,0 +1,316 @@
+{
+  "protocol": "agent-report-handoff-v1",
+  "independent_internal_review": {
+    "method": "Scoped GO before inference, conditional on matching preflight and green software verification.",
+    "outcome": "Arithmetic and useful analysis pass; business routing acceptance fails. Not external peer review or customer validation.",
+    "baseline_attribution_limit": "The baseline says the source defines net_sales as Executive management sales. The official management-sales meaning comes from the fictional owner declaration; the saved chart establishes SUM(net_sales), not that business definition. Preserve the original wording, but do not treat it as source-proven semantics."
+  },
+  "execution_status": "closed",
+  "method_commit": "5444ead",
+  "scope": "Formative same-conversation agent workflow and conditional plain-agent comparator over the known historical Northstar fixture. Not a new company, holdout, fresh human onboarding, causal study or superiority estimate. This is a different workflow from the closed forced publisher/writer split; their failures and unknown costs remain separate.",
+  "process_completed": true,
+  "business_acceptance": "failed: native confidence fallback changed the data-gap owner; baseline followed the owner policy",
+  "native_workflow_complete": true,
+  "card_unchanged": true,
+  "frontier_invocations": 2,
+  "jev_attempts": 1,
+  "automatic_retries": 0,
+  "series_cost_known": false,
+  "prior_censored_attempts": [
+    {
+      "protocol": "frontier-publication-v1",
+      "frontier_invocations": 1,
+      "usage_known": false
+    },
+    {
+      "protocol": "frontier-publication-v2",
+      "frontier_invocations": 1,
+      "usage_known": false
+    }
+  ],
+  "native_build": {
+    "dirty": false,
+    "format_version": 1,
+    "frozen": true,
+    "git_commit": "865502901a5e3bcafedad3317552132f96b23dca",
+    "python": "3.12.10",
+    "source_sha256": "ee737966781ca8478cc4f7d3736b1a78ef329943ebffcd56941b50296070a45f",
+    "version": "0.2.0rc3",
+    "binary_sha256": "11bb3ab1166d89b11936f79443fc61e463d697468d2683c0c9512af64ff9c40b"
+  },
+  "codex": {
+    "version": "codex-cli 0.162.0-alpha.2",
+    "sha256": "cb4e4994627e770800a940b42969c77855a3fc09a6e60b02aa6319f670d6b6ab"
+  },
+  "usage_scope": "CLI-reported completed user-turn usage, not invoices or underlying HTTP request counts; prior unknown costs excluded. Response times exclude startup/registry/cleanup.",
+  "arms": [
+    {
+      "arm": "signalweave",
+      "status": "complete",
+      "seconds": 204.32044308297918,
+      "admitted_tool_calls": 20,
+      "observed_calls_including_discovery": 20,
+      "metadata_discovery_calls": 0,
+      "tool_errors": 0,
+      "cli_usage": {
+        "input_tokens": 488780,
+        "cached_input_tokens": 409088,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 17523,
+        "reasoning_output_tokens": 14253
+      },
+      "uncached_input_tokens": 79692,
+      "source_telemetry": {
+        "logical_tool_calls": 9,
+        "chart_query_http_requests": 3
+      },
+      "submission": {
+        "outcome": "investigate",
+        "recipients": [
+          "analytics"
+        ],
+        "message": "Shadow workflow route key: analytics. Executive SUM(net_sales) from gold.mart_executive_daily (saved chart 1) rose from 2,158,994.74 in July to 2,292,267.50 in August (+133,272.76; +6.17%). Online added 61,949.94 (+7.92%), 46.48% of the increase; Store added 4,394.84, Marketplace 18,701.69 and Mobile 48,226.29. August was +6.47% versus the April–July mean. This complete-month change is below the 10% investigate threshold.\n\nDaily detail (chart 10) ends on September 19; under the supplied steward declaration, September is partial. Separately, September 1–19 versus August 1–19 fell 34,428.19 (−2.45%), with Online down 27,640.19 (−5.40%). This matched-day diagnostic is not the calendar-month policy comparison and does not establish cause.\n\nThe card judge preferred insufficient_data (support 0.47), below the 0.70 threshold, so its workflow used the investigation fallback to Analytics; it returned 0 observations and 0 computed analyses. Values are net_sales units; currency is unspecified. Saved-query metadata does not establish warehouse completeness or freshness, while the coverage-through-September-19 statement is owner supplied. Source: analysis_publication|report:northstar-sales (charts 1 and 10). Next check: have Data Trust verify that coverage boundary and rerun the calendar-month comparison once September 30 coverage is established."
+      },
+      "receipt": {
+        "receipt_id": "receipt-c103a918e6204833875ecccbe46a0c63",
+        "idempotency_key": "agent-report-handoff-v1:signalweave",
+        "request_fingerprint": "5279b1f340ac23316f5c7c379bb34659a0c16c74ef4b61b9e50ba5f25ec851de",
+        "card_id": "card-historical-sales-investigation-and-human-report-3af8e237",
+        "card_version": 1,
+        "actor": "historical-sales-owner",
+        "parent_receipt_id": null,
+        "workflow_step_key": null,
+        "context_provider": null,
+        "context_version": null,
+        "delivery_mode": "shadow",
+        "status": "delivery_disabled",
+        "outcome": "investigate",
+        "delivery_enabled": false,
+        "delivery_method_keys": [
+          "analytics"
+        ],
+        "created_at": "2026-10-16T17:02:42.073882Z"
+      }
+    },
+    {
+      "arm": "baseline",
+      "status": "complete",
+      "seconds": 137.9134003329964,
+      "admitted_tool_calls": 16,
+      "observed_calls_including_discovery": 18,
+      "metadata_discovery_calls": 2,
+      "tool_errors": 0,
+      "cli_usage": {
+        "input_tokens": 236168,
+        "cached_input_tokens": 173696,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 12981,
+        "reasoning_output_tokens": 10483
+      },
+      "uncached_input_tokens": 62472,
+      "source_telemetry": {
+        "logical_tool_calls": 8,
+        "chart_query_http_requests": 3
+      },
+      "submission": {
+        "outcome": "insufficient_data",
+        "recipients": [
+          "data_trust"
+        ],
+        "message": "Data Trust — insufficient data for the latest calendar-month check. Executive Command Center Revenue trend (chart 1: monthly SUM(net_sales) by channel) and Executive daily detail (chart 10, gold.mart_executive_daily) show the latest observed order_date is 2026-09-19. The steward declares daily detail complete through that date, so September is partial; the saved query still marks warehouse completeness unknown. Do not treat Sep vs Aug as a decline. The last comparable full months were Aug 2,292,267.50 vs Jul 2,158,994.74 (+133,272.76; +6.17%), below the 10% Analytics threshold. Online rose 61,949.94 (+7.92%), contributing 46.48% of that increase. As context, Aug was +6.47% vs the Apr–Jul average of 2,152,978.07. Separate matched-day diagnostic (Sep 1–19 vs Aug 1–19): total net_sales fell 34,428.19 (-2.45%); Online fell 27,640.19 (-5.40%), 80.28% of the net decline, while Store rose 15,948.77. These are channel contributions, not causes; the source defines net_sales as Executive management sales and does not state a currency. Next check: rerun the full-month comparison once Sep 30 is covered, and compare Online sessions/conversion for Sep 1–19 vs Aug 1–19 to investigate the matched-day decrease."
+      },
+      "receipt": null
+    }
+  ],
+  "jev_response": {
+    "episode": "agent-report-handoff-v1:signalweave",
+    "kind": "api.response",
+    "model": "jev-1.13.0",
+    "provider": "jev",
+    "request_id": 1,
+    "response": {
+      "answers": {
+        "outcome": {
+          "choice": "insufficient_data",
+          "confidence": 0.29,
+          "probabilities": {
+            "ignore": 0.38,
+            "insufficient_data": 0.47000000000000003,
+            "investigate": 0.15,
+            "notify": 0
+          },
+          "type": "choice"
+        }
+      },
+      "model": "jev-1.13.0",
+      "usage": {
+        "input_tokens": 6571,
+        "output_tokens": 57
+      }
+    },
+    "seconds": 0.199415749986656,
+    "usage": {
+      "input_tokens": 6571,
+      "output_tokens": 57
+    }
+  },
+  "policy_reference": "evaluations/data/raw-northstar-onboarding-v1.json owner declarations: latest partial/unknown month -> insufficient_data to data_trust; still report the last fully covered months.",
+  "source_checks": {
+    "scope": "Pre/post point-in-time checks, not an atomic warehouse snapshot. Independent post-closure direct Decimal accumulation verified actual actor row hashes. Owner-declared coverage is not provider-proven completeness.",
+    "identities": {
+      "1": {
+        "returned_rows_sha256": "8ca2e24cd7708f697de4d89af00df0af8dbc18376eba0710d2664be18e2c1df8",
+        "rows": 132
+      },
+      "5": {
+        "returned_rows_sha256": "ee44aebb1ab6af2f4345a964a9dfea172a8197da2839b5567fd6ef9c156084e7",
+        "rows": 4
+      },
+      "10": {
+        "returned_rows_sha256": "6eb79f7835f3423ba863ec34d7d5c026238e17c34d19201984bed1d69c6c48a2",
+        "rows": 8937
+      }
+    },
+    "actor_date_filters": [
+      {
+        "arm": "signalweave",
+        "date_filters": [
+          {
+            "column": "order_date",
+            "op": "gte",
+            "value": 1788220800000,
+            "utc": "2026-09-01T00:00:00+00:00"
+          },
+          {
+            "column": "order_date",
+            "op": "lt",
+            "value": 1789862400000,
+            "utc": "2026-09-20T00:00:00+00:00"
+          }
+        ],
+        "matched_row_count": 171
+      },
+      {
+        "arm": "signalweave",
+        "date_filters": [
+          {
+            "column": "order_date",
+            "op": "gte",
+            "value": 1785542400000,
+            "utc": "2026-08-01T00:00:00+00:00"
+          },
+          {
+            "column": "order_date",
+            "op": "lt",
+            "value": 1787184000000,
+            "utc": "2026-08-20T00:00:00+00:00"
+          }
+        ],
+        "matched_row_count": 171
+      },
+      {
+        "arm": "baseline",
+        "date_filters": [
+          {
+            "column": "order_date",
+            "op": "gte",
+            "value": 1788220800000,
+            "utc": "2026-09-01T00:00:00+00:00"
+          },
+          {
+            "column": "order_date",
+            "op": "lt",
+            "value": 1789862400000,
+            "utc": "2026-09-20T00:00:00+00:00"
+          }
+        ],
+        "matched_row_count": 171
+      },
+      {
+        "arm": "baseline",
+        "date_filters": [
+          {
+            "column": "order_date",
+            "op": "gte",
+            "value": 1785542400000,
+            "utc": "2026-08-01T00:00:00+00:00"
+          },
+          {
+            "column": "order_date",
+            "op": "lt",
+            "value": 1787184000000,
+            "utc": "2026-08-20T00:00:00+00:00"
+          }
+        ],
+        "matched_row_count": 171
+      }
+    ],
+    "closed_comparison": {
+      "delta": "133272.76",
+      "change_pct": "6.172908045158090565797302498",
+      "channels": {
+        "Marketplace": {
+          "delta": "18701.69",
+          "change_pct": "13.23428051082254023140772850",
+          "contribution_pct": "14.03264252950115237352329163"
+        },
+        "Mobile": {
+          "delta": "48226.29",
+          "change_pct": "16.92261681188322264536112690",
+          "contribution_pct": "36.18615687106652552254489214"
+        },
+        "Online": {
+          "delta": "61949.94",
+          "change_pct": "7.924209537587836813927957200",
+          "contribution_pct": "46.48357248698083539351927581"
+        },
+        "Store": {
+          "delta": "4394.84",
+          "change_pct": "0.462167023484166059807179000",
+          "contribution_pct": "3.297628112451486710412540417"
+        }
+      }
+    },
+    "matched_comparison": {
+      "delta": "-34428.19",
+      "change_pct": "-2.448431494142450847056044777",
+      "channels": {
+        "Marketplace": {
+          "delta": "-17791.95",
+          "change_pct": "-16.29541046424373723540147573",
+          "contribution_pct": "51.67843560756461492747658242"
+        },
+        "Mobile": {
+          "delta": "-4944.82",
+          "change_pct": "-2.368082015531926978239383540",
+          "contribution_pct": "14.36270683994714796217866812"
+        },
+        "Online": {
+          "delta": "-27640.19",
+          "change_pct": "-5.395435988345235647072591050",
+          "contribution_pct": "80.28359899256975170637782585"
+        },
+        "Store": {
+          "delta": "15948.77",
+          "change_pct": "2.769609164289423590679447400",
+          "contribution_pct": "-46.32474144008151459603307638"
+        }
+      }
+    },
+    "coordinator_probe_queries": 10,
+    "post_closure_verification_queries": 3
+  },
+  "artifacts": {
+    "report.json": "7c1edcb0b8712b4a43932aff7822294aa7140d34c5cd1da89f8a9aceb7d90fc3",
+    "trace.jsonl": "3fe0338914887a6cdd829a0ddf2305bf262fe6bfef59aa238a0e6b6ce369cf82",
+    "publication.json": "4e2963767d01407a9a086645310bd8e05ba853560a220bb799d30296e2cbf936",
+    "independent-math.json": "d76637e9e3846a5db52412bc4bc64877bfe0f9bcc05dd9d75d429b5f1461bf08"
+  },
+  "limits": [
+    "One known fictional company and one conditional treatment-first pair; not a holdout, superiority estimate or enterprise readiness proof.",
+    "Same BI, calendar, arithmetic and owner policy in both arms; baseline retains source tools. Neither arm has arbitrary SQL or shell.",
+    "Scripted source/card approval and fictional shadow recipients; no interactive human onboarding, delivery or scheduler tested.",
+    "No causal campaign finding or currency was inferred. Neither result proves why Online declined.",
+    "Software verification before inference: 4104 passed, 12 opt-in skips. This is not a business-success count."
+  ]
+}

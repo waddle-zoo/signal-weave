@@ -1,0 +1,37 @@
+{
+  "protocol": "pine-courier-workflow-v1",
+  "status": "prospective; source fitness does not admit paid actors",
+  "question": "Does SignalWeave make a complete recurring delivery review easier to establish, maintain and hand over than a capable agent with its own retained notes and queries?",
+  "source": "evaluations/pine_courier_history.py",
+  "source_contract": "evaluations/data/pine-courier-history-contract.md",
+  "initial_source_connection": "Operator-prepared company MCP plus one fixed native source reading SELECT * FROM cached_sla_exports; both arms can inspect that exact source-owned export, definitions and raw records. It supplies no analyst comparison, card or outcome. Count this preparation; it is not automatic connector discovery. The normal card may reuse that source without a custom reader.",
+  "additional_query_path": "If an agent needs its own aggregation as recurring native evidence, it must retain the exact SQL and proposed fixed-argument manifest using the already connected company export_query tool. Review and count that artifact, source/executable scope, CLI connections add/update and reconnect before approving the resulting card. The researcher must not silently author, substitute or connect analytical SQL. A one-off export_query result alone is not a persistent source. Keep unsupported automation in shadow review while still returning the useful current answer.",
+  "scope": "A new record-backed instance of the known Courier business question, not an unseen domain, a real company or a statistical reliability sample.",
+  "business_journey": [
+    "A Dispatch lead asks for a useful weekly delivery assessment and a reusable check. Each agent discovers assets, clarifies population, materiality and audience, writes a first answer and preserves its own work. No prepared card or analytical reconstruction query is supplied.",
+    "An independent data expert reviews the actual proposed workflow and message. Count corrections and technical connection steps; keep unqualified onboarding unqualified. Explicit simulated owner consent is separate from expert review and does not establish human usability.",
+    "At the next cutoff, each agent repeats its agreed check, investigates any material movement, and prepares a concise Dispatch update plus a precise DataOps handoff if warranted. A missing cached field must not force abstention when other trustworthy source records support the answer.",
+    "At the final cutoff, an authorized successor follows up the previous findings and repair request using its arm's actual retained artifacts and current source. Distinguish performance improvement, corrected history and evidence of actual human action. Retain the useful procedure for another run."
+  ],
+  "arms": {
+    "baseline": "Luna 6 xhigh with the same company MCP, owner knowledge, analytical guidance and ordinary persistent workspace; may retain definitions, notes, reusable SQL, calculations and deterministic reporting code without SignalWeave or recurring model inference.",
+    "signalweave": "The same capabilities plus the fingerprint-verified current native agent-profile MCP, canonical skill, actual agent-authored reviewed card, optional shared context and live Jev for fresh typed policy judgments. Frontier agents still own analysis, investigation and the human message."
+  },
+  "fairness": [
+    "Both arms have equivalent cached exports, raw records, metric definitions, query limits, source clocks and owner access. Source tools are never removed from treatment.",
+    "Preserve each arm's own real work between stages; never give baseline treatment discoveries or make it forget. Do not require a second card merely to manufacture memory reuse.",
+    "Keep future snapshots, source factory, contract's future repair narrative and reference findings inaccessible to actors. Both arms receive only the current fixed-cutoff source and ordinary business request.",
+    "No researcher analytical rescue, invented expert approval, silently repaired outputs, post-result threshold tuning or replacement of failed attempts. Valid alternative queries, messages and paths count.",
+    "Expose normal native tools during onboarding. Any stage restriction must be explicit and justified; unavailable full-profile tools cannot become prerequisites.",
+    "Any custom query/bridge preparation or caller-produced evidence refresh is part of setup/maintenance effort, not free invisible infrastructure. Source-only setup is not human-first onboarding proof."
+  ],
+  "primary_outcome": "A supported, concise human handoff: what matters, its business scope and evidence, what remains uncertain, who should do what next, and what useful work can be reused without repeating discovery.",
+  "benefit_gate": "Demonstrate materially less total owner/analyst work or a materially better maintained outcome after counting setup and corrections, without sacrificing significant findings. Equal useful answers with more effort are not a SignalWeave win. A decision label, memory retrieval or test count cannot close this gate.",
+  "accounting": [
+    "Retain every attempted stage, exact messages, supporting-file reachability, clarification/correction requests, card/context revisions, queries, receipts and process outcomes.",
+    "Count frontier input/cached/uncached/output tokens, policy-provider requests/tokens, elapsed time, MCP and workspace operations, setup and operator effort separately. Unknown usage is not zero. Do not invent billing or human time saved.",
+    "Review factual support and usefulness independently. Internal model reviewers are not external peer review or real human participants. Three dependent observations remain one workflow trajectory."
+  ],
+  "admission": "Before the first actor: source/reference and stdio parity checks, current native identity/setup checks, frozen actual prompts/owner declarations/tool contracts and source hashes, sandbox/registry probes, independent method review and a finite recorded budget. Admit only the first onboarding pair initially; review its actual outputs before recurrence. No paid execution is authorized by this JSON alone.",
+  "delivery": "Local shadow drafts only. No message, channel, assignment or schedule is created. Later source repair is a scripted source event, not evidence that a DataOps recipient acted."
+}

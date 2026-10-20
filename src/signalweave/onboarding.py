@@ -36,7 +36,7 @@ from .models import (
 )
 from .numeric_conditions import NumericCondition
 from .retrieval import _search_text, build_candidate_pool, resource_ref
-from .sources import SourceRegistry
+from .sources import SourceParameterError, SourceRegistry
 
 
 class ResourceRelevanceJudger(Protocol):
@@ -236,7 +236,7 @@ def resolve_comparison_windows(
 ) -> list[str]:
     """Resolve omitted defaults; explicit identifiers are never rewritten."""
     if requested is not None:
-        if not requested or any(not value.strip() for value in requested):
+        if any(not value.strip() for value in requested):
             raise ValueError("comparison_windows must contain nonempty identifiers")
         return list(requested)
     declared = declared_comparison_windows([source for source in sources if source.required], contracts)
@@ -480,9 +480,9 @@ class InsightAuthoringService:
     def _source_reason(match: ResourceMatch) -> str:
         """Explain a candidate without pretending ranking proves ownership."""
         reasons: list[str] = []
-        if "frontier-selected" in match.retrieval_signals:
+        if "caller-selected" in match.retrieval_signals:
             reasons.append(
-                "the calling agent selected and inspected this exact authorized source"
+                "the caller explicitly selected this exact authorized source; prior inspection is not verified"
             )
         elif match.recommended:
             reasons.append("Jev judged it materially relevant to the stated goal")
@@ -501,7 +501,7 @@ class InsightAuthoringService:
         if match.contract.domain and match.contract.domain != "unknown":
             reasons.append(f"its catalog domain is {match.contract.domain}")
         if match.suggested_role != "unknown":
-            if "frontier-selected" in match.retrieval_signals:
+            if "caller-selected" in match.retrieval_signals:
                 reasons.append(
                     f"its adapter contract identifies it as {match.suggested_role}"
                 )
@@ -587,8 +587,8 @@ class InsightAuthoringService:
     ) -> ResourceDiscovery:
         """Build an inspectable discovery receipt from caller-selected sources.
 
-        This is intentionally not a semantic ranking operation. The caller's
-        agent owns asset discovery and analytical interpretation; SignalWeave
+        This is intentionally not a semantic ranking operation. The caller
+        owns asset discovery and analytical interpretation; SignalWeave
         only re-authorizes the exact refs and records the contracts that were
         used to build the card. A selected source gets a relevance of ``1`` as
         an identity marker, not as a Jev score.
@@ -614,7 +614,7 @@ class InsightAuthoringService:
                     suggested_role=role["role"],
                     role_probability=role["probability"],
                     retrieval_signals=[
-                        "frontier-selected",
+                        "caller-selected",
                         "explicit-card-anchor",
                         "authorized-revalidation",
                     ],
@@ -640,14 +640,14 @@ class InsightAuthoringService:
             candidate_limit=max(1, len(matches)),
             truncated=False,
             no_match=False,
-            candidate_strategy="frontier-agent-selected",
-            evaluator="frontier-agent-selection",
+            candidate_strategy="caller-selected",
+            evaluator="caller-source-selection",
             authorized_tenant=authorized_tenant,
             catalog_provider="authorized-adapter-catalog",
             catalog_strategy="explicit-authorized",
             catalog_fingerprint=catalog_fingerprint,
             warnings=[
-                "Source selection was supplied by the caller/agent after its own catalog search and inspection.",
+                "Exact source references were supplied by the caller; prior search, inspection and caller type are not verified.",
                 "SignalWeave did not use Jev to discover, rank, or classify these sources.",
             ],
         )
@@ -755,47 +755,53 @@ class InsightAuthoringService:
         window_issues: list[str] = []
         window_refs: list[str] = []
         undeclared_refs: list[str] = []
-        required_undeclared_refs: list[str] = []
         optional_window_issues: list[str] = []
+        numeric_source_keys = {condition.source_key for condition in card.numeric_conditions}
         for source in card.sources:
             ref = f"{source.adapter}|{source.resource}"
-            available = declared_windows.get(ref)
-            comparison_required = _comparison_window_required(source, matches)
-            if not available:
-                undeclared_refs.append(ref)
-                if source.required and comparison_required:
-                    required_undeclared_refs.append(ref)
-            elif comparison_required and not set(card.comparison_windows).issubset(available):
-                message = f"{ref}: requested {card.comparison_windows!r}; available {available!r}."
-                if source.required:
-                    window_issues.append(message)
-                    window_refs.append(ref)
-                else:
-                    optional_window_issues.append(message)
+            if not card.comparison_windows:
+                match = matches.get(ref)
+                required_keys = set(source.required_comparison_keys)
+                if match is not None:
+                    required_keys.update(match.contract.required_comparison_keys)
+                if required_keys or source.key in numeric_source_keys:
+                    requirements = []
+                    if required_keys:
+                        requirements.append(
+                            f"required comparison keys {sorted(required_keys)!r} need a selected window"
+                        )
+                    if source.key in numeric_source_keys:
+                        requirements.append("numeric conditions need a selected comparison window")
+                    message = f"{ref}: {'; '.join(requirements)}."
+                    if source.required or source.key in numeric_source_keys:
+                        window_issues.append(message)
+                        window_refs.append(ref)
+                    else:
+                        optional_window_issues.append(message)
+            else:
+                available = declared_windows.get(ref)
+                comparison_required = _comparison_window_required(source, matches)
+                if not available:
+                    undeclared_refs.append(ref)
+                elif comparison_required and not set(card.comparison_windows).issubset(available):
+                    message = f"{ref}: requested {card.comparison_windows!r}; available {available!r}."
+                    if source.required:
+                        window_issues.append(message)
+                        window_refs.append(ref)
+                    else:
+                        optional_window_issues.append(message)
         if undeclared_refs:
             warnings.append("Comparison windows are undeclared; compatibility is unverified for: "
                             + ", ".join(undeclared_refs))
-            automatic_routes = [
-                method for method in card.delivery_methods
-                if method.outcome in {Outcome.INVESTIGATE, Outcome.NOTIFY, Outcome.ESCALATE}
-            ]
-            if required_undeclared_refs and automatic_routes:
-                route_names = ", ".join(method.outcome.value for method in automatic_routes)
-                window_issues.append(
-                    "Required sources do not declare compatible comparison windows for "
-                    f"automatic {route_names} routes. Verify a source-owned comparison "
-                    "contract before approval."
-                )
-                window_refs.extend(required_undeclared_refs)
         if optional_window_issues:
             warnings.append("Optional source comparison-window mismatch: " + " ".join(optional_window_issues))
-        if not card.comparison_windows:
-            window_issues.append("The card must select at least one comparison window.")
         if card.compiled_plan is not None and (
-            not card.compiled_plan.comparison_windows
+            (card.comparison_windows and not card.compiled_plan.comparison_windows)
             or not set(card.compiled_plan.comparison_windows).issubset(card.comparison_windows)
         ):
-            window_issues.append("Cached plan windows must be a nonempty subset of the card's windows.")
+            window_issues.append(
+                "Cached plan windows must be a nonempty subset of the card's windows unless both are empty."
+            )
         if window_issues:
             question = "Select exact compatible source identifiers and recompile the card before approval."
             questions.append(question)
@@ -805,23 +811,18 @@ class InsightAuthoringService:
                 " ".join(window_issues)[:2000], question, window_refs,
             )
 
-        # A source that advertises a metric but only carries a title/scope is
-        # not enough evidence for an unattended action. The frontier agent may
-        # discover and interpret arbitrary assets, but the recurring card still
-        # needs an adapter-owned contract tying the measurement to a comparison
-        # key, population, grain, and window. Do not let a caller-owned scope
-        # acknowledgement turn a noisy regional/archive/reference asset into a
-        # safe automatic route. This applies to externally delivered
-        # investigation routes as well as notify/escalate: an investigation
-        # destination is still an automated action and must not be triggered by
-        # an untyped source. Generic non-metric context sources are exempt; their
-        # typed role does not define the recurring measurement.
-        automatic_routes = [
+        # Destination mappings preserve the owner's policy; they are not
+        # authorization or certification for unattended delivery. Ordinary BI
+        # APIs often omit these custom contracts. Keep absent meaning explicit
+        # for the owner/frontier agent, rather than forbid a shadow evaluation
+        # or fabricate a provider guarantee. Known incompatible windows above
+        # and explicitly bound comparison requirements remain enforced.
+        routed_outcomes = [
             method for method in card.delivery_methods
             if method.outcome in {Outcome.INVESTIGATE, Outcome.NOTIFY, Outcome.ESCALATE}
         ]
         incomplete_contract_refs: list[str] = []
-        if automatic_routes:
+        if routed_outcomes:
             for source in card.sources:
                 if not source.required:
                     continue
@@ -893,23 +894,13 @@ class InsightAuthoringService:
                 ):
                     incomplete_contract_refs.append(ref)
         if incomplete_contract_refs:
-            route_names = ", ".join(method.outcome.value for method in automatic_routes)
-            question = (
-                "Select or inspect a source with a versioned metric/comparison contract before "
-                "enabling automatic " + route_names + " routing. The contract must declare the "
-                "metric meaning, comparison key/window, population, and grain; owner scope "
-                "confirmation cannot supply those missing facts."
-            )
-            questions.append(question)
-            add_blocker(
-                OnboardingBlockerCode.SOURCE_CONTRACT_REQUIRED,
-                OnboardingBlockerSeverity.BLOCK,
-                "source-contract",
-                "Required metric sources advertise a measurement but do not provide a complete "
-                "adapter-owned definition, comparison binding, population, grain, and window: "
-                + ", ".join(sorted(incomplete_contract_refs)),
-                question,
-                incomplete_contract_refs,
+            warnings.append(
+                "Source metric/comparison meaning is unverified by an adapter-owned "
+                "definition, comparison binding, population, grain and window for: "
+                + ", ".join(sorted(incomplete_contract_refs))
+                + ". Preserve the owner's reviewed meaning in the card and verify each run's "
+                "evidence. A destination mapping or card approval does not certify "
+                "unattended delivery or establish missing source guarantees."
             )
 
         principal_tenant = principal.tenant_id if principal else discovery.authorized_tenant
@@ -1178,8 +1169,10 @@ class InsightAuthoringService:
             if match.ref in selected_refs and declared_source_scope(match)
         }
         if scoped_selected:
+            populations = {match.ref: match.contract.population.strip() for match in discovery.matches}
             details = "; ".join(
-                f"{ref}: {scope}" for ref, scope in sorted(scoped_selected.items())
+                f"{ref}: scope={scope}; declared population={populations.get(ref) or 'not supplied'}"
+                for ref, scope in sorted(scoped_selected.items())
             )
             question = (
                 "Confirm the declared population/scope for every selected source before approval. "
@@ -1679,6 +1672,10 @@ class InsightAuthoringService:
                     source,
                     authorized_tenants=[principal.tenant_id] if principal else None,
                 )
+            except SourceParameterError:
+                # Preserve actionable scope feedback instead of calling a bad
+                # query parameter an authorization or catalog failure.
+                raise
             except Exception:  # noqa: BLE001 - fail closed before paid ranking
                 descriptor = None
             if descriptor is not None:
@@ -2078,7 +2075,7 @@ class InsightAuthoringService:
         setup_questions: list[str] = list(onboarding_review.questions)
         if plan.comparison_windows:
             setup_questions.append(
-                f"Confirm the comparison window proposed by Jev: {plan.comparison_windows[0]}."
+                f"Confirm the selected comparison window: {plan.comparison_windows[0]}."
             )
         if discovery.truncated:
             setup_questions.append(

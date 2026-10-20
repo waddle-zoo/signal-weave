@@ -24,6 +24,43 @@ from .models import (
     ResourceSnapshot,
     SourceRef,
 )
+from .source_identity import namespace_fingerprint, namespace_uri
+
+
+def _binding_namespace(adapter, provider: str) -> str | None:
+    connection = getattr(adapter, "connection", None) or getattr(adapter.client, "connection", None)
+
+    def value(name):
+        return getattr(connection, name, None) or getattr(adapter.client, name, None)
+
+    provider_name = value("provider") or provider
+    connection_id = value("id")
+    external_workspace = value("external_workspace")
+    base_url = value("base_url")
+    identity = {"provider": str(provider_name)}
+    has_locator = False
+    adapter_name = getattr(adapter, "name", None)
+    if adapter_name and adapter_name != provider_name:
+        identity["adapter_name"] = str(adapter_name)
+        has_locator = True
+    if connection_id:
+        identity["connection_id"] = str(connection_id)
+        has_locator = True
+    if external_workspace:
+        identity["external_workspace"] = str(external_workspace)
+        has_locator = True
+    if isinstance(base_url, str) and base_url.strip():
+        try:
+            endpoint = namespace_uri(base_url)
+        except (TypeError, ValueError):
+            return None
+        if not endpoint:
+            return None
+        identity["endpoint"] = endpoint
+        has_locator = True
+    if not has_locator:
+        return None
+    return namespace_fingerprint(identity)
 
 
 class HexCloudClient:
@@ -186,6 +223,10 @@ class HexAdapter:
         self.policy = policy or HostedDataPolicy()
         self.name = adapter_name
         self.provider_name = "hex"
+
+    @property
+    def binding_namespace(self) -> str | None:
+        return _binding_namespace(self, self.provider_name)
 
     @staticmethod
     def _project_title(project: dict[str, Any]) -> str:

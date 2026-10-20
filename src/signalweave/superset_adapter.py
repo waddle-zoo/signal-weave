@@ -12,7 +12,14 @@ from .models import (
     ResourceSnapshot,
     SourceRef,
 )
-from .superset_client import SupersetClient
+from .source_identity import namespace_fingerprint, namespace_uri
+from .sources import SourceParameterError
+from .superset_client import (
+    _MISSING,
+    SupersetClient,
+    _chart_for_observation_extraction,
+    _saved_query_definition,
+)
 
 
 class SupersetAdapter:
@@ -42,6 +49,19 @@ class SupersetAdapter:
         self.tenant_id = tenant_id
         self.provider_name = provider_name or adapter_name
         self.max_search_fallback_terms = max_search_fallback_terms
+
+    @property
+    def binding_namespace(self) -> str | None:
+        base_url = getattr(self.client, "base_url", None)
+        if not isinstance(base_url, str) or not base_url.strip():
+            return None
+        try:
+            endpoint = namespace_uri(base_url)
+        except (TypeError, ValueError):
+            return None
+        if not endpoint:
+            return None
+        return namespace_fingerprint({"provider": self.provider_name, "endpoint": endpoint})
 
     async def list_resources(self) -> list[ResourceDescriptor]:
         dashboards = await self.client.list_dashboards()
@@ -172,6 +192,8 @@ class SupersetAdapter:
         ):
             return None
         resource_type, resource_id = _resource_id(source.resource)
+        if resource_type in {"dashboard", "chart"}:
+            self._validate_source_parameters(source, resource_type)
         if resource_type == "dashboard":
             metadata = await self.client.get_dashboard_metadata(resource_id)
             if str(metadata.get("id")) != resource_id:
@@ -249,13 +271,27 @@ class SupersetAdapter:
             for item in dashboards
         ]
 
+    def _validate_source_parameters(self, source: SourceRef, resource_type: str) -> None:
+        supported = {"chart_ids"} if resource_type == "dashboard" else set()
+        unsupported = set(source.parameters) - supported
+        if unsupported:
+            raise SourceParameterError(
+                f"Unsupported {self.provider_name} {resource_type} source parameters: "
+                + ", ".join(sorted(unsupported))
+                + ". This adapter reads saved chart queries, including their saved filters; "
+                "SourceRef parameters do not override those queries. Only dashboard chart_ids "
+                "is supported for selecting charts. Use company BI/SQL tools or a reviewed "
+                "saved source for a different query scope."
+            )
+
     async def inspect(self, source: SourceRef) -> ResourceSnapshot:
         resource_type, resource_id = _resource_id(source.resource)
+        if resource_type not in {"dashboard", "chart"}:
+            raise ValueError(f"unsupported Superset resource kind: {resource_type}")
+        self._validate_source_parameters(source, resource_type)
         if resource_type == "dashboard":
             return await self._inspect_dashboard(source, resource_id)
-        if resource_type == "chart":
-            return await self._inspect_chart(source, resource_id)
-        raise ValueError(f"unsupported Superset resource kind: {resource_type}")
+        return await self._inspect_chart(source, resource_id)
 
     async def _inspect_dashboard(self, source: SourceRef, dashboard_id: str) -> ResourceSnapshot:
         chart_ids = source.parameters.get("chart_ids")
@@ -304,13 +340,27 @@ class SupersetAdapter:
             "provider": self.provider_name,
             "dashboard_id": dashboard.id,
             "owners": dashboard.owners,
-            "charts": [
-                chart.model_dump(mode="json", exclude={"observations"})
-                for chart in dashboard.charts
-            ],
+            "charts": [],
             "dashboard_scope": dashboard.scope_telemetry,
             "parameters": source.parameters,
         }
+        for chart in dashboard.charts:
+            chart_params = getattr(chart, "params", _MISSING)
+            excluded_fields = {"observations"}
+            if chart_params is not _MISSING:
+                excluded_fields.add("params")
+            chart_metadata = chart.model_dump(
+                mode="json", exclude=excluded_fields
+            )
+            if chart_metadata.get("saved_query_definition") is None:
+                chart_metadata.pop("saved_query_definition", None)
+            if chart_params is _MISSING:
+                chart_params = chart_metadata.pop("params", _MISSING)
+            if chart_params is not _MISSING:
+                chart_metadata["saved_query_definition"] = _saved_query_definition(
+                    chart.id, chart_params
+                )
+            metadata["charts"].append(chart_metadata)
         chart_errors = [
             f"{chart.title}: {chart.error}" for chart in dashboard.charts if chart.error
         ]
@@ -379,7 +429,10 @@ class SupersetAdapter:
             raise ValueError(
                 "Superset chart response did not match the requested chart ID"
             )
-        extraction = self.client.extract_chart_data(chart, await self.client.chart_data(chart))
+        rows = await self.client.chart_data(chart)
+        extraction = self.client.extract_chart_data(
+            _chart_for_observation_extraction(chart), rows
+        )
         observations = extraction.observations
         observations = [
             observation.model_copy(update={"source_key": source.key})
@@ -419,6 +472,9 @@ class SupersetAdapter:
                 "provider": self.provider_name,
                 "chart_id": str(chart_id),
                 "viz_type": self._chart_viz_type(chart),
+                "saved_query_definition": _saved_query_definition(
+                    str(chart_id), chart.get("params", _MISSING)
+                ),
                 "semantic_status": extraction.semantic_status,
                 "semantic_notes": extraction.notes,
                 "result_row_count": extraction.row_count,

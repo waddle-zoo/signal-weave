@@ -17,7 +17,7 @@ async def test_preview_reports_without_approving_or_delivering(tmp_path):
     assert preview["report_markdown"]
     assert runtime.card_store.get_card("repeat").status.value == "draft"
     assert source.calls == 1 and len(judger.states) == 1
-    with pytest.raises(Exception, match="approve"):
+    with pytest.raises(Exception, match="explicit owner approval"):
         await dispatch(server, "evaluate_insight_card", {"card_id": "repeat"})
 
 

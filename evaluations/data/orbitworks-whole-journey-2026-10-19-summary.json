@@ -1,0 +1,539 @@
+{
+  "study": "OrbitWorks actual native whole-company journey",
+  "unit": "One fictional six-account company; six dependent cutoffs per arm",
+  "native": {
+    "dirty": false,
+    "format_version": 1,
+    "frozen": true,
+    "git_commit": "97a5daa103056963b5988921230da9688a241c42",
+    "python": "3.12.10",
+    "source_sha256": "5a4d087b394a457dee0e0c46107870e8a8bcbf61cb16acc81c9908cd161f0b6d",
+    "version": "0.2.0rc3",
+    "binary_sha256": "a5dccb877c757f35a6f6f7d05e37afa7523f0ad6b6283f4128ea63db25a1f170"
+  },
+  "native_archive_sha256": "3226991b76359383721327de972f8cc71a41bdf39133c6a5103ffbde5710e7d7",
+  "setup_scope": "Locally built checksum-verified candidate native archive; exact signalweave member; not a published release or curl-installer study",
+  "historical_setup_scope_label": "supplied GitHub Actions CI tar archive; exact member signalweave; not a published release or curl-installer test",
+  "setup_scope_correction": "The generic setup helper labels supplied archives as GitHub Actions artifacts; this study's 97a5daa archive was built locally. No CI-origin claim is made.",
+  "setup_mode": "actual native PTY wizard; scripted fake-person inputs; actual isolated Codex CLI registration and bundled user-scope skill",
+  "study_sha256": "30140b489249e2d8a46dff0fcde7e5fa57eab2e24bfb8686145fd1487fedd6a1",
+  "source_cutoffs": [
+    {
+      "as_of_utc": "2026-06-01T18:00:00Z",
+      "sha256": "76372ba5539698fe84076b651f21955545cbf74094d470bb30198244640d6cd1"
+    },
+    {
+      "as_of_utc": "2026-06-11T18:00:00Z",
+      "sha256": "38f73e02aeaa9f069af5b1c7611af4abbd0339f5cc79a88848b1b11fef644abb"
+    },
+    {
+      "as_of_utc": "2026-06-21T18:00:00Z",
+      "sha256": "886c603cba0d2167537e701264e057999c8de819195aad2e65d49407ac6bc162"
+    },
+    {
+      "as_of_utc": "2026-07-01T18:00:00Z",
+      "sha256": "1023ee25f00811f10fbda24cc64e0a7b1fa5bc55acecf8c2814af22d39bc45ef"
+    },
+    {
+      "as_of_utc": "2026-07-11T18:00:00Z",
+      "sha256": "0802a6a37b0f9951140beae78fc5e820f301f42b6588d72fa41f29df9dc64815"
+    },
+    {
+      "as_of_utc": "2026-07-21T18:00:00Z",
+      "sha256": "3aea0b4441dcdefc77c011b7fcefb3427a3f2c2ec5e1bc8028d93735a36f6924"
+    }
+  ],
+  "continuation_protocol_sha256": "773e36b7b704b25603112b347020ea06d0e510618ce9875cc255915270db28b5",
+  "closeout_protocol_sha256": "69c648e528e83c62fc85c571df5c66c0cb1d6916b8c825606b8312cf1a2ed249",
+  "episodes": [
+    {
+      "arm": "baseline",
+      "wake": 0,
+      "phase": "original",
+      "terminal_sha256": "7274cb88e3344b77b6f66ca07613075c8f48fcf86b8e7b9c83278559b4a058c7",
+      "process_complete": true,
+      "elapsed_seconds": 200.805,
+      "actor_usage": {
+        "known": true,
+        "usage": {
+          "input_tokens": 424350,
+          "cached_input_tokens": 343552,
+          "uncached_input_tokens": 80798,
+          "output_tokens": 16964,
+          "responses": 1
+        }
+      },
+      "provider_requests": 0,
+      "provider_usage": {
+        "known": true,
+        "attempts": 0,
+        "usage": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        }
+      },
+      "errors": []
+    },
+    {
+      "arm": "signalweave",
+      "wake": 0,
+      "phase": "original",
+      "terminal_sha256": "b6ada045645844b07a7c027e1b48afbb61c768b1eaa67aa3d72dbf10d0c957d6",
+      "process_complete": false,
+      "elapsed_seconds": 908.447,
+      "actor_usage": {
+        "known": false,
+        "usage": null
+      },
+      "provider_requests": 1,
+      "provider_usage": {
+        "known": true,
+        "attempts": 1,
+        "usage": {
+          "input_tokens": 9936,
+          "output_tokens": 177
+        }
+      },
+      "errors": []
+    },
+    {
+      "arm": "baseline",
+      "wake": 1,
+      "phase": "separate_functional_continuation",
+      "terminal_sha256": "fdb03749af85f41f0a55ff6335f4560781b224a30419cb8767822a77819d4807",
+      "process_complete": true,
+      "elapsed_seconds": 140.882,
+      "actor_usage": {
+        "known": true,
+        "usage": {
+          "input_tokens": 539478,
+          "cached_input_tokens": 462848,
+          "uncached_input_tokens": 76630,
+          "output_tokens": 14421,
+          "responses": 1
+        }
+      },
+      "provider_requests": 0,
+      "provider_usage": {
+        "known": true,
+        "attempts": 0,
+        "usage": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        }
+      },
+      "errors": []
+    },
+    {
+      "arm": "baseline",
+      "wake": 2,
+      "phase": "separate_functional_continuation",
+      "terminal_sha256": "0695795c5e739410147dbcfe051ff69b96c82226915a472b5b565d8e0d1cf9a8",
+      "process_complete": true,
+      "elapsed_seconds": 139.344,
+      "actor_usage": {
+        "known": true,
+        "usage": {
+          "input_tokens": 476779,
+          "cached_input_tokens": 422400,
+          "uncached_input_tokens": 54379,
+          "output_tokens": 15420,
+          "responses": 1
+        }
+      },
+      "provider_requests": 0,
+      "provider_usage": {
+        "known": true,
+        "attempts": 0,
+        "usage": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        }
+      },
+      "errors": []
+    },
+    {
+      "arm": "baseline",
+      "wake": 3,
+      "phase": "separate_functional_continuation",
+      "terminal_sha256": "d9df985af9939af58f9f4e0fc175be633aeba176927572e158e38e9f53f56367",
+      "process_complete": true,
+      "elapsed_seconds": 232.973,
+      "actor_usage": {
+        "known": true,
+        "usage": {
+          "input_tokens": 919729,
+          "cached_input_tokens": 825984,
+          "uncached_input_tokens": 93745,
+          "output_tokens": 22326,
+          "responses": 1
+        }
+      },
+      "provider_requests": 0,
+      "provider_usage": {
+        "known": true,
+        "attempts": 0,
+        "usage": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        }
+      },
+      "errors": []
+    },
+    {
+      "arm": "baseline",
+      "wake": 4,
+      "phase": "separate_functional_continuation",
+      "terminal_sha256": "3892a419d2a1f103d58aad5330d2fd43a26b8f8e1f221acadc99294e18a6d6d7",
+      "process_complete": true,
+      "elapsed_seconds": 207.114,
+      "actor_usage": {
+        "known": true,
+        "usage": {
+          "input_tokens": 839343,
+          "cached_input_tokens": 764160,
+          "uncached_input_tokens": 75183,
+          "output_tokens": 22189,
+          "responses": 1
+        }
+      },
+      "provider_requests": 0,
+      "provider_usage": {
+        "known": true,
+        "attempts": 0,
+        "usage": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        }
+      },
+      "errors": []
+    },
+    {
+      "arm": "signalweave",
+      "wake": 0,
+      "phase": "separate_functional_continuation",
+      "terminal_sha256": "4ae32f843aa77ee605bf4a49d453c94c0fbd12667f6fb437d9c776e99ffc2f43",
+      "process_complete": true,
+      "elapsed_seconds": 235.23,
+      "actor_usage": {
+        "known": true,
+        "usage": {
+          "input_tokens": 1471087,
+          "cached_input_tokens": 1347456,
+          "uncached_input_tokens": 123631,
+          "output_tokens": 22491,
+          "responses": 1
+        }
+      },
+      "provider_requests": 1,
+      "provider_usage": {
+        "known": true,
+        "attempts": 1,
+        "usage": {
+          "input_tokens": 10911,
+          "output_tokens": 177
+        }
+      },
+      "errors": []
+    },
+    {
+      "arm": "signalweave",
+      "wake": 1,
+      "phase": "separate_functional_continuation",
+      "terminal_sha256": "6766f3edfe7eb592d8e9e5e7e70f065691169e8272fb080eb1aceb63753d9721",
+      "process_complete": true,
+      "elapsed_seconds": 205.012,
+      "actor_usage": {
+        "known": true,
+        "usage": {
+          "input_tokens": 1319087,
+          "cached_input_tokens": 1220992,
+          "uncached_input_tokens": 98095,
+          "output_tokens": 21328,
+          "responses": 1
+        }
+      },
+      "provider_requests": 1,
+      "provider_usage": {
+        "known": true,
+        "attempts": 1,
+        "usage": {
+          "input_tokens": 9837,
+          "output_tokens": 177
+        }
+      },
+      "errors": []
+    },
+    {
+      "arm": "signalweave",
+      "wake": 2,
+      "phase": "separate_functional_continuation",
+      "terminal_sha256": "cbd0c86b21a12ef1c64ca45b8814a69226679a7340935d58c8d42eb8e8d86762",
+      "process_complete": true,
+      "elapsed_seconds": 194.026,
+      "actor_usage": {
+        "known": true,
+        "usage": {
+          "input_tokens": 1069228,
+          "cached_input_tokens": 973184,
+          "uncached_input_tokens": 96044,
+          "output_tokens": 17960,
+          "responses": 1
+        }
+      },
+      "provider_requests": 1,
+      "provider_usage": {
+        "known": true,
+        "attempts": 1,
+        "usage": {
+          "input_tokens": 10431,
+          "output_tokens": 177
+        }
+      },
+      "errors": []
+    },
+    {
+      "arm": "signalweave",
+      "wake": 3,
+      "phase": "separate_functional_continuation",
+      "terminal_sha256": "2a9e5eaf8a0da58221d238f92d8d148440db32c9af6ed55a054608aab1fc5460",
+      "process_complete": true,
+      "elapsed_seconds": 303.893,
+      "actor_usage": {
+        "known": true,
+        "usage": {
+          "input_tokens": 1731681,
+          "cached_input_tokens": 1600256,
+          "uncached_input_tokens": 131425,
+          "output_tokens": 30275,
+          "responses": 1
+        }
+      },
+      "provider_requests": 1,
+      "provider_usage": {
+        "known": true,
+        "attempts": 1,
+        "usage": {
+          "input_tokens": 10434,
+          "output_tokens": 177
+        }
+      },
+      "errors": []
+    },
+    {
+      "arm": "signalweave",
+      "wake": 4,
+      "phase": "separate_functional_continuation",
+      "terminal_sha256": "dcaa366d05a469ec12540de4b7f399c863921a761c3935083cfbc82178294e70",
+      "process_complete": false,
+      "elapsed_seconds": 368.38,
+      "actor_usage": {
+        "known": false,
+        "usage": null
+      },
+      "provider_requests": 1,
+      "provider_usage": {
+        "known": true,
+        "attempts": 1,
+        "usage": {
+          "input_tokens": 10187,
+          "output_tokens": 176
+        }
+      },
+      "errors": []
+    },
+    {
+      "arm": "baseline",
+      "wake": 5,
+      "phase": "separate_functional_closeout",
+      "terminal_sha256": "af69a6b64ec1de0ee5ac226df160c6ac5e763645b962d01bea89e26fba45abd2",
+      "process_complete": true,
+      "elapsed_seconds": 205.673,
+      "actor_usage": {
+        "known": true,
+        "usage": {
+          "input_tokens": 1011144,
+          "cached_input_tokens": 920192,
+          "uncached_input_tokens": 90952,
+          "output_tokens": 21815,
+          "responses": 1
+        }
+      },
+      "provider_requests": 0,
+      "provider_usage": {
+        "known": true,
+        "attempts": 0,
+        "usage": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        }
+      },
+      "errors": []
+    },
+    {
+      "arm": "signalweave",
+      "wake": 4,
+      "phase": "separate_functional_closeout",
+      "terminal_sha256": "9eff65b81b912d34032cd34f47d36fb690618a0244b0d6f3836de575daa4dab1",
+      "process_complete": true,
+      "elapsed_seconds": 51.046,
+      "actor_usage": {
+        "known": true,
+        "usage": {
+          "input_tokens": 276733,
+          "cached_input_tokens": 225920,
+          "uncached_input_tokens": 50813,
+          "output_tokens": 3655,
+          "responses": 1
+        }
+      },
+      "provider_requests": 0,
+      "provider_usage": {
+        "known": true,
+        "attempts": 0,
+        "usage": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        }
+      },
+      "errors": []
+    },
+    {
+      "arm": "signalweave",
+      "wake": 5,
+      "phase": "separate_functional_closeout",
+      "terminal_sha256": "1d37514e3d1973e4f1a2ff9ab5e6797cbcca77b5e393e394a6931bdbfdd4f5c9",
+      "process_complete": true,
+      "elapsed_seconds": 291.106,
+      "actor_usage": {
+        "known": true,
+        "usage": {
+          "input_tokens": 2152978,
+          "cached_input_tokens": 2036480,
+          "uncached_input_tokens": 116498,
+          "output_tokens": 33527,
+          "responses": 1
+        }
+      },
+      "provider_requests": 1,
+      "provider_usage": {
+        "known": true,
+        "attempts": 1,
+        "usage": {
+          "input_tokens": 10155,
+          "output_tokens": 176
+        }
+      },
+      "errors": []
+    }
+  ],
+  "actual_company_communication": {
+    "baseline": {
+      "delivered_messages": 26,
+      "replies": 27,
+      "all_reply_usage_known": true,
+      "recorded_delivered_message_attachment_reads": 0,
+      "other_recorded_attachment_reads_including_card_consent": 0,
+      "participant_usage": {
+        "input_tokens": 321158,
+        "uncached_input_tokens": 113798,
+        "output_tokens": 1692
+      }
+    },
+    "signalweave": {
+      "delivered_messages": 15,
+      "replies": 23,
+      "all_reply_usage_known": true,
+      "recorded_delivered_message_attachment_reads": 3,
+      "other_recorded_attachment_reads_including_card_consent": 6,
+      "participant_usage": {
+        "input_tokens": 517963,
+        "uncached_input_tokens": 168267,
+        "output_tokens": 2678
+      }
+    }
+  },
+  "limitations": [
+    "Original treatment T0 and continuation T4 timed out; both outer actor usages remain unknown.",
+    "Separate functional recoveries preserve those failures; no uninterrupted journey pass or total-cost claim.",
+    "Frozen instructions induced redundant recurring owner consent; not a product requirement.",
+    "All six cutoffs give coincident monthly/rolling cash totals; definition contrast untested numerically.",
+    "Local simulated participants and inboxes; not real users or Slack delivery.",
+    "Current candidate archive and scripted PTY setup, not a published curl-install study.",
+    "No statistical superiority, enterprise-scale, external peer-review or causal claim."
+  ],
+  "schema_version": 1,
+  "date": "2026-10-19",
+  "independent_data_review_sha256": "fc3633f5be710389b48d93c9f1a317f727760a785c862f7292136ee8f394313d",
+  "independent_product_review_sha256": "e52c7d542c6524b423752f503703ab74d5413ee4e23e1eb5ccbe6e6b25f47123",
+  "business_review": {
+    "review_status": "final B5/T5 data and human-outcome review complete",
+    "functional_coverage": {
+      "business_cutoffs": 6,
+      "baseline_cutoffs_with_retained_work": 6,
+      "signalweave_cutoffs_with_retained_work": 6,
+      "separate_signalweave_recoveries": [
+        "T0",
+        "T4"
+      ],
+      "uninterrupted_journey": false
+    },
+    "cutoffs": [
+      {
+        "as_of_utc": "2026-06-01T18:00:00Z",
+        "raw_positive_case": null,
+        "baseline_cs_no_trigger_fyi_messages": 1,
+        "signalweave_cs_no_trigger_fyi_messages": 0
+      },
+      {
+        "as_of_utc": "2026-06-11T18:00:00Z",
+        "raw_positive_case": null,
+        "baseline_cs_no_trigger_fyi_messages": 1,
+        "signalweave_cs_no_trigger_fyi_messages": 0
+      },
+      {
+        "as_of_utc": "2026-06-21T18:00:00Z",
+        "raw_positive_case": null,
+        "baseline_cs_no_trigger_fyi_messages": 1,
+        "signalweave_cs_no_trigger_fyi_messages": 0
+      },
+      {
+        "as_of_utc": "2026-07-01T18:00:00Z",
+        "raw_positive_case": null,
+        "baseline_cs_no_trigger_fyi_messages": 2,
+        "signalweave_cs_no_trigger_fyi_messages": 0
+      },
+      {
+        "as_of_utc": "2026-07-11T18:00:00Z",
+        "raw_positive_case": "acct_101 / ren_101_2026: failed charge attempt plus linked open billing case; invoice not yet due",
+        "baseline_positive_case_handoff": true,
+        "signalweave_positive_case_handoff": true
+      },
+      {
+        "as_of_utc": "2026-07-21T18:00:00Z",
+        "raw_positive_case": "acct_105 / ren_105_2026_07: USD 750 invoice issued and past due",
+        "baseline_positive_case_handoff": true,
+        "signalweave_positive_case_handoff": true
+      }
+    ],
+    "descriptive_delivery_counts": {
+      "baseline_no_trigger_cs_fyi_messages": 5,
+      "baseline_no_trigger_fyi_cutoffs": 4,
+      "signalweave_no_trigger_cs_fyi_messages": 0,
+      "source_supported_positive_cases_handed_off_per_arm": 2,
+      "interpretation": "FYIs explicitly said no trigger was confirmed and were not candidate escalations. Follow-up/receipt messages are not additional cases. Do not calculate message-level precision or infer a statistical winner."
+    },
+    "definition_feedback": {
+      "shared": "Owner-defined inclusive 30-day renewal horizon and three review triggers; no overclaim from incomplete payment/support coverage. Later source billing changes do not identify customer-success action or root cause.",
+      "baseline": "Cash interval was not elicited through B2. At B3 the owner requested trailing 30x24-hour cash, separate from calendar months and invoice value; the report was revised. Earlier monthly reporting is not a known breach, and numeric coincidence is not rolling-window fidelity.",
+      "signalweave": "Owner rejected v2's calendar-month cash scope, specified effective-time trailing 30x24-hour cash available by cutoff, then approved exact v4/v5 before use. T5 retained the agreed definition. June 1's initial coverage wording overstated what a batch watermark proved; the agent corrected it in the same cutoff.",
+      "interpretation": "Definition alignment is recorded separately from source arithmetic and message counts; no precision percentage is reported."
+    },
+    "review_limits": [
+      "This is one synthetic company's six historical cutoffs, not six independent cases or a powered trial.",
+      "Correct source facts and recipient replies do not prove real-human adoption, actual CS assignment/action, customer outcome, or source repair.",
+      "Review did not launch another experiment, change actor inputs, or write source data."
+    ]
+  },
+  "review_scope": "Internal arm-aware independent agent data and product reviews; not external peer review."
+}

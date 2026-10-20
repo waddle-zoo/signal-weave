@@ -1,6 +1,6 @@
 [project]
 name = "signal-weave"
-version = "0.2.0rc3"
+version = "0.2.0rc4"
 description = "A semantic decision layer that turns author guidance and existing data signals into typed, explainable actions."
 readme = "README.md"
 license = "Apache-2.0"
@@ -14,6 +14,7 @@ dependencies = [
   "pydantic>=2.8,<3",
   "pydantic-settings>=2.4,<3",
   "python-dotenv>=1.0,<2",
+  "sqlglot>=30.7,<31",
   "typesafe-sdk>=0.6.0",
   "uvicorn[standard]>=0.30,<1",
 ]

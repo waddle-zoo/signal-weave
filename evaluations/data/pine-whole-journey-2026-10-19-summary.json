@@ -1,0 +1,459 @@
+{
+  "study": "Pine Courier complete fictional-enterprise journey, 2026-10-19",
+  "comparison": "Completed v1 baseline and separate forward v2 treatment after a retained harness failure; descriptive, not randomized or a clean one-attempt paired cost estimate.",
+  "native_binary": {
+    "dirty": false,
+    "format_version": 1,
+    "frozen": true,
+    "git_commit": "c521642a12924dcb6218216f17cd6927d468a236",
+    "python": "3.12.10",
+    "source_sha256": "99cec53e50c8fbb297037fbb5b6fb6218a5c867a77e70a4b5b0182799d69e8dc",
+    "version": "0.2.0rc3",
+    "binary_sha256": "ffd04fe329479f0abef31b7bed75bda1a04aaacf50d7eab3c409112eca998907"
+  },
+  "codex": {
+    "version": "codex-cli 0.162.0-alpha.17.2",
+    "sha256": "0d5ac7aae20c4eda6242428d5e218c55ba96d8763fda2a271088ff37104b9d28"
+  },
+  "setup": {
+    "status": "setup_verified",
+    "wizard_seconds": 7.776,
+    "prompt_count": 8,
+    "distribution": "supplied GitHub Actions CI tar archive; exact member signalweave; not a published release or curl-installer test",
+    "health_and_real_codex_registration": true,
+    "provider_judgments": 0
+  },
+  "source_reference": [
+    {
+      "source_id": "0",
+      "sha256": "30c6913e4db97a379bd6a09789837a991204e64eb284204a9bcbdef4c11c860e",
+      "as_of_utc": "2026-09-21T06:00:00Z",
+      "prior_all": {
+        "on_time": 2040,
+        "eligible": 2280,
+        "rate_pct": 89.47368421052632
+      },
+      "current_all": {
+        "on_time": 2550,
+        "eligible": 2850,
+        "rate_pct": 89.47368421052632
+      },
+      "delta_pp": 0.0,
+      "raw_comparison_valid": true,
+      "cache_comparison_valid": true,
+      "quality_flags": []
+    },
+    {
+      "source_id": "1",
+      "sha256": "9d97d146a2d233eb174ec50f80112da04c83bbe392aba669b6cb8ec0722d34bf",
+      "as_of_utc": "2026-09-28T06:00:00Z",
+      "prior_all": {
+        "on_time": 2550,
+        "eligible": 2850,
+        "rate_pct": 89.47368421052632
+      },
+      "current_all": {
+        "on_time": 2772,
+        "eligible": 3420,
+        "rate_pct": 81.05263157894737
+      },
+      "delta_pp": -8.421052631578945,
+      "raw_comparison_valid": true,
+      "cache_comparison_valid": false,
+      "quality_flags": [
+        "cache_denominator_missing"
+      ]
+    },
+    {
+      "source_id": "2",
+      "sha256": "1f397e613df914d3e2babe742c9517dd503378d04337beed2e795d431a4b2d3c",
+      "as_of_utc": "2026-10-05T06:00:00Z",
+      "prior_all": {
+        "on_time": 2772,
+        "eligible": 3420,
+        "rate_pct": 81.05263157894737
+      },
+      "current_all": {
+        "on_time": 3486,
+        "eligible": 3990,
+        "rate_pct": 87.36842105263158
+      },
+      "delta_pp": 6.315789473684205,
+      "raw_comparison_valid": true,
+      "cache_comparison_valid": true,
+      "quality_flags": []
+    }
+  ],
+  "arms": {
+    "company_tools_and_luna": {
+      "terminal_sha256": "af7a5747c95ff85328420fdbdaf701726dc844c0a7c924bba63543b146f1df08",
+      "world_sha256": "dba0563bd3420068898d91068c4aeee43759a65dea675c3491f0ed2b437f4afe",
+      "process_complete": true,
+      "seconds": 628.3225415420002,
+      "frontier_tool_calls": 70,
+      "workspace_operations": 42,
+      "usage": {
+        "known": true,
+        "usage": {
+          "input_tokens": 5188455,
+          "cached_input_tokens": 5004928,
+          "uncached_input_tokens": 183527,
+          "output_tokens": 76392,
+          "responses": 1
+        },
+        "observed": {
+          "input_tokens": 5188455,
+          "cached_input_tokens": 5004928,
+          "uncached_input_tokens": 183527,
+          "output_tokens": 76392,
+          "responses": 1
+        }
+      },
+      "provider": {
+        "known": true,
+        "attempts": 0,
+        "usage": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        }
+      },
+      "owner_question_answers": 1,
+      "owner_confirmations": 2,
+      "operator_actions": 0,
+      "messages": [
+        {
+          "id": "baseline-message-1",
+          "source_cutoff": "2026-09-21T06:00:00Z",
+          "to": "dispatch",
+          "body": "Weekly delivery review — snapshot as of 2026-09-21 06:00 UTC\n\nFor the week of Sep 14–21, due-week on-time attainment was 89.47% (2,550/2,850), unchanged from Sep 7–14 (2,040/2,280; 0.00 percentage-point change). The 5-point investigation trigger did not fire. Priority was 90.00% both weeks; Standard was 89.33% both weeks.\n\nThe latest week had 157 noncancelled parcels still undelivered at the source cutoff (80 prior); they remain in the denominator as agreed. Manifests and the as-of-visible cached export match the parcel rollup. The completed-only view shows 92.73% to 94.69% because it excludes undelivered parcels; it is not the selected Dispatch measure.\n\nEvidence: parcel rollup, manifest coverage, visible export revisions, completed-only contrast.",
+          "actor_elapsed_seconds": 379.8340106659998,
+          "inbox_attachment_count": 4,
+          "evidence_ref_count": 4,
+          "evidence_refs_sha256": "dfe97e853542dac000dcdf96c3fbe5bc2ab6f6f3b0cc5da58dbbc59952b471a9"
+        },
+        {
+          "id": "baseline-message-2",
+          "source_cutoff": "2026-09-21T06:00:00Z",
+          "to": "data-operations",
+          "body": "Weekly review found no manifest coverage gap or cached-export mismatch: registered counts and visible export numerators/denominators reconcile to the parcel rollup for both weeks. One definition risk to check: completed_only_sla excludes undelivered parcels and produces 92.73% → 94.69%, while Dispatch's confirmed due-week measure is flat at 89.47% and includes those parcels. Please verify whether the completed-only view feeds the Dispatch headline; if it does, switch the headline to the due-week measure or label the alternate population clearly. No source repair is assumed.",
+          "actor_elapsed_seconds": 379.84353516600095,
+          "inbox_attachment_count": 4,
+          "evidence_ref_count": 4,
+          "evidence_refs_sha256": "dfe97e853542dac000dcdf96c3fbe5bc2ab6f6f3b0cc5da58dbbc59952b471a9"
+        },
+        {
+          "id": "baseline-message-3",
+          "source_cutoff": "2026-09-21T06:00:00Z",
+          "to": "data-operations",
+          "body": "Clarifying the open check: the parcel rollup, manifests, and cached export all reconcile; I have not found a source or cached-export mismatch. The specific question is whether the completed_only_sla view feeds Dispatch's headline. It excludes undelivered parcels and differs from the agreed due-week measure. Please confirm the dashboard binding/label when checked; your acknowledgement is not being treated as a repair.",
+          "actor_elapsed_seconds": 397.87283633300103,
+          "inbox_attachment_count": 3,
+          "evidence_ref_count": 3,
+          "evidence_refs_sha256": "215b8187991295e250aaee8e661889e2cbd21b5d63c695c1ac221e45971ecf00"
+        },
+        {
+          "id": "baseline-message-4",
+          "source_cutoff": "2026-09-28T06:00:00Z",
+          "to": "dispatch",
+          "body": "Action: please investigate the decline across both service tiers.\n\nFor Sep 21–28, due-week attainment was 81.05% (2,772/3,420), down 8.42 percentage points from Sep 14–21 (89.47%, 2,550/2,850). This crosses your 5-point trigger. Priority fell 10.00 points (90.00% to 80.00%); Standard fell 8.00 points (89.33% to 81.33%). Daily attainment stayed near 80.9%–81.2% across all seven due dates. The 648 misses were 309 late deliveries and 339 undelivered at the source cutoff. Manifests fully reconcile. Available records do not establish a cause.\n\nSnapshot as of 2026-09-28 06:00 UTC. Evidence: parcel rollup, manifest coverage, daily drilldown.",
+          "actor_elapsed_seconds": 525.9735971660011,
+          "inbox_attachment_count": 3,
+          "evidence_ref_count": 3,
+          "evidence_refs_sha256": "5e460c273badd2bc63f7a3cd3d0fa5c6d30fa037ac6003fabffa92646f54c77a"
+        },
+        {
+          "id": "baseline-message-5",
+          "source_cutoff": "2026-09-28T06:00:00Z",
+          "to": "data-operations",
+          "body": "Please repair/confirm the aggregate cached export for the Sep 21–28 due week: visible revision 1 is available at and cut off at 2026-09-28 06:00 UTC, has on_time_parcels=2,772, but eligible_parcels is NULL; its source_note says “Cached total denominator serialization omitted.” Priority (576/720) and Standard (2,196/2,700) rows match the parcel rollup and sum to 2,772/3,420; manifests and source registration are complete, so the business finding is supported independently. Please also confirm whether completed_only_sla feeds the Dispatch headline; if so, its 2.76-point movement would understate the due-week decline of 8.42 points. Neither issue is treated as repaired until confirmed.",
+          "actor_elapsed_seconds": 525.9852557499999,
+          "inbox_attachment_count": 5,
+          "evidence_ref_count": 5,
+          "evidence_refs_sha256": "3d5cfcfdb1b836f84e42c42cc3460121ea8d0738b6550bef10451f9bd1f966f7"
+        },
+        {
+          "id": "baseline-message-6",
+          "source_cutoff": "2026-09-28T06:00:00Z",
+          "to": "dispatch",
+          "body": "Separate data follow-up: the aggregate cached export for Sep 21–28 has 2,772 on-time parcels but its eligible denominator is blank. The Priority and Standard export rows, parcel rollup, and manifests support 2,772/3,420, so the business result above is established; Data Operations has been asked to repair the aggregate row. The earlier check on whether the completed-only view feeds your headline is still open. That view would show a 2.76-point decline this week, not 8.42, if used.",
+          "actor_elapsed_seconds": 525.9952106660003,
+          "inbox_attachment_count": 5,
+          "evidence_ref_count": 5,
+          "evidence_refs_sha256": "3d5cfcfdb1b836f84e42c42cc3460121ea8d0738b6550bef10451f9bd1f966f7"
+        },
+        {
+          "id": "baseline-message-7",
+          "source_cutoff": "2026-10-05T06:00:00Z",
+          "to": "dispatch",
+          "body": "Action: no threshold investigation is required this week.\n\nFor Sep 28–Oct 5, due-week attainment improved to 87.37% (3,486/3,990) from 81.05% (2,772/3,420), a 6.32-point increase. Priority rose from 80.00% to 85.00%; Standard from 81.33% to 88.00%. Non-on-time parcels fell from 648 to 504: late deliveries fell 432→240, while undelivered parcels rose 216→264. Manifests and current exports reconcile. No cause is established.\n\nSnapshot as of 2026-10-05 06:00 UTC. Evidence: parcel rollup, coverage and visible exports.",
+          "actor_elapsed_seconds": 595.2846987909998,
+          "inbox_attachment_count": 3,
+          "evidence_ref_count": 3,
+          "evidence_refs_sha256": "585a821a4294da31e616e84a4f0505f58a78ca1267c76c4b8b979406c78b2e24"
+        },
+        {
+          "id": "baseline-message-8",
+          "source_cutoff": "2026-10-05T06:00:00Z",
+          "to": "dispatch",
+          "body": "Separate data follow-up: the missing aggregate denominator for Sep 21–28 is now present in visible export revision 2 (2,772/3,420); the current aggregate row also reconciles. The dashboard binding check remains open: if completed_only_sla feeds your headline, it shows 86.52%→93.56% instead of the selected due-week measure's 81.05%→87.37%. The new observation inbox had no confirmation from Data Operations.",
+          "actor_elapsed_seconds": 595.294989375001,
+          "inbox_attachment_count": 3,
+          "evidence_ref_count": 3,
+          "evidence_refs_sha256": "f20f75333a698b3cedcd1748d4c996b409e556b2e3566024860271993b1791b3"
+        },
+        {
+          "id": "baseline-message-9",
+          "source_cutoff": "2026-10-05T06:00:00Z",
+          "to": "data-operations",
+          "body": "Follow-up: source evidence now shows the Sep 21–28 aggregate denominator restored in visible revision 2 (2,772/3,420), and the current aggregate export reconciles. I’m treating that data issue as repaired based on the source row. Please confirm whether completed_only_sla feeds Dispatch's headline; the current observation still has no binding confirmation.",
+          "actor_elapsed_seconds": 595.3026485830014,
+          "inbox_attachment_count": 5,
+          "evidence_ref_count": 5,
+          "evidence_refs_sha256": "f52d35db95cbc8f34b1e8ecaaa44b4edb077072bd73b7e98b6d6b533006385a2"
+        }
+      ],
+      "feedback_read_count": 7,
+      "native_checks": [],
+      "provider_responses": [],
+      "source_history_unchanged": true,
+      "review_artifacts": {
+        "reader": "2db23e63ebd688042ccaac04e8298791a0f4c3978324ac3ca41e706905df4a6f",
+        "raw": "2b72acc7a8db78b730ce6a7b9a5a4d0e2d4a734ff8865c91a1f59f030985cd91"
+      },
+      "reader_stage_profile": [
+        {
+          "stage_id": "owner_setup_and_confirmed_plan",
+          "verdict": "pass"
+        },
+        {
+          "stage_id": "weekly_business_digest",
+          "verdict": "pass"
+        },
+        {
+          "stage_id": "significance_and_recipient_actions",
+          "verdict": "pass"
+        },
+        {
+          "stage_id": "source_issue_and_data_operations_routing",
+          "verdict": "needs_revision"
+        },
+        {
+          "stage_id": "feedback_in_later_updates",
+          "verdict": "pass"
+        },
+        {
+          "stage_id": "reusable_procedure_and_completion",
+          "verdict": "pass"
+        }
+      ],
+      "final_operator_handoff_sha256": "00674d1e5c8ecafb5e75bafad2ccd430aaa010dd5a26ae548075ec0244c87746"
+    },
+    "plus_signalweave_jev": {
+      "terminal_sha256": "ae0f3379f293dacba3cf63481caa58966c89aeab5caefc5fa3ab12bbeafa11ce",
+      "world_sha256": "947e50231cfd770fbe3581a450e4e9d6aacc84cabeb44f94aa6db64c4dec7ed6",
+      "process_complete": true,
+      "seconds": 808.873846333001,
+      "frontier_tool_calls": 54,
+      "workspace_operations": 30,
+      "usage": {
+        "known": true,
+        "usage": {
+          "input_tokens": 8396959,
+          "cached_input_tokens": 8176768,
+          "uncached_input_tokens": 220191,
+          "output_tokens": 83691,
+          "responses": 1
+        },
+        "observed": {
+          "input_tokens": 8396959,
+          "cached_input_tokens": 8176768,
+          "uncached_input_tokens": 220191,
+          "output_tokens": 83691,
+          "responses": 1
+        }
+      },
+      "provider": {
+        "known": true,
+        "attempts": 3,
+        "usage": {
+          "input_tokens": 28493,
+          "output_tokens": 373
+        }
+      },
+      "owner_question_answers": 2,
+      "owner_confirmations": 1,
+      "operator_actions": 1,
+      "messages": [
+        {
+          "id": "signalweave-message-1",
+          "source_cutoff": "2026-09-21T06:00:00Z",
+          "to": "dispatch",
+          "body": "Dispatch — weekly delivery digest\n\nWeek 14–21 Sep 2026 UTC, compared with 7–14 Sep; source as of 21 Sep 06:00 UTC.\n\n• Overall on-time attainment was 2,550/2,850 (89.47%), unchanged from 2,040/2,280 (89.47%). Priority held at 90.00%; Standard held at 89.33%.\n• Eligible volume rose 25% (+570). Parcels not on time at the cutoff rose from 240 to 300. In the same-cutoff parcel breakdown, 143 current-week parcels were late delivered (160 prior); 157 had no delivered timestamp in the source parcel record (80 prior). This is source-visible status, not a cause or a statement about later resolution.\n• Manifest/registration counts and raw/cache numerator-denominator checks agree for both weeks. No data issue found; no Data Operations follow-up needed.\n\nThe 5-point decline threshold was not met, so there is no exception investigation or policy-triggered notice. This is the requested routine digest.",
+          "actor_elapsed_seconds": 533.5145366249999,
+          "inbox_attachment_count": 0,
+          "evidence_ref_count": 3,
+          "evidence_refs_sha256": "3f440861de7e9c5fa06b4397bc208382f035355f1587c280727829c44200022b"
+        },
+        {
+          "id": "signalweave-message-2",
+          "source_cutoff": "2026-09-28T06:00:00Z",
+          "to": "dispatch",
+          "body": "Dispatch — attainment decline needs investigation\n\nThe 21–28 Sep UTC week came in at 2,772/3,420 (81.05%), down 8.42 percentage points from 2,550/2,850 (89.47%). Both tiers fell: Priority 90.00% to 80.00%; Standard 89.33% to 81.33%. The five-point rule is met.\n\nThe not-on-time count rose from 300 to 648. By the 28 Sep 06:00 UTC source cutoff, 309 current-week parcels were recorded late delivered (200 prior) and 339 had no delivered timestamp in the parcel record (100 prior). These are source statuses, not an explanation. The manifest and parcel registrations reconcile, and raw/tier calculations support the business comparison. The individual delivery reason remains unknown; the broad parcel-event join exceeded the source query budget, so I could not validate a route-level cause.\n\nNo specific owner action is assigned.",
+          "actor_elapsed_seconds": 602.4500060409991,
+          "inbox_attachment_count": 0,
+          "evidence_ref_count": 4,
+          "evidence_refs_sha256": "3347e954f96a5e9cf627936a90b247a3ad5188413a847609a541ad58e2e5b2dd"
+        },
+        {
+          "id": "signalweave-message-3",
+          "source_cutoff": "2026-09-28T06:00:00Z",
+          "to": "data-operations",
+          "body": "Data Operations — please repair the cached total denominator\n\nFor the closed due week 2026-09-21–2026-09-28 UTC (source as of 28 Sep 06:00 UTC), cached_export_revisions revision 1 for service_tier=ALL has on_time_parcels=2,772 but eligible_parcels is NULL. Its source_note says “Cached total denominator serialization omitted.”\n\nThe business comparison is still supported by the raw and tier rows: manifests and parcel registrations are 3,600/3,600; priority is 576/720; standard is 2,196/2,700; raw ALL is 2,772/3,420. The prior week ALL cache (2,550/2,850) reconciles. The registered query flags data_issue=1 only because the current ALL cache denominator is missing.\n\nPlease restore the current ALL eligible denominator (3,420) in the export and confirm the corrected source row. This is a separate export repair; it does not invalidate the supported Dispatch finding.",
+          "actor_elapsed_seconds": 611.2692831250006,
+          "inbox_attachment_count": 0,
+          "evidence_ref_count": 5,
+          "evidence_refs_sha256": "6938dbddf473853c86e673e4489114963d19694358a451931f829a5e46cc439e"
+        },
+        {
+          "id": "signalweave-message-4",
+          "source_cutoff": "2026-10-05T06:00:00Z",
+          "to": "dispatch",
+          "body": "Dispatch — attainment improved; no new trigger\n\n28 Sep–5 Oct UTC: 3,486/3,990 = 87.37%, up 6.32 percentage points from 81.05% the week before. Priority improved to 85.00% (+5 pp); Standard to 88.00% (+6.67 pp). Volume rose 16.7%; volume alone is not a trigger.\n\nFollow-up: the 21–28 Sep week remains at 2,772/3,420 = 81.05%. By the newer 5 Oct cutoff, 123 parcels have a visible late-delivery timestamp that had no timestamp at the 28 Sep cutoff; the on-time rate did not change. The delivery reason remains unknown.\n\nThe earlier denominator defect is repaired and all current source checks pass. Action: no additional Dispatch follow-up; continue the routine weekly digest.",
+          "actor_elapsed_seconds": 681.8280070000001,
+          "inbox_attachment_count": 0,
+          "evidence_ref_count": 4,
+          "evidence_refs_sha256": "03cfb8138cd851825cdd5d1c74e17eca8519b2b31ca66e094ee53ac367ea5ce3"
+        },
+        {
+          "id": "signalweave-message-5",
+          "source_cutoff": "2026-10-05T06:00:00Z",
+          "to": "data-operations",
+          "body": "Data Operations — denominator repair verified\n\nThe 5 Oct source now exposes revision 2 for the 21 Sep ALL row: on_time_parcels=2,772 and eligible_parcels=3,420. Its note says “Denominator republished from unchanged parcel input.” The value matches the raw calculation and priority/standard cache rows. The registered review now returns data_issue=0.\n\nI’ve verified the correction in the source; no further repair is pending for this denominator.",
+          "actor_elapsed_seconds": 685.9844735829993,
+          "inbox_attachment_count": 0,
+          "evidence_ref_count": 3,
+          "evidence_refs_sha256": "3b0d6b4226d5f9be14d779ab4d4c47243e3070b4b5051a083d607972d7f98a83"
+        }
+      ],
+      "feedback_read_count": 4,
+      "native_checks": [
+        {
+          "outcome": "ignore",
+          "card_version": 1,
+          "idempotency_key": "pine-delivery-review-2026-09-21T0600Z",
+          "receipt_id": "receipt-011e8821547e4025bddee9230667d944",
+          "delivery_enabled": false
+        },
+        {
+          "outcome": "investigate",
+          "card_version": 1,
+          "idempotency_key": "pine-delivery-review-2026-09-28T0600Z",
+          "receipt_id": "receipt-8caef76f4be740f1a5cf4755f4067ced",
+          "delivery_enabled": false
+        },
+        {
+          "outcome": "ignore",
+          "card_version": 1,
+          "idempotency_key": "pine-delivery-review-2026-10-05T0600Z",
+          "receipt_id": "receipt-e70c8ad77a6d496c9997087dbc5e30fc",
+          "delivery_enabled": false
+        }
+      ],
+      "provider_responses": [
+        {
+          "request_id": 1,
+          "seconds": 0.3176010409988521,
+          "usage": {
+            "input_tokens": 9422,
+            "output_tokens": 124
+          }
+        },
+        {
+          "request_id": 2,
+          "seconds": 0.24487650000082795,
+          "usage": {
+            "input_tokens": 9518,
+            "output_tokens": 125
+          }
+        },
+        {
+          "request_id": 3,
+          "seconds": 0.2118949169998814,
+          "usage": {
+            "input_tokens": 9553,
+            "output_tokens": 124
+          }
+        }
+      ],
+      "source_history_unchanged": true,
+      "review_artifacts": {
+        "reader": "838a1ec665aba9958fc47d62e2e5e4dde3aa47948aa34c95be0e915f209b4c7b",
+        "raw": "7884ab21c54b8a9f83f40c20e8ea9fcb8607d4e2f931220764f1f520635d7748"
+      },
+      "reader_stage_profile": [
+        {
+          "stage_id": "owner_setup_and_confirmed_plan",
+          "verdict": "pass"
+        },
+        {
+          "stage_id": "weekly_business_digest",
+          "verdict": "pass"
+        },
+        {
+          "stage_id": "significance_and_recipient_actions",
+          "verdict": "pass"
+        },
+        {
+          "stage_id": "source_issue_and_data_operations_routing",
+          "verdict": "pass"
+        },
+        {
+          "stage_id": "feedback_in_later_updates",
+          "verdict": "needs_revision"
+        },
+        {
+          "stage_id": "reusable_procedure_and_completion",
+          "verdict": "pass"
+        }
+      ],
+      "final_operator_handoff_sha256": "69da8587850eb7ba28a9c3069f75ee1e93bdc5554e33d6ed9c3f835ddbe22c94"
+    }
+  },
+  "retained_incomplete_attempt": {
+    "terminal_sha256": "11ab49f9e2f8d7934f766000f97d99816cff0f8401c74f1901c4ac9c23334e9c",
+    "process_complete": false,
+    "seconds": 206.0941830419997,
+    "usage": {
+      "known": false,
+      "usage": null,
+      "observed": {
+        "input_tokens": 0,
+        "cached_input_tokens": 0,
+        "uncached_input_tokens": 0,
+        "output_tokens": 0,
+        "responses": 0
+      }
+    },
+    "provider": {
+      "known": true,
+      "attempts": 0,
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0
+      }
+    },
+    "errors": [
+      {
+        "type": "RuntimeError",
+        "message": "Attempted to exit a cancel scope that isn't the current tasks's current cancel scope"
+      }
+    ]
+  },
+  "limits": [
+    "One company and three dependent observations, not three independent samples.",
+    "Scripted people and actual local inbox delivery; no external notifications or real participant study.",
+    "Native policy checks are separate from final analytical and communication correctness.",
+    "No dollar cost, query-latency saving or population-level superiority is established.",
+    "The interrupted attempt has unknown frontier usage; total development cost is unknown."
+  ]
+}

@@ -114,6 +114,23 @@ def test_numeric_condition_schema_separates_unit_from_absolute_magnitude():
     assert "magnitude" in properties["absolute"]["description"].lower()
 
 
+@pytest.mark.parametrize(("kind", "unit"), [("additive", "USD"), ("additive", "number"),
+                                             ("additive", "milliseconds"), ("rate", "ratio")])
+@pytest.mark.parametrize("reverse", [False, True])
+def test_absolute_relative_change_matches_both_directions_across_metric_units(kind, unit, reverse):
+    source = comparison(kind=kind, unit=unit)
+    if reverse:
+        source.baseline_total, source.current_total = source.current_total, source.baseline_total
+        for segment in source.segments:
+            segment.baseline, segment.current = segment.current, segment.baseline
+    report = analyze_comparison("source-a", source)
+    result = evaluate(condition(measurement="change_pct", unit="percent", comparator=">=",
+                                threshold=5, absolute=True), report=report)[0]
+    assert result.status == "true"
+    assert result.value == pytest.approx(abs((report.current - report.baseline) / abs(report.baseline) * 100))
+    assert result.unit == "percent"
+
+
 def test_contribution_checks_support_any_and_exact_segment_without_reserved_label():
     report = analyze_comparison("source-a", comparison())
     any_result = evaluate(

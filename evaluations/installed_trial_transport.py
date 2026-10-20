@@ -51,6 +51,10 @@ class InstalledServer:
     async def list_tools(self) -> list[types.Tool]:
         return list((await self._session.list_tools()).tools)
 
+    async def read_resource(self, uri):
+        """Read through this initialized MCP; caller protocols own URI scope."""
+        return await self._session.read_resource(uri)
+
     async def call_tool(self, name: str, args: dict[str, Any]) -> tuple[list[Any], Any]:
         result = await self._session.call_tool(name, args)
         structured = result.structuredContent

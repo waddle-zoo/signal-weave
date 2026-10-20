@@ -124,5 +124,5 @@ async def test_caller_authored_labels_are_not_independent_truth_or_card_approval
     assert report["acceptance_passed"] is True
     assert all(row["expected_retrieval_refs"] == [] for row in report["cases"])
     assert tool(server, "get_insight_card")(card_id)["status"] == "draft"
-    with pytest.raises(ValueError, match="approve it before evaluation"):
+    with pytest.raises(ValueError, match="obtain explicit owner approval"):
         await tool(server, "evaluate_insight_card")(card_id)

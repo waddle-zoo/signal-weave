@@ -62,7 +62,11 @@ runtime evaluation still calls `inspect` and applies freshness, health, and
 payload-budget gates.
 
 The registry also enforces a serialized snapshot byte budget (1 MiB by default).
-An oversized adapter result is stripped of observations, comparisons, evidence, and metadata
+It first removes optional `saved_query_definition` metadata explicitly marked
+`audience="agent"` when that alone makes an oversized snapshot fit. Measurements,
+contracts, quality warnings, and other metadata remain intact; an omission notice
+is included when it fits too. Unmarked query metadata is not treated as optional.
+An adapter result that still exceeds the budget is stripped of observations, comparisons, evidence, and metadata
 and returned as a typed source error. Required sources therefore route to
 `insufficient_data` instead of silently sending an unbounded payload to Jev.
 Deployments can lower the budget with `SourceRegistry(max_snapshot_bytes=...)`.
@@ -172,7 +176,7 @@ and the bounded Trino query path are shipped in this repository. The remaining
 examples are extension points:
 
 ```text
-Superset   dashboard:7                 parameters.chart_ids=[62,64]
+Superset   dashboard:7                 parameters.chart_ids=["62","64"]
 Looker     dashboard:executive-growth  native dashboard/saved-query API
 Hex        project:retention            published run/cell-output API
 SQL        query:orders_quality         reviewed query catalog
@@ -191,6 +195,18 @@ of authorized optional context sources at evaluation time. Use
 `retrieval_mode="fixed"` when the source set must not expand.
 
 ## SQL adapter boundary
+
+The native [reviewed query source](query-sources.md) reuses an existing Superset
+or Preset connection. `superset_sql` (or the Preset adapter name plus `_sql`)
+resolves `query:<key>:<full-definition-sha256>` from an operator-imported catalog.
+It accepts no caller parameters or SQL. Connection credentials and tenant scope
+are reused; Preset requires its existing explicit live-query permission.
+Results retain arbitrary named columns as evidence with query provenance; no
+metric aliases, arithmetic or policy are inferred. Receipt time is not source
+freshness. Transport and final snapshot budgets reject incomplete/oversized
+results. See `test_query_source.py`, `test_superset_sql.py` and
+`test_local_queries.py` for offline contracts; those are not enterprise outcome
+or hosted-Preset acceptance results.
 
 An enterprise SQL adapter should resolve `query:orders_quality` through a reviewed
 query catalog. It should not accept raw SQL from `SourceRef.parameters` unless the
@@ -219,6 +235,29 @@ returned as `Evidence`; comparable numeric checks can be returned as
 establish their state.
 
 ## Registering an adapter
+
+Superset inspection retains a bounded `saved_query_definition` in chart metadata:
+the saved metric/aggregation, grouping, time grain/range, filters, columns and row
+limit when declared. Dashboard reads carry this from their existing chart
+metadata requests; no additional queries are needed. Missing, invalid or oversized
+definitions are marked unavailable/omitted rather than replaced with invented
+meaning. The projection is limited to 8 KiB per chart, with a 64 KiB serialized
+input limit and bounded nesting. These saved declarations do not establish effective dashboard filters,
+complete periods or a business population. They help the agent choose an
+appropriate aggregate instead of reconstructing it from detail rows. Original
+snapshots retain the declaration when the snapshot budget permits it; recurring
+policy input excludes query definitions marked `audience="agent"`. That marker
+controls payload projection, not authorization or confidentiality.
+
+Superset and Preset chart references execute the saved chart query; their
+`SourceRef.parameters` must be empty. Dashboard references additionally accept
+`chart_ids` (a list of string IDs) to select a subset. Saved chart fields such as
+`time_range`, filters and grouping describe that saved query, not supported
+`SourceRef` overrides. Unsupported keys are rejected rather than echoed beside
+unfiltered measurements. Use the connected BI/SQL tools for a different analysis,
+or choose a separately reviewed saved source when SignalWeave must retrieve that
+filtered aggregate on future runs. Do not silently delete requested filters to
+make a card runnable.
 
 The local runtime registers `SupersetAdapter` when `SUPERSET_URL` is configured.
 If `SIGNALWEAVE_TENANT_ID` is set, the adapter inherits that tenant binding;

@@ -1,0 +1,25 @@
+{
+  "protocol": "northstar-direct-source-authoring-v1",
+  "status": "source-authoring only; each paid admission requires actual prepared-input review",
+  "question": "Can experts operationalize their actual retained analysis so repeat checks no longer require frontier preanalysis or a rewritten publication, and does SignalWeave justify its extra setup versus competent deterministic automation?",
+  "predecessor": "Closed northstar-forward-continuation-v1: both correct, no overall treatment advantage, shared capture-overwrite failure retained",
+  "arms": {
+    "baseline": "Same capable Luna expert, own actual notes/queries/calculations and raw Superset tools; may author deterministic queries, rules and human reports without further LLM calls",
+    "signalweave": "Same retained own work and raw tools; authors bounded direct-query MCP reader and manifest plus proposed card and result renderer; native connection, actual source inspection and card review/approval happen only after exact code consent"
+  },
+  "common_access": "Public installed MCP1/Python SDKs, own workspace and original read-only tool captures; shell has no network or credential access; parent source MCP has only synthetic Superset access; no researcher business SQL or analytical normalization supplied",
+  "historical_clock": "Explicit reviewed cutoff file; setup Sep18, proposed subsequent Sep4 and Sep11. These are known-company historical snapshots, not unseen or as-known-then samples. Cutoffs fixed before new queries. Repeat stages not yet admitted.",
+  "limits": {"authors": 2, "jev_requests": 0, "mcp_tools": 20, "workspace_tools": 50, "response_seconds": 600, "between_actor_input_stop": 4000000, "between_actor_uncached_stop": 250000},
+  "order": ["baseline", "signalweave"],
+  "after_authors": [
+    "Preserve every attempt and actual usage, including incomplete authors; do not change prompts or silently repair outputs",
+    "Independent code and PM/DE review of actual executable, SQL, normalization, clock, manifest, credential flow, and owner-facing handoff before any deployment",
+    "Operator consent concerns exact source/executable/credential scope, not fabricated approval of analysis or hidden SQL corrections",
+    "Use actual native CLI in isolated private home; count setup, registration and credential reuse explicitly; record any inability to register the authored source",
+    "Charge additional treatment source-inspection/card-review/approval actor; no borrowed completion from authoring or old source approval",
+    "Freeze further shadow limits before provider calls; no frontend preanalysis on direct recurrence; baseline best actual runner remains allowed",
+    "Judge whole outcome: fresh correct measurements, concise human report, correct attention/quiet/data-gap handling, evidence and next action; no claims of delivery, scheduling or customer adoption"
+  ],
+  "benefit_gate": "Correct numbers and a receipt establish functioning, not comparative value. Count authoring, debugging, consent, extra actor/card operations and recurrence. If baseline is equally useful more simply, report no product win.",
+  "nonclaims": ["fresh human install", "statistical reliability", "external peer review", "general enterprise readiness", "qualifying decline coverage from quiet checkpoints", "automatic causal explanation", "no frontier work if a later writer is still needed"]
+}

@@ -39,7 +39,13 @@ def test_large_compact_handoff_discloses_omitted_evidence_and_keeps_decision():
     })
     assert len(json.dumps(compact).encode()) < AGENT_HANDOFF_BYTES
     assert compact["result"]["outcome"] == "investigate"
-    assert "evidence" not in compact["result"]
+    inline = compact["result"]["evidence"]
+    assert 0 < len(inline) <= 25
+    assert inline == result["evidence"][:len(inline)]
+    assert compact["evidence_access"]["evidence_coverage"] == {
+        "result_path": ["evidence"], "total": 400, "included": len(inline),
+        "coverage": "partial_section", "next_offset": len(inline),
+    }
     assert compact["evidence_access"]["complete"] is False
     assert compact["evidence_access"]["receipt_id"] == "r1"
     assert {tuple(s["path"]): s["count"] for s in compact["evidence_access"]["available_sections"]}[("evidence",)] == 400
@@ -127,13 +133,13 @@ async def test_mcp_pages_read_durable_receipt_without_new_sources_or_models(tmp_
     assert page["result_page"]["items"][-1]["values"]["value"] == 399
     assert "result" not in page["receipt"]
     assert "result" not in page
-    full = tool(server, "get_decision_receipt")(idempotency_key="pages")
+    full = await tool(server, "get_decision_receipt")(idempotency_key="pages")
     assert full["result"] == wide_result()
     card = runtime.card_store.get_card(draft["card"]["id"])
     runtime.card_store.save_card(card.model_copy(update={"principal_tenant": "owner-a"}))
     runtime.principal = PrincipalContext(tenant_id="owner-b", principal_id="other-reader")
     unauthorized = create_mcp(runtime, profile="full")
     with pytest.raises(ValueError):
-        tool(unauthorized, "get_decision_receipt")(
+        await tool(unauthorized, "get_decision_receipt")(
             receipt_id=receipt.receipt_id, result_path=["evidence"],
         )

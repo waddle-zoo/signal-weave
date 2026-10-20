@@ -136,6 +136,22 @@ native release.
   guided setup, isolated Codex registration, canonical skill installation,
   credential update, live local Superset/Jev card, replay, and uninstall checks.
   See the [scoped release evidence](evidence/cards-native-release-2026-10-14.md).
+- **Current source after `rc3` (not a published native release):** adds the
+  reviewed-query source path (`queries schema/import/list`) through the existing
+  Superset/Preset connection without a custom reader or SDK; these commands are
+  absent from the published `rc3` binary. It also adds the
+  domain-context preview (including persistent `context enable/disable/status`
+  controls), bounded saved-query definitions, and owner-reviewed
+  shadow evaluation without requiring custom BI metric contracts. Missing
+  declarations stay unverified and recipient mappings do not certify delivery.
+  Explicit `comparison_windows=[]` supports point-in-time cards without an
+  invented baseline; older published builds require a nonempty list. The agent
+  guide also distinguishes native card-source scope from the caller's existing
+  authorized investigation tools. The company MCP bridge also accepts a single
+  JSON text snapshot when structured content is omitted or null, with the same typed
+  source and tenant checks; older published builds require structured content.
+  Use an explicitly identified source build for these capabilities and verify
+  its embedded production fingerprint; the version string alone is insufficient.
 
 Release maintainers must update the pinned install commands in `README.md` and
 `docs/local-install.md`, and this compatibility section, when a new native
@@ -294,7 +310,12 @@ are resolved relative to the local home. Keep source secrets private too.
 For Trino, use `signalweave connections add --source trino` with a private
 normalized catalog JSON file; see [metric query cards](metric-query-cards.md).
 For the MCP source bridge, use `signalweave connections add --source mcp
---manifest /private/path/sources.json`. In advanced environment-only deployments,
+--manifest /private/path/sources.json`.
+Use `connections update --source mcp --manifest /private/path/reviewed-sources.json`
+to select a replacement manifest deliberately. This validates the replacement's
+tenant and schema without running its source tools; it does not merge manifests
+or approve cards. Include any existing resources you intend to keep.
+In advanced environment-only deployments,
 set `SIGNALWEAVE_MCP_SOURCES_FILE` to a deployment-owned JSON manifest; see
 [MCP source bridge](mcp-source-bridge.md). `doctor`
 reuses the bridge's manifest schema validation without launching a source MCP

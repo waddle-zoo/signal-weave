@@ -7,7 +7,11 @@ import json
 import re
 from collections import Counter
 from collections.abc import Iterable
-from typing import Protocol
+from contextlib import asynccontextmanager
+from contextvars import ContextVar
+from copy import deepcopy
+from datetime import datetime, timezone
+from typing import Any, Protocol
 
 from .models import (
     CatalogSearchPage,
@@ -16,6 +20,54 @@ from .models import (
     ResourceSnapshot,
     SourceRef,
 )
+
+
+class SourceParameterError(ValueError):
+    """The requested query scope is unsupported, not a permission failure."""
+
+
+source_read_instant: ContextVar[datetime | None] = ContextVar("source_read_instant", default=None)
+
+
+@asynccontextmanager
+async def source_read_clock():
+    """One instant across a collection/evaluation, never a server-start date."""
+    existing = source_read_instant.get()
+    token = source_read_instant.set(existing or datetime.now(timezone.utc))
+    try:
+        yield
+    finally:
+        source_read_instant.reset(token)
+
+
+def _without_agent_query_definitions(
+    metadata: dict[str, Any],
+) -> tuple[dict[str, Any], bool]:
+    """Copy metadata while omitting only agent-facing saved query definitions."""
+    copied = deepcopy(metadata)
+    removed = False
+
+    root_definition = copied.get("saved_query_definition")
+    if isinstance(root_definition, dict) and root_definition.get("audience") == "agent":
+        del copied["saved_query_definition"]
+        removed = True
+
+    charts = copied.get("charts")
+    if isinstance(charts, list):
+        for chart in charts:
+            if not isinstance(chart, dict):
+                continue
+            definition = chart.get("saved_query_definition")
+            if isinstance(definition, dict) and definition.get("audience") == "agent":
+                del chart["saved_query_definition"]
+                removed = True
+
+    return copied, removed
+
+
+def _snapshot_size_bytes(snapshot: ResourceSnapshot) -> int:
+    encoded = json.dumps(snapshot.model_dump(mode="json"), separators=(",", ":"))
+    return len(encoded.encode("utf-8"))
 
 
 def _inspection_contract(catalog: ResourceContract, snapshot: ResourceContract) -> ResourceContract:
@@ -616,10 +668,36 @@ class SourceRegistry:
 
     def _enforce_snapshot_budget(self, snapshot: ResourceSnapshot) -> ResourceSnapshot:
         """Keep oversized adapter payloads out of Jev and fail them closed."""
-        encoded = json.dumps(snapshot.model_dump(mode="json"), separators=(",", ":"))
-        observed_bytes = len(encoded.encode("utf-8"))
+        observed_bytes = _snapshot_size_bytes(snapshot)
         if observed_bytes <= self._max_snapshot_bytes:
             return snapshot
+
+        metadata, removed = _without_agent_query_definitions(snapshot.metadata)
+        if removed:
+            reduced = snapshot.model_copy(update={"metadata": metadata})
+            reduced_bytes = _snapshot_size_bytes(reduced)
+            if reduced_bytes <= self._max_snapshot_bytes:
+                # Reporting the omission is useful, but never let the report
+                # itself push otherwise usable evidence over the byte budget.
+                flag_key = (
+                    "signalweave_budget"
+                    if "signalweave_budget" not in metadata
+                    else "signalweave_optional_metadata_omission"
+                )
+                if flag_key not in metadata:
+                    flagged_metadata = deepcopy(metadata)
+                    flagged_metadata[flag_key] = {
+                        "status": "optional_metadata_omitted",
+                        "max_snapshot_bytes": self._max_snapshot_bytes,
+                        "observed_snapshot_bytes": observed_bytes,
+                        "omitted_metadata": ["saved_query_definition"],
+                    }
+                    flagged = reduced.model_copy(update={"metadata": flagged_metadata})
+                    flagged_bytes = _snapshot_size_bytes(flagged)
+                    if flagged_bytes <= self._max_snapshot_bytes:
+                        return flagged
+                return reduced
+
         return snapshot.model_copy(
             update={
                 "observations": [],
@@ -639,6 +717,7 @@ class SourceRegistry:
             }
         )
 
+    @source_read_clock()
     async def resolve(
         self,
         sources: Iterable[SourceRef],

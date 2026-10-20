@@ -36,7 +36,7 @@ from .models import (
     WorkflowHandoff,
 )
 from .retrieval import build_candidate_pool, resource_ref
-from .sources import SourceRegistry
+from .sources import SourceRegistry, _without_agent_query_definitions, source_read_clock
 from .typesafe_adapter import (
     DEFAULT_MAX_JEV_PAYLOAD_BYTES,
     InsightJudger,
@@ -46,36 +46,12 @@ from .typesafe_adapter import (
     compact_resource_snapshot_payload,
 )
 
-# A source can be reachable and well-formed while still failing to answer a
-# semantic prerequisite for the card (for example, whether an exception was
-# approved for the exact period being evaluated).  These values are not
-# adapter-specific failures; they are unresolved business context and must
-# not be allowed to authorize an automatic route.
-_UNCERTAIN_CONTEXT_KEYS = frozenset({
-    "approval_status",
-    "authorization_status",
-    "context_status",
-    "decision_status",
-    "exception_status",
-    "owner_status",
-    "resolution_status",
-    "semantic_status",
-    "status",
-})
-_UNCERTAIN_CONTEXT_VALUES = frozenset({
-    "ambiguous",
-    "conflict",
-    "conflicted",
-    "incomplete",
-    "missing",
-    "not found",
-    "not_found",
-    "pending",
-    "undetermined",
-    "unknown",
-    "unresolved",
-    "unverified",
-})
+
+def _judgment_source(resource: ResourceSnapshot) -> dict[str, Any]:
+    """Keep agent query provenance in receipts, not recurring policy input."""
+    payload = resource.model_dump(mode="json", exclude={"observations", "evidence", "analytical_comparisons"})
+    payload["metadata"], _ = _without_agent_query_definitions(payload["metadata"])
+    return payload
 
 
 @dataclass
@@ -108,6 +84,14 @@ class EvaluationPayloadError(ValueError):
             f"{stage} Jev payload exceeded the configured budget "
             f"({observed_bytes} > {budget_bytes} bytes)"
         )
+
+
+class ContextReviewRequired(ValueError):
+    """Evidence is usable for investigation but required policy meaning needs review."""
+
+    def __init__(self, handoff: dict) -> None:
+        super().__init__("required card context needs review; policy judgment deferred")
+        self.prepared_handoff = handoff
 
 
 class InsightEngine:
@@ -269,13 +253,14 @@ class InsightEngine:
         # tampered windows cannot be treated as harmless transport metadata.
         if card.compiled_plan is not None:
             if (
-                not card.compiled_plan.comparison_windows
+                (card.comparison_windows and not card.compiled_plan.comparison_windows)
                 or not set(card.compiled_plan.comparison_windows).issubset(
                     card.comparison_windows
                 )
             ):
                 raise ValueError(
-                    "compiled_plan comparison windows must be a nonempty subset of card windows"
+                    "compiled_plan comparison windows must be a nonempty subset of card windows "
+                    "unless both are empty"
                 )
             InsightCard.model_validate(card.model_dump(mode="json"))
             # The cached plan has already passed the card-version validator.
@@ -308,6 +293,20 @@ class InsightEngine:
         del resources
         return base_plan(card)
 
+    async def prepare_evidence(
+        self, card: InsightCard, principal: PrincipalContext | None = None,
+    ) -> dict:
+        """Fetch approved anchors only, without model compilation or related-source expansion."""
+        if self.registry is None:
+            raise ValueError("evidence preparation requires a SourceRegistry")
+        resources = await self.registry.resolve(
+            card.sources, authorized_tenants=[principal.tenant_id] if principal else None,
+        )
+        plan = base_plan(card)
+        return {"card": card, "resources": resources, "plan": plan,
+                "materials": self._evaluation_materials(card, plan, resources, None, None)}
+
+    @source_read_clock()
     async def evaluate(
         self,
         card: InsightCard,
@@ -425,7 +424,7 @@ class InsightEngine:
                 result = await self.judger.judge(
                     materials.state, evaluation_card, plan, materials.observations
                 )
-            except JevPayloadError as error:
+            except (EvaluationPayloadError, JevPayloadError) as error:
                 if error.stage == "judgment":
                     attempts = getattr(request_attempts, "count", None)
                     error.provider_call_attempts = (
@@ -572,7 +571,10 @@ class InsightEngine:
                     status = "unavailable"
                 elif any(resource.observations or resource.evidence for resource in relevant) or any(
                     report.status == "complete" for report in analytical_reports
-                ) or any(
+                ) or (not plan.comparison_windows and any(
+                    InsightEngine._has_current_comparison_inputs(comparison)
+                    for resource in relevant for comparison in resource.analytical_comparisons
+                )) or any(
                     comparison.coverage == "complete" and comparison.comparable
                     for resource in relevant
                     for comparison in resource.contract.comparison_contracts
@@ -654,29 +656,21 @@ class InsightEngine:
         objective = card.why_watch or card.what_to_watch
         delivery_keys = [method.key for method in result.delivery_methods]
         evidence_plan = result.evidence_plan
-        pending_sources = (
-            sorted(
-                {
-                    source_key
-                    for slot in evidence_plan.slots
-                    if slot.status in {"pending", "unavailable"}
-                    for source_key in slot.source_keys
-                }
-            )
-            if evidence_plan
-            else []
-        )
+        required_pending_slots = [
+            slot for slot in evidence_plan.slots
+            if slot.required and slot.status in {"pending", "unavailable"}
+        ] if evidence_plan else []
+        pending_sources = sorted({
+            source_key
+            for slot in required_pending_slots
+            for source_key in slot.source_keys
+        })
         plan_instructions = ""
-        if evidence_plan and evidence_plan.missing_slot_keys:
-            plan_slots = {
-                slot.key: slot
-                for slot in evidence_plan.slots
-                if slot.key in evidence_plan.missing_slot_keys
-            }
+        if required_pending_slots:
             plan_instructions = "Evidence slots to complete:\n" + "\n".join(
                 f"- {slot.key}: {slot.question} "
                 f"(sources: {', '.join(slot.source_keys) or 'caller-authorized catalog'})"
-                for slot in plan_slots.values()
+                for slot in required_pending_slots
             )
         if result.outcome == Outcome.IGNORE:
             return WorkflowHandoff(
@@ -684,19 +678,35 @@ class InsightEngine:
                 step_key="suppress",
                 action="suppress",
                 objective=objective,
-                instructions="Record the result and suppress delivery for this run.",
-                completion_criteria="No further workflow step is required unless new evidence arrives.",
+                instructions=(
+                    "Record the result and suppress policy-triggered delivery for this run. "
+                    "This does not cancel a separately requested routine report of supported "
+                    "findings; do not present that report as a triggered alert."
+                ),
+                completion_criteria="No further card policy step is required unless new evidence arrives.",
                 evidence_plan=evidence_plan,
             )
-        if result.outcome in {Outcome.NOTIFY, Outcome.ESCALATE}:
+        missing_data_notice = result.outcome == Outcome.INSUFFICIENT_DATA and bool(delivery_keys)
+        if result.outcome in {Outcome.NOTIFY, Outcome.ESCALATE} or missing_data_notice:
             return WorkflowHandoff(
                 status="ready",
                 step_key="deliver",
                 action="deliver",
                 objective=objective,
                 instructions=(
+                    "Prepare only the configured missing-data notice, explaining what is missing "
+                    "and which conclusions remain unsupported. This is not a business regression "
+                    "alert or evidence repair. Supported analysis may continue with authorized "
+                    "tools; a new policy conclusion still requires the missing evidence. "
+                    "For the human message, cite the relevant source URL or exact adapter|resource "
+                    "reference and state the smallest next check needed to resolve the gap. "
+                    "The caller must separately authorize delivery to the configured destination."
+                    if missing_data_notice else
                     "Deliver the evidence bundle to the configured destination. "
-                    "Do not invent a destination or change the outcome."
+                    "Lead with the supported finding, cite its source URL or exact adapter|resource "
+                    "reference, and give the next check justified by the evidence or say no further "
+                    "action is needed. Keep uncertainty beside the finding. "
+                    "Do not invent a cause, destination or action, or change the outcome."
                 ),
                 required_source_keys=sorted(set([*result.source_keys, *pending_sources])),
                 completion_criteria="The caller-owned delivery adapter accepted the evidence bundle.",
@@ -707,11 +717,15 @@ class InsightEngine:
             required_sources = sorted(source.key for source in card.sources if source.required)
             repair_instructions = (
                 "Repair or validate the missing, conflicting, or incomparable required "
-                "evidence before continuing the analysis. Source availability alone does "
+                "evidence before claiming the affected policy question is resolved. "
+                "Report supported findings and limits now; authorized investigation may continue. "
+                "Source availability alone does "
                 "not establish that its evidence is complete or comparable. Use the "
                 "evidence bundle and plan to identify the gap; do not reconstruct missing "
                 "values or invent definitions. Submit corrected evidence for re-evaluation "
-                "of the same card before resuming analytical follow-up."
+                "of the same card before changing its policy conclusion. "
+                "Caller-submitted context stays unverified; use updated approved sources or "
+                "a trusted context provider for policy evidence."
             )
             follow_up = (
                 "\n\nCard follow-up guidance (after evidence repair and re-evaluation):\n"
@@ -722,11 +736,11 @@ class InsightEngine:
             # 8,000-character limit together. Reference full structured content
             # rather than truncating an owner's policy mid-sentence.
             if len(instructions) > 8000:
-                instructions = repair_instructions + "\n\nConsult the attached evidence_plan for all evidence slots." + follow_up
+                instructions = repair_instructions + "\n\nConsult the attached evidence_plan for required evidence gaps." + follow_up
             if len(instructions) > 8000:
                 instructions = (
                     repair_instructions
-                    + "\n\nConsult the attached evidence_plan for all evidence slots. "
+                    + "\n\nConsult the attached evidence_plan for required evidence gaps. "
                     "The full follow-up guidance exceeds this handoff's text limit; read "
                     f"card {card.id} version {card.version}'s follow_up_guidance after "
                     "evidence repair and re-evaluation."
@@ -761,7 +775,10 @@ class InsightEngine:
                 objective=objective,
                 instructions=(
                     "Deliver the configured investigation route. This card does not define "
-                    "a follow-up step, so the existing single-step behavior is terminal."
+                    "a follow-up step, so the existing single-step behavior is terminal. "
+                    "In the human message, cite the relevant source URL or exact adapter|resource "
+                    "reference, explain what remains uncertain, and suggest only an evidence-justified "
+                    "next check; do not invent a cause, action or recipient."
                 ),
                 required_source_keys=sorted(set([*result.source_keys, *pending_sources])),
                 completion_criteria="The caller-owned delivery adapter accepted the evidence bundle.",
@@ -779,9 +796,11 @@ class InsightEngine:
             ),
             required_source_keys=sorted(set([*selected_sources, *pending_sources])),
             completion_criteria=(
-                "Submit the follow-up evidence after completing the required evidence slots "
-                "as a versioned context snapshot to the same card for re-evaluation before "
-                "leadership delivery."
+                "Submit the follow-up evidence for review. A new policy evaluation must fetch "
+                "updated approved sources or a trusted context provider. Caller-submitted "
+                "context remains unverified and cannot authorize notify or escalate. Report "
+                "supported analysis separately without claiming the missing policy evidence "
+                "is resolved; any delivery requires the caller's authorization."
                 if has_follow_up_guidance
                 else "A human or caller-owned agent must review the evidence and decide the next retrieval."
             ),
@@ -1008,6 +1027,12 @@ class InsightEngine:
             warnings=warnings,
         )
 
+    @staticmethod
+    def _has_current_comparison_inputs(comparison) -> bool:
+        return any(value is not None for value in comparison.current_total.model_dump().values()) or any(
+            value is not None for segment in comparison.segments for value in segment.current.model_dump().values()
+        )
+
     def _evaluation_materials(
         self,
         card: InsightCard,
@@ -1033,9 +1058,45 @@ class InsightEngine:
             if resource.source_key not in plan.selected_source_keys and resource.source_key not in required_sources:
                 continue
             for comparison in resource.analytical_comparisons:
+                if not plan.comparison_windows:
+                    # A comparison table may be the only carrier of current
+                    # facts. Keep its current side as source input, not as a
+                    # validated change or decomposition.
+                    if not self._has_current_comparison_inputs(comparison):
+                        continue
+                    current = comparison.model_dump(mode="json", exclude={
+                        "baseline_start", "baseline_end", "baseline_total", "comparison_window",
+                        "comparable", "require_equal_duration", "required", "segments", "query_refs",
+                    })
+                    current["segments"] = [
+                        {"segment": segment.segment, "current": segment.current.model_dump(mode="json")}
+                        for segment in comparison.segments
+                    ]
+                    current["source_comparison_coverage"] = current.pop("coverage")
+                    analytical_evidence.append(Evidence(
+                        source_key=resource.source_key, subject_id=comparison.key,
+                        subject_label=comparison.metric,
+                        statement=(f"Source-reported current-period inputs for {comparison.metric}; "
+                                   "no period comparison or reconciliation was performed."),
+                        values=current, origin="source", provenance=comparison.query_refs,
+                        source_url=resource.source_url,
+                    ))
+                    missing_refs = sorted(
+                        ref for ref in comparison.query_refs if "|" in ref
+                        and ref.split("|", 1)[0] in registered_adapters and ref not in inspected_resource_refs
+                    )
+                    if missing_refs:
+                        source_errors.append({
+                            "source_key": resource.source_key, "resource": resource.resource,
+                            "label": resource.title,
+                            "message": "Current-input provenance names unresolved resource(s): " + ", ".join(missing_refs),
+                            "blocking": resource.source_key in required_sources,
+                            "quality_status": "provenance_incomplete", "source_url": resource.source_url,
+                        })
+                    continue
                 report = analyze_comparison(
                     resource.source_key, comparison,
-                    comparison_window=plan.comparison_windows[0] if plan.comparison_windows else None,
+                    comparison_window=plan.comparison_windows[0],
                 )
                 report = report.model_copy(update={
                     "required": resource.source_key in required_sources and (
@@ -1120,6 +1181,10 @@ class InsightEngine:
             if (observation.source_key, observation.subject_id, observation.metric)
             not in priority_keys
         ]
+        statements = evidence_statements(
+            evidence_observations,
+            include_comparison=bool(plan.comparison_windows),
+        )
         evidence = [
             Evidence(
                 source_key=observation.source_key,
@@ -1128,9 +1193,6 @@ class InsightEngine:
                 statement=statement,
                 values={
                     "current": observation.current,
-                    "baseline": observation.baseline,
-                    "previous": observation.previous,
-                    "change_pct": observation.change_pct,
                     "freshness": observation.freshness,
                     "priority": (
                         observation.source_key,
@@ -1142,14 +1204,15 @@ class InsightEngine:
                     "unit": observation.unit,
                     "dimensions": observation.dimensions,
                     **observation.attributes,
+                    **({
+                        "baseline": observation.baseline,
+                        "previous": observation.previous,
+                        "change_pct": observation.change_pct,
+                    } if plan.comparison_windows else {}),
                 },
                 source_url=observation.source_url,
             )
-            for observation, statement in zip(
-                evidence_observations,
-                evidence_statements(evidence_observations),
-                strict=False,
-            )
+            for observation, statement in zip(evidence_observations, statements, strict=False)
         ]
         evidence.extend(
             item
@@ -1190,13 +1253,7 @@ class InsightEngine:
             # Do not send every raw source snapshot a second time: large BI
             # dashboards can otherwise exceed the provider context window even
             # though the local byte budget is still within bounds.
-            "sources": [
-                resource.model_dump(
-                    mode="json",
-                    exclude={"observations", "evidence", "analytical_comparisons"},
-                )
-                for resource in resources
-            ],
+            "sources": [_judgment_source(resource) for resource in resources],
             "observations": [observation.model_dump(mode="json") for observation in observations],
             "priority_observations": [
                 observation.model_dump(mode="json") for observation in priority_observations
@@ -1222,8 +1279,18 @@ class InsightEngine:
     def _apply_comparison_window(
         observations: list[Observation], plan: InsightPlan
     ) -> list[Observation]:
-        """Use the compiled window when the source exposes that baseline."""
-        window = plan.comparison_windows[0] if plan.comparison_windows else "previous_period"
+        """Apply a selected window, or expose current-only observations."""
+        if not plan.comparison_windows:
+            return [
+                observation.model_copy(update={
+                    "baseline": None,
+                    "previous": None,
+                    "change_pct": None,
+                    "comparison_baselines": {},
+                })
+                for observation in observations
+            ]
+        window = plan.comparison_windows[0]
         if window == "previous_period":
             return observations
         adjusted: list[Observation] = []
@@ -1269,6 +1336,19 @@ class InsightEngine:
             )
         for key, source in declared.items():
             resource = provided.get(key)
+            if not card.comparison_windows and source.required_comparison_keys:
+                errors.append({
+                    "source_key": key,
+                    "resource": source.resource,
+                    "label": source.label,
+                    "message": (
+                        "Required comparison keys cannot be evaluated when the card selects no "
+                        "comparison windows: " + ", ".join(source.required_comparison_keys)
+                    ),
+                    "source_url": resource.source_url if resource is not None else None,
+                    "blocking": source.required,
+                    "quality_status": "comparison_window_mismatch",
+                })
             if resource is None:
                 errors.append(
                     {
@@ -1440,6 +1520,7 @@ class InsightEngine:
                             ),
                             "source_url": resource.source_url,
                             "blocking": source.required,
+                            "quality_status": "stale",
                         }
                     )
         return errors
@@ -1467,49 +1548,6 @@ class InsightEngine:
             "delivery_methods": cls._delivery_methods_for(card, outcome),
         }
         return result.model_copy(update=updates)
-
-    @staticmethod
-    def _unresolved_required_context(
-        result: InsightResult,
-        required_source_keys: set[str],
-    ) -> list[tuple[str, str, str]]:
-        """Find unresolved semantic status values in required source evidence.
-
-        Adapters are intentionally free to shape qualitative evidence, so the
-        engine cannot require a single context schema.  It can still enforce
-        the important safety invariant: a required source that explicitly says
-        a status is unknown or unresolved cannot authorize a notify/escalate
-        result.  Only status-like keys are inspected and the source key must
-        be required, which avoids treating ordinary prose or numeric values as
-        missing context.
-        """
-
-        findings: list[tuple[str, str, str]] = []
-
-        def visit(value: Any, path: str = "") -> None:
-            if isinstance(value, dict):
-                for key, nested in value.items():
-                    normalized_key = str(key).strip().lower()
-                    if normalized_key in _UNCERTAIN_CONTEXT_KEYS:
-                        normalized_value = str(nested).strip().lower()
-                        if normalized_value in _UNCERTAIN_CONTEXT_VALUES:
-                            findings.append((path or "evidence", normalized_key, normalized_value))
-                    if isinstance(nested, (dict, list)):
-                        visit(nested, f"{path}.{normalized_key}" if path else normalized_key)
-            elif isinstance(value, list):
-                for index, nested in enumerate(value):
-                    if isinstance(nested, (dict, list)):
-                        visit(nested, f"{path}[{index}]")
-
-        for item in result.evidence:
-            if item.source_key not in required_source_keys:
-                continue
-            before = len(findings)
-            visit(item.values)
-            for index in range(before, len(findings)):
-                path, key, value = findings[index]
-                findings[index] = (item.source_key, key, value)
-        return findings
 
     @classmethod
     def _apply_safety_gates(
@@ -1546,14 +1584,36 @@ class InsightEngine:
                 for item in source_error_evidence
                 if (item.source_key, item.subject_id, item.statement) not in existing_evidence
             )
+            unavailable_statuses = {None, "failed", "unknown"}
+            has_unavailable_source = any(
+                error.get("quality_status") in unavailable_statuses
+                for error in blocking_source_errors
+            )
+            has_quality_limited_source = any(
+                error.get("quality_status") not in unavailable_statuses
+                for error in blocking_source_errors
+            )
+            if has_unavailable_source and has_quality_limited_source:
+                rationale = (
+                    "One or more required card sources were unavailable, and one or more "
+                    "returned stale or quality-limited evidence, so no automatic "
+                    "interpretation is safe."
+                )
+            elif has_quality_limited_source:
+                rationale = (
+                    "One or more required card sources returned stale or quality-limited "
+                    "evidence, so no automatic interpretation is safe."
+                )
+            else:
+                rationale = (
+                    "One or more required card sources were unavailable, so no automatic "
+                    "interpretation is safe."
+                )
             return cls._with_outcome(
                 result,
                 card,
                 Outcome.INSUFFICIENT_DATA,
-                rationale=(
-                    "One or more required card sources were unavailable, so no automatic "
-                    "interpretation is safe."
-                ),
+                rationale=rationale,
                 confidence=max(result.confidence or 0.0, 0.95),
                 evidence=new_evidence,
             )
@@ -1596,23 +1656,10 @@ class InsightEngine:
                 ),
             )
 
-        unresolved_context = cls._unresolved_required_context(result, required_keys)
-        if unresolved_context and result.outcome in {Outcome.NOTIFY, Outcome.ESCALATE}:
-            details = ", ".join(
-                f"{source_key}.{key}={value}"
-                for source_key, key, value in unresolved_context[:5]
-            )
-            suffix = "" if len(unresolved_context) <= 5 else " (and more)"
-            return cls._with_outcome(
-                result,
-                card,
-                Outcome.INVESTIGATE,
-                rationale=(
-                    "A required source contains unresolved semantic context, so an automatic "
-                    f"route is unsafe until the context is resolved: {details}{suffix}."
-                ),
-            )
-
+        # Business statuses such as pending approvals or unresolved incidents
+        # may be exactly what the owner wants to alert on. Interpret those
+        # values through the card policy, not a recursive keyword veto. Typed
+        # source-quality failures and required semantic slots remain gated.
         if (
             result.context is not None
             and result.context.trust == "unverified"

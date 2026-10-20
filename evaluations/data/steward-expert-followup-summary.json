@@ -1,0 +1,258 @@
+{
+  "protocol": "steward-expert-followup-v1",
+  "scope": "One known synthetic retail development case after coordinator/data-expert assistance. Not autonomous onboarding, customer evidence, a statistical efficacy estimate, or a comparative cost/speed win. No sending or schedule. Runtime traces and setup remain local.",
+  "setup": {
+    "original_v4": "Stopped after four agent calls, no Jev or reports; false numerical review objection and incomplete source-scope approval. Not rescored.",
+    "intervention": "Actual retained model-authored card, not imported approval: expert approved the unchanged stored definition, bound reviewed revision 2 as required and approved the same card v2 through public MCP. Both fresh reporters received equivalent expert-confirmed context.",
+    "audit_limit": "Original signoff native call arguments/results were not individually logged. Matched runner and final state support the sequence; separate read-only restart verified the persisted v2 card, context revisions 1/2 and saved receipt. Subsequent runner changes add per-operation auditing; no paid rerun.",
+    "runner_commit": "2389175",
+    "native_source_commit": "5a9e0e2f69740dad88ec05853129e049ed95ad39",
+    "native_source_sha256": "55013815a667dd4d893c5da4b95eaac00be33835a2c04fae6e50d8bb9e43a7a3"
+  },
+  "owner_context": {
+    "company": "Juniper Trail Retail",
+    "brief": "Keep an eye on what we actually keep from sales. If it takes a hit, tell our commerce lead what changed, not just that a chart moved. Remember the agreed definition for future sales investigations.",
+    "glossary": {
+      "net_sales": "Sales means gross completed-order revenue minus refunds posted during the same reporting week, excluding tax and shipping. Do not use booked order value or subtract refunds twice.",
+      "unit": "USD",
+      "comparison": "Previous complete reporting week; source periods are UTC.",
+      "source_steward_notes": "# Juniper Trail Retail: fictional source-steward declaration v1\n\nThis is additional simulation input supplied by the fictional data steward,\nnot an inference, a real customer's attestation, a card, or permission to act.\n\nFor Commerce weekly (`company_mcp|resource-949a4c0c44fb188d1658`), the glossary's\n`net_sales` definition is the controlling scope: completed-order gross revenue\nless refunds posted in the same reporting week, excluding tax and shipping.\nThere are no additional customer, region, eligibility or pilot filters on this\nexport beyond that definition. Web and shop are its disjoint sales channels;\nbooked or cancelled order value is not recognized sales. The generic population\nlabel “Eligible entities in the source glossary” refers to this scope, not to an\nadditional unspecified cohort.\n\nFor that source, `previous_period` maps to `company-metric-glossary#/definitions/comparison`:\nthe previous complete reporting week, with source intervals in UTC. Each run\nmust use its actual reported measurement intervals, coverage and comparability.\nHistorical onboarding examples do not attest to later source freshness,\ncompleteness, refund timing or values.\n\nReturns operations (`company_mcp|resource-00dc1bfdfad5f5f05554`) is point-in-time\nrefund-posting metadata, not a second monetary ledger. It does not share a\ntransaction population merely because the sources are related. Use it within\nits own stated scope as corroboration; do not add or subtract its records from\nCommerce weekly's amounts or treat its presence as proof of current quality.\n\nThis declaration supplies no alert threshold, destination, outcome, current\nmeasurement or causal explanation. Ask the business owner for action policy.\nSave and show the proposed artifacts; consent, context review and card approval\nare separate steps. No sending or scheduling is authorized here.\n"
+    },
+    "owner_answers": {
+      "metric_scope": "Sales means gross completed-order revenue minus refunds posted during the same reporting week, excluding tax and shipping. Do not use booked order value or subtract refunds twice.",
+      "materiality": "Notify the business destination for a net-sales decline of at least 10% against the prior complete week. Otherwise ignore. Missing definitions or incomplete postings require insufficient_data to the data destination, not a business alert.",
+      "routing": "business destination: team-f88d053536cba66bc88e; data destination: team-b5fcff88e8691a8a9289. Only these routes are authorized; no destructive actions.",
+      "data_gaps": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer.",
+      "context_review": "Definitions may be shared within this synthetic tenant; review in 30 days. Show the saved draft before requesting approval. Hypotheses stay advisory."
+    },
+    "destinations": [
+      {
+        "key": "team-f88d053536cba66bc88e",
+        "label": "Business owner",
+        "destination": "slack://team-f88d053536cba66bc88e"
+      },
+      {
+        "key": "team-b5fcff88e8691a8a9289",
+        "label": "Data operations",
+        "destination": "slack://team-b5fcff88e8691a8a9289"
+      }
+    ]
+  },
+  "sources": [
+    {
+      "ref": "company_mcp|resource-00dc1bfdfad5f5f05554",
+      "capture_time": "2026-10-15T23:37:17.045596Z",
+      "payload_values": [
+        {
+          "posting_policy": "Posting week matches transaction feed; refunds already included in its rows."
+        }
+      ],
+      "analytical_comparisons": []
+    },
+    {
+      "ref": "company_mcp|resource-949a4c0c44fb188d1658",
+      "capture_time": "2026-10-15T23:37:17.045596Z",
+      "payload_values": [
+        {
+          "fields": {
+            "gross": "USD",
+            "refunds": "USD"
+          },
+          "refund_timing": "posting_week",
+          "rows": [
+            {
+              "baseline_gross": 8000,
+              "baseline_refunds": 1000,
+              "channel": "web",
+              "current_gross": 6500,
+              "current_refunds": 2500
+            },
+            {
+              "baseline_gross": 4000,
+              "baseline_refunds": 1000,
+              "channel": "shop",
+              "current_gross": 4000,
+              "current_refunds": 1000
+            }
+          ]
+        }
+      ],
+      "analytical_comparisons": [
+        {
+          "baseline_end": "2026-10-05T00:00:00Z",
+          "baseline_start": "2026-09-28T00:00:00Z",
+          "baseline_total": {
+            "denominator": null,
+            "numerator": null,
+            "value": 10000
+          },
+          "comparable": true,
+          "comparison_window": "previous_period",
+          "coverage": "complete",
+          "current_end": "2026-10-12T00:00:00Z",
+          "current_start": "2026-10-05T00:00:00Z",
+          "current_total": {
+            "denominator": null,
+            "numerator": null,
+            "value": 7000
+          },
+          "definition": "Sales means gross completed-order revenue minus refunds posted during the same reporting week, excluding tax and shipping. Do not use booked order value or subtract refunds twice.",
+          "dimension": "total",
+          "disjoint_segments": true,
+          "key": "net_sales",
+          "kind": "additive",
+          "metric": "net_sales",
+          "population": "Eligible entities in the source glossary",
+          "query_refs": [
+            "company_mcp|resource-949a4c0c44fb188d1658"
+          ],
+          "require_equal_duration": false,
+          "required": true,
+          "segments": [
+            {
+              "baseline": {
+                "denominator": null,
+                "numerator": null,
+                "value": 7000
+              },
+              "current": {
+                "denominator": null,
+                "numerator": null,
+                "value": 4000
+              },
+              "segment": "web"
+            },
+            {
+              "baseline": {
+                "denominator": null,
+                "numerator": null,
+                "value": 3000
+              },
+              "current": {
+                "denominator": null,
+                "numerator": null,
+                "value": 3000
+              },
+              "segment": "shop"
+            }
+          ],
+          "unit": "USD"
+        }
+      ]
+    }
+  ],
+  "reports": {
+    "signalweave": {
+      "case_id": "case-8f3bc03d6652",
+      "recorded_report": {
+        "outcome": "notify",
+        "recipients": [
+          "team-f88d053536cba66bc88e"
+        ],
+        "summary": "Juniper Trail Retail net sales fell 30%, from $10,000 to $7,000, for the complete comparable UTC weeks Sep 28–Oct 5 and Oct 5–12, 2026. This exceeds the agreed 10% decline threshold, so the policy-triggered recipient is the Business owner (commerce lead). [company_mcp|resource-949a4c0c44fb188d1658]\n\nUseful breakdown: web net sales moved $7,000 to $4,000 (−$3,000); shop stayed at $3,000. These are accounting contributions to the total change, not causes. [company_mcp|resource-949a4c0c44fb188d1658]\n\nThe comparison reports complete coverage and comparable populations. It is an aggregate accounting comparison, with no estimate of statistical uncertainty; the underlying driver is not established. Returns metadata says refunds are already included in the Commerce rows, so they should not be deducted again. [company_mcp|resource-949a4c0c0c44fb188d1658] [company_mcp|resource-00dc1bfdfad5f5f05554]\n\nNext step: commerce lead to review the web decline and investigate operational drivers. This run is delivery-disabled; no message was sent."
+      }
+    },
+    "baseline": {
+      "case_id": "case-eccb93723af7",
+      "recorded_report": {
+        "outcome": "notify",
+        "recipients": [
+          "team-f88d053536cba66bc88e"
+        ],
+        "summary": "Juniper Trail Retail: Net sales declined 30% ($10,000 to $7,000) between complete, comparable UTC weeks 2026-09-28–2026-10-05 and 2026-10-05–2026-10-12, exceeding the agreed ≥10% decline trigger. Web fell $3,000 ($7,000 to $4,000; −42.9%); shop was unchanged at $3,000. This metric is completed-order revenue less refunds posted in the same week, excluding tax and shipping; source rows reconcile to web $8,000−$1,000 to $6,500−$2,500 and shop $4,000−$1,000 in both weeks (Commerce weekly: company_mcp|resource-949a4c0c44fb188d1658). Returns operations confirms posting week alignment and that refunds are already included; it is corroboration, not a second ledger (company_mcp|resource-00dc1bfdfad5f5f05554). No causal explanation is established. Proposed policy route: commerce/business owner team-f88d053536cba66bc88e. Data operations team-b5fcff88e8691a8a9289 is the routine report audience; no data gap indicated. Next step: commerce lead review the web decline and investigate operational context."
+      }
+    }
+  },
+  "review": {
+    "scope": "One synthetic case; no efficacy or enterprise claim.",
+    "preference": {
+      "result": "case-8f3bc03d6652",
+      "reason": "Both messages get the accounting and comparison right, but case-eccb93723af7 proposes Data Operations as a routine audience despite no data gap."
+    },
+    "cases": [
+      {
+        "case_id": "case-8f3bc03d6652",
+        "usable": true,
+        "reason": "Correct USD arithmetic, same seven-day consecutive complete comparable UTC weeks, supported channel accounting, bounded causality, authorized business route, and actionable review step. Receipt is used only to report delivery-disabled status.",
+        "material_findings": [],
+        "minor_findings": [
+          "One repeated Commerce citation has a typo: resource-949a4c0c0c44fb188d1658 (extra 0c); earlier Commerce citations and the Returns citation are exact."
+        ]
+      },
+      {
+        "case_id": "case-eccb93723af7",
+        "usable": false,
+        "reason": "Its figures, units, windows, source reconciliations, literal source IDs, and no-cause caveat are supported, but the message adds Data Operations as a routine audience although no data gap is indicated. This conflicts with the stated routing policy and the listed business-only recipient.",
+        "material_findings": [
+          "Unauthorized extra audience proposed for this no-gap business alert; prose also conflicts with its business-only recipient list."
+        ],
+        "minor_findings": [
+          "Single dense paragraph and the channel reconciliation make the message harder to scan."
+        ]
+      }
+    ]
+  },
+  "native_policy_result": {
+    "evaluator": "jev-latest",
+    "outcome": "notify",
+    "confidence": 1,
+    "probabilities": {
+      "ignore": 0,
+      "investigate": 0,
+      "insufficient_data": 0,
+      "notify": 1
+    },
+    "scope": "Typed policy output, not calibrated confidence or causal analysis.",
+    "receipt": {
+      "receipt_id": "receipt-5791b2e076ea41eba82f8204f98debf3",
+      "card_id": "card-weekly-net-sales-decline-and-explanation-989f3fc6",
+      "card_version": 2,
+      "idempotency_key": "steward-expert-followup-v1:period-b47d22d0383ab140f7fc",
+      "status": "delivery_disabled",
+      "delivery_enabled": false,
+      "delivery_method_keys": [
+        "team-f88d053536cba66bc88e"
+      ]
+    }
+  },
+  "observed_work": {
+    "baseline": {
+      "agent_tools": 5,
+      "source_reads": 2,
+      "agent_seconds": 14.617791208002018,
+      "input_tokens": 76123,
+      "cached_input_tokens": 60928,
+      "uncached_input_tokens": 15195,
+      "output_tokens": 794
+    },
+    "signalweave": {
+      "agent_tools": 3,
+      "source_reads": 2,
+      "agent_seconds": 16.195272249984555,
+      "input_tokens": 124625,
+      "cached_input_tokens": 94976,
+      "uncached_input_tokens": 29649,
+      "output_tokens": 801,
+      "jev_input_tokens": 7014,
+      "jev_output_tokens": 109
+    },
+    "cumulative_including_original_v4": {
+      "input_tokens": 746252,
+      "cached_input_tokens": 616192,
+      "uncached_input_tokens": 130060,
+      "output_tokens": 8420,
+      "responses": 6
+    },
+    "agent_calls_total": 6,
+    "jev_attempts_total": 1,
+    "cost_limits": "Reporter time excludes startup/cleanup and is not user end-to-end latency. Provider prefix caching was active. Prices/billing and coordinator/reviewer work are not accounted; unknown is not zero."
+  },
+  "local_artifact_sha256": {
+    "report.json": "f93d5f05fb9cfa8f70a105782ffc81cf4283f59b05ae496826bf38f28117ffb4",
+    "trace.jsonl": "a64baf8f8a3ce0e85cd3f4f595fd3d4aed1317889d1a3357558e60bab6035b0b",
+    "quality-review-packet.json": "32076ceeaf36eb8b1353e3aa8cabd82c687b8acdf6a25b8e743f87c6106cbe35",
+    "independent-message-review.json": "c320aab332c32a162229389f8bba465ee4d44de6a939dc542280264efec12de3",
+    "persistence-check/report.json": "f55255d165c795c77f2ee1f95d38ea8a0717756d3072b6ff4770f47d61af5df2",
+    "persistence-check/trace.jsonl": "fa62b4f8fa15849aaf7569e259a3acd0ccc09b02eb68f3a6e1b437b8be4db68c"
+  }
+}

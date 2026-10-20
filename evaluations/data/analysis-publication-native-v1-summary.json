@@ -1,0 +1,93 @@
+{
+  "protocol": "analysis-publication-native-v1",
+  "execution_status": "closed",
+  "scope": "Native source-bridge integration with scripted owner approval and synthetic publications, not a frontier analysis, human onboarding or comparative business-value trial.",
+  "completed": true,
+  "native_build": {
+    "git_commit": "865502901a5e3bcafedad3317552132f96b23dca",
+    "source_sha256": "ee737966781ca8478cc4f7d3736b1a78ef329943ebffcd56941b50296070a45f",
+    "binary_sha256": "11bb3ab1166d89b11936f79443fc61e463d697468d2683c0c9512af64ff9c40b"
+  },
+  "card": {
+    "id": "card-delegated-publication-protocol-8a98164b",
+    "version": 1,
+    "source": "analysis_publication|report:product-growth",
+    "policy": "Investigate pending or hypothesis-only findings. Notify the configured Growth owner for a published observed activation decline of at least five percentage points. A signed fraction of -0.08 means an eight-percentage-point decline; an onboarding hypothesis is not an established cause."
+  },
+  "source_captured_at": "2026-10-16T13:11:05.211503+00:00",
+  "runs": [
+    {
+      "revision": 1,
+      "finding": "pending",
+      "outcome": "investigate",
+      "route": "agent://analyst",
+      "workflow_action": "retrieve_evidence",
+      "receipt_id": "receipt-105b787485d347949f6f3ef12cbcdcc9",
+      "parent_receipt_id": null,
+      "publication_sha256": "9b7ebb37b0e92928ed70a071398003e3b7172bb4d8af1f4527bdfba82850e65d",
+      "provider_usage": {"input_tokens": 2320, "output_tokens": 56}
+    },
+    {
+      "revision": 2,
+      "finding": "hypothesis-only decline of -0.08",
+      "outcome": "investigate",
+      "route": "agent://analyst",
+      "workflow_action": "retrieve_evidence",
+      "receipt_id": "receipt-c16ca47007974bb889f31f7436885eba",
+      "parent_receipt_id": "receipt-105b787485d347949f6f3ef12cbcdcc9",
+      "publication_sha256": "bb46620f5cb8bb42896ea62f51c895d0606636f4027a2c78404f5f5fd65bafed",
+      "provider_usage": {"input_tokens": 2458, "output_tokens": 56}
+    },
+    {
+      "revision": 3,
+      "finding": "observed decline of -0.08; separate unconfirmed onboarding hypothesis",
+      "outcome": "notify",
+      "route": "agent://growth-owner",
+      "workflow_action": "deliver",
+      "receipt_id": "receipt-65aef279da8b4f1392f955a28a993bbf",
+      "parent_receipt_id": "receipt-c16ca47007974bb889f31f7436885eba",
+      "publication_sha256": "95f998df4e8c1760638443ceabad77a5d99eac3faccbcf79aaa1e4da85c9805c",
+      "provider_usage": {"input_tokens": 2451, "output_tokens": 53}
+    }
+  ],
+  "provider_attempts": 3,
+  "provider_errors": 0,
+  "provider_usage_known": true,
+  "automatic_retries": 0,
+  "total_input_tokens": 7229,
+  "total_output_tokens": 165,
+  "card_unchanged": true,
+  "caller_context": null,
+  "historical_replay": {
+    "original_receipt_id": "receipt-105b787485d347949f6f3ef12cbcdcc9",
+    "returned_receipt_status": "replayed",
+    "stored_original_status": "delivery_disabled",
+    "original_result_and_publication_hash_preserved": true,
+    "additional_provider_attempts": 0
+  },
+  "delivery_enabled": false,
+  "retained_preflights": [
+    {"attempt": 1, "passed": false, "provider_attempts": 0, "reason": "Generated source manifest was 0644; CLI setup requires 0600. Test fixture and example instructions corrected before inference."},
+    {"attempt": 2, "passed": true, "provider_attempts": 0, "scope": "Fresh native setup, scripted card approval and inspection of all three publication revisions."}
+  ],
+  "private_artifacts": {
+    "proof_sha256": "a8a8aebe13a647bfaed2b267eb0719170caa28666dcd36cb8dfc1480689195fd",
+    "trace_sha256": "d2f1ebe52b21785d394ea41aff4ceaf83a934debb6ff93e18fdaa9bd961aded9"
+  },
+  "artifact_review": {
+    "disposition": "GO for the narrow native integration claim",
+    "kind": "Independent internal agent audit, not external peer review",
+    "checked": "Source/provider/result/stored receipt agreement, reconstructed revision hashes, saved card equality, closure, preflight/build fingerprints and proxy usage.",
+    "replay_limit": "The passing native test checks the replay response; that response was not separately retained. Stored originals and the absence of a fourth provider attempt were independently checked.",
+    "trace_label_note": "Trace events retain the generic episode label preflight; actual live HTTP responses and usage identify the three provider requests."
+  },
+  "limitations": [
+    "Three supplied revisions are integration controls, not independent business trials or a general accuracy estimate.",
+    "No frontier analyst produced these synthetic findings; no raw BI discovery, real human setup, schedule or external delivery ran.",
+    "The scripted policy supplies the change interpretation. Measurement windows and populations were not independently established.",
+    "Publication identity, byte hash and authorization do not verify claim truth or analyst identity. Probabilities are not a calibration result.",
+    "No baseline, customer SSO, cost advantage, human-message quality or deployed hosted publication proof is claimed.",
+    "Atomic replacement/concurrent publication and an expired freshness SLA were not exercised in this live check; capture times were preserved, not independently verified as true.",
+    "Full private artifacts and the matching native build are reproduction prerequisites. This closed cohort must not be rerun."
+  ]
+}

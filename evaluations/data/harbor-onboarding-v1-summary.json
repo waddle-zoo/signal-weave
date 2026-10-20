@@ -1,0 +1,140 @@
+{
+  "protocol": "harbor-complete-journey-v1",
+  "execution_status": "closed_after_two_onboarding_actors_at_between_actor_token_stop",
+  "scope": "One known fictional company, one ordinary source observation, treatment-first descriptive pair. Actual local company MCP and native candidate with live Luna 6 xhigh analysts. Scripted private native setup, deterministic fictional owner references, no real-human onboarding panel, no recurrence, no Jev, no approval, no delivery.",
+  "method_commit": "70c65ff",
+  "native_candidate": {
+    "git_commit": "30701fde738efe378d935b4b7a93886a6745b804",
+    "source_sha256": "215ab6958c8e69a18901d2ea2307a95debdb5e910feddcd28f94d2c51b7d4e99",
+    "binary_sha256": "dc81ebb3c144c3f260636073489393bdcfe267eadba9a7c71732a21c6ebf5f53",
+    "version": "0.2.0rc3"
+  },
+  "frontier_invocations": 2,
+  "jev_requests": 0,
+  "approved_cards": 0,
+  "recurring_observations": 0,
+  "usage_scope": "CLI-reported aggregate turn usage, including repeated/cached context and reasoning output. Not a single context length, invoices or measured human effort. Internal research reviewers are separate and unpriced.",
+  "total_frontier_input_tokens": 1261068,
+  "total_frontier_uncached_input_tokens": 142732,
+  "total_frontier_output_tokens": 55794,
+  "stop": "First actor completed below 700000 total-input between-actor stop, admitting baseline. Baseline completed across that aggregate stop. No next actor launched; no in-flight input cap was claimed.",
+  "source_check": {
+    "cutoff": "2026-02-23T06:00:00Z",
+    "known_ticket_count": 1454,
+    "known_open_priority_tickets": 88,
+    "known_unanswered_open_priority_past_response_clock": 0,
+    "known_responded_open_priority_past_resolution_clock": 81,
+    "responded_by_tier": {
+      "self_service": 48,
+      "business": 29,
+      "enterprise": 4
+    },
+    "method": "Independent raw-history summarization with separate event-selection code, followed by elapsed-hour checks; not the actor SQL or materialized aggregate view.",
+    "helper": "evaluations/harbor_history_reference.py:summarize_history"
+  },
+  "arms": [
+    {
+      "arm": "signalweave",
+      "process_complete": true,
+      "inputs_unchanged": true,
+      "usage": {
+        "input_tokens": 549915,
+        "cached_input_tokens": 479360,
+        "uncached_input_tokens": 70555,
+        "output_tokens": 22308,
+        "responses": 1
+      },
+      "provider_attempts": 0,
+      "total_stage_seconds": 197.94123950001085,
+      "episode": {
+        "status": "complete",
+        "seconds": 183.83187454100698,
+        "tool_calls": 20,
+        "final_message": "## Queue lead handoff draft — manual review only\n\n**Source cutoff: Feb 23, 2026, 06:00 UTC.** This is a historical snapshot, not a live queue read.\n\n- **Unanswered response clock:** 0 of 88 known open P1 tickets had no visible first response past their tier’s response clock. That does not trigger the owner’s unanswered-only review rule.\n- **Separate resolution-clock work:** 81 known open P1 tickets had a visible response but remained past their resolution clock: 48 self-service, 29 business, and 4 enterprise. They were 1.0–1,168.4 hours past the clock. The oldest example is `t-af08e05ccc6e3ea7e19685e7` (self-service; 1,168.4 hours past its 12-hour clock).\n\nThe 81 are **not** part of the unanswered trigger. The owner has not defined whether or how to hand off resolution-only cases, so that decision remains open. No prior handoff list was available to establish what is new versus carryover.\n\n**Sources:** [`harbor_history|metric:known-priority-queue`](SQL SHA `1af3b44c…b101d22`) and [`harbor_history|metric:known-open-backlog-all-cohorts`](SQL SHA `63ec61dc…e113e84a`). I reconciled the resolution detail against `harbor_operational_snapshot:tickets` and `support_tier_sla`.\n\nThe source only covers known records from Jan 5 onward; older work is absent, and event-history completeness is not certified. It contains no assignee, customer description, cause, or evidence of customer harm.\n\n## SignalWeave draft\n\nSaved draft card `card-unanswered-priority-response-clock-handoff-1c7c6097` uses the fixed known-priority aggregate. Review needs owner input on the source population scope and warns that the card’s generated comparison windows are unsupported by this source. The catalog rejected the ticket-detail query as a card source, so the card cannot produce IDs for a future triggered handoff until an authorized detail source is added. **No approval, evaluation, scheduling, or delivery occurred.**\n\nBefore repeating this, the owner should confirm the known-record scope, add an authorized ID-level detail source, decide the separate resolution-only handoff policy, and resolve the unsupported comparison defaults."
+      },
+      "review_artifact_digest": "feab780c54b090723dd4245fa14cff37d106103c3e0f2b85dfc79b4c4d79fff0",
+      "card": {
+        "id": "card-unanswered-priority-response-clock-handoff-1c7c6097",
+        "version": 1,
+        "status": "draft",
+        "comparison_windows": [
+          "previous_period",
+          "trailing_4_period_average"
+        ],
+        "decision_guidance": "Ordered policy for this card: (1) Use the fixed aggregate's count of priority=1 tickets that are open, have no visible first_response_at_utc event by the as-of cutoff, and have strictly exceeded the support tier's source-owned first_response_sla_hours. (2) One or more qualifying known tickets is enough to propose a same-day internal manual review for the Support queue lead, with the duty manager as secondary reviewer. A complete handoff must identify each ticket and the clock crossed; this selected aggregate contains counts only, so a ticket-level detail source must be approved and included before a repeated run can produce that list. (3) A zero count means no trigger under this unanswered-only variant, not an all-clear about the full queue. Do not suppress known qualifying records because optional coverage is unknown. (4) History begins 2026-01-05 and source event completeness is not certified; state scope and unknown coverage alongside the result. The source cannot establish customer harm, cause, customer description, or assignee. Do not assign work or contact a customer. (5) Keep response-recorded open priority tickets past the resolution clock outside this trigger until a separate resolution-focused handoff policy is defined; report that group separately.",
+        "sources": [
+          {
+            "key": "queue_counts",
+            "adapter": "harbor_history",
+            "resource": "metric:known-priority-queue",
+            "label": "Known priority queue counts",
+            "parameters": {},
+            "required": true,
+            "required_comparison_keys": []
+          }
+        ],
+        "delivery_methods": [
+          {
+            "key": "queue_lead_manual_review",
+            "outcome": "investigate",
+            "label": "Same-day internal manual-review draft",
+            "destination": "Support queue lead; duty manager secondary reviewer",
+            "instructions": "Include ticket IDs and the first-response clock crossed after an approved detail source is added. Human review only; do not send or notify."
+          }
+        ]
+      },
+      "native_errors": [
+        {
+          "name": "onboard_insight_card",
+          "error": {
+            "type": "RuntimeError",
+            "message": "installed MCP tool returned an error: [{\"type\": \"text\", \"text\": \"Error executing tool onboard_insight_card: selected source refs must come from the authorized adapter catalog and discover_insight_sources when available: harbor_history|metric:known-unanswered-open-priority-response-breaches\", \"annotations\": null, \"meta\": null}]"
+          }
+        },
+        {
+          "name": "revise_insight_card",
+          "error": {
+            "type": "RuntimeError",
+            "message": "installed MCP tool returned an error: [{\"type\": \"text\", \"text\": \"Error executing tool revise_insight_card: 1 validation error for InsightCard\\ncomparison_windows\\n  List should have at least 1 item after validation, not 0 [type=too_short, input_value=[], input_type=list]\\n    For further information visit https://errors.pydantic.dev/2.13/v/too_short\", \"annotations\": null, \"meta\": null}]"
+          }
+        }
+      ]
+    },
+    {
+      "arm": "baseline",
+      "process_complete": true,
+      "inputs_unchanged": true,
+      "usage": {
+        "input_tokens": 711153,
+        "cached_input_tokens": 638976,
+        "uncached_input_tokens": 72177,
+        "output_tokens": 33486,
+        "responses": 1
+      },
+      "provider_attempts": 0,
+      "total_stage_seconds": 235.94678662496153,
+      "episode": {
+        "status": "complete",
+        "seconds": 229.42513554199832,
+        "tool_calls": 30,
+        "final_message": "## Queue lead handoff draft — for review, not sent\n\n**Source cutoff: 2026-02-23 06:00 UTC.** This is a historical snapshot, not a live view of today’s queue.\n\nThe snapshot contains **88 known open priority tickets**. All 88 have a visible first response; none are visibly past the first-response clock. So **no ticket meets the owner’s proposed unanswered-first-response trigger**.\n\nSeparately, **81 of the 88 are past their resolution SLA**. These are a proposed resolution-review group, not part of the unanswered trigger.\n\n| Tier | Open priority | Past resolution SLA | Resolution SLA |\n|---|---:|---:|---:|\n| Self-service | 48 | 48 | 12h |\n| Business | 33 | 29 | 24h |\n| Enterprise | 7 | 4 | 48h |\n| **Total** | **88** | **81** | |\n\nOldest example: `t-af08e05ccc6e3ea7e19685e7` (self-service, central), created 2026-01-05 01:34 UTC. At the cutoff it was 1,180.4 hours old, or 1,168.4 hours beyond its 12-hour resolution SLA.\n\n**Suggested review:** The queue lead, with the duty manager as secondary reviewer, can inspect the 81 resolution-clock records in `handoff:resolution-overdue-records`. Owner context permits surfacing known clock breaches as proposed review items, but a separate resolution-focused handoff has not been defined. No assignees, causes, or customer harm are established by this source. No prior handoff list was supplied, so newness and prior review cannot be determined.\n\n**Coverage limits:** The source history starts on Jan 5, so older open work is absent. Creation manifests reconcile 63 of 63 segments across seven completed weeks (1,453 tickets); that does not establish response or resolution event completeness. The one ticket in the current partial cohort is not an open priority ticket, but that cohort is outside the completed-week coverage view.\n\n**Sources:** `metric:known-priority-queue` (cutoff aggregate; SQL SHA-256 `eecadc63…a26287a0`); `handoff:resolution-by-tier-region` and `handoff:resolution-overdue-records` (segment summary and all 81 ticket details); `coverage:completed-creation-cohorts`. SLA hours come from `support_tier_sla`. The owner’s unanswered-only proposal and unresolved resolution-policy choice came from `ask_owner`; they are reference context, not approval.\n\nReusable notes with definitions, query choices, reporting expectations, policy references, and unresolved questions are saved. No SignalWeave draft/review tool was available, so this is a local handoff draft; nothing was delivered externally.\n\nBefore repeating it, the owner should decide whether resolution-overdue tickets warrant a separate review rule, confirm the source cutoff and event coverage, and check for a prior handoff list."
+      },
+      "review_artifact_digest": "ddc6d8a1fa74ea590594fad815d73af95fb4da035e759659d1770fbc1a7ccea1",
+      "card": null,
+      "native_errors": []
+    }
+  ],
+  "outcome_review": {
+    "type": "independent internal Luna review, not external peer review or real-human usability",
+    "checked": "Raw-table SQL independently confirmed 88 known open priority tickets, zero unanswered first-response breaches, 81 responded resolution breaches and the reported tier counts/oldest age. Creation counts reconcile 63 completed segments; event completeness remains unknown.",
+    "human_outcome": "Both one-off findings are supported; the baseline resolution-work suggestion is permitted as an advisory draft, not a new recurring trigger. Neither author result proves recurrence readiness or general advantage.",
+    "adjudication": "The reviewer initially proposed registration of detail and prior-handoff state as prerequisites, then withdrew that overbroad requirement after checking existing caller-tool rights and the owner's explicit no-prior-list fallback. Already-authorized caller SQL remains usable; source registration is needed for SignalWeave's own future reads/policy inputs. No actual card approval was supplied."
+  },
+  "immutable_artifact_sha256": {
+    "onboarding-signalweave.json": "1d83882e020298769962ad44120a103121cec849bf31e39e9018b04391238f04",
+    "onboarding-baseline.json": "0ad0db7f55a6434d12f956c30bad3d43e789e5f0a624fd98425f271705442691",
+    "study.json": "3b39a42217510fc92001bbd35a46b7e5832c697f3669c59437a947ad647eaaa6",
+    "snapshots/0.sqlite3": "5e3a0a6a811403b30708c7fde3e4bfd2f3fba6a40233d057ddf3b7ebc3a5ab36"
+  },
+  "local_artifact_directory": "artifacts/harbor-complete-journey-v1-preparation-v2"
+}

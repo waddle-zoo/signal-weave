@@ -1,0 +1,117 @@
+{
+  "protocol": "harbor-handoff-followthrough-v1",
+  "scope": "Two known-company simulated successor contexts. Exact saved human briefs, not model reasoning. Local supporting links were checked but are not public downloads. Not onboarding, new monitoring, customer delivery or a superiority benchmark.",
+  "study_sha256": "4f785665eb71763c5e3c1a04f894331f31c15fc9c7dd87424e4625441ea4eb6f",
+  "preflight_sha256": "4aff9bbddf1e94b0c14aaad667e20efa0de0f3a1c1ab8c25e580a60d946a5cf3",
+  "admission_sha256": "e811907e98ae143f52bc4a21e706231afe4afa92e04af5865784f56754179059",
+  "method_sha256": "ee8617614964dc728f41454b3cb772d2bae21bb9ce9c70c0b8f7a5277cd0a65c",
+  "limits": {
+    "actors": 2,
+    "jev_requests": 0,
+    "response_seconds": 420,
+    "mcp_tools": 30,
+    "workspace_tools": 40,
+    "between_actor_input_stop": 2500000,
+    "between_actor_uncached_stop": 180000
+  },
+  "native_build": {
+    "dirty": false,
+    "format_version": 1,
+    "frozen": true,
+    "git_commit": "70251559716b7ef4b94533d2032637032d341f30",
+    "python": "3.12.10",
+    "source_sha256": "f689067880d9a4816ef5bbba80c9688735a70c164f870cee21e47c50e032dfe1",
+    "version": "0.2.0rc3",
+    "binary_sha256": "715fec8d15aad9f899577fd4882881fcc45b063b8ffb3922a125addbdfa510d8"
+  },
+  "source": {
+    "cutoff": "2026-03-09T06:00:00Z",
+    "snapshot_sha256": "c35d33e2a32239901dd7c2254f05658548fa557f370a82c39ffbaef9b8fee0af",
+    "current_queue_values": {
+      "as_of_utc": "2026-03-09T06:00:00Z",
+      "known_open_priority_past_resolution_clock": 104,
+      "known_open_priority_tickets": 117,
+      "known_ticket_count": 1973,
+      "known_unanswered_open_priority_past_response_clock": 0,
+      "known_unanswered_open_priority_tickets": 0
+    },
+    "previous_cohort_count": 80,
+    "previous_cohort_recorded_resolved": 80,
+    "previous_cohort_visible_responses": 0,
+    "previous_cohort_sha256": "ece4b391cd313a42737b9183db5b03fa1683d71297f279ff900ca32c3de3b3b6",
+    "semantics": "Recorded source state; no response recovery, complete event history or customer outcome inferred."
+  },
+  "new_policy_provider_requests": 0,
+  "arms": {
+    "baseline": {
+      "human_brief": "# Harbor priority queue — as of 2026-03-09 06:00 UTC\n\nThis is the requested cutoff and matches the third retained observation; it is a follow-through against that historical snapshot, not a new fourth measurement.\n\n**Queue state:** 1,973 known tickets across 10 creation cohorts, with 117 open P1. None of those open P1 tickets lacks a visible first-response event, so **0 currently meet the approved trigger** (open P1, no visible response, and strictly beyond the tier response SLA). The same-day manual-review trigger is not met; recipient list: `[]`. A zero known count is not an all-clear. [followthrough:known-priority-queue-2026-03-09] [followthrough:known-open-backlog-all-cohorts-2026-03-09]\n\n**Prior exception follow-through:** The 80 tickets that met the rule on March 2 are each recorded as resolved on March 3 in the March 9 source state. Their first-response timestamp remains absent. They no longer meet the rule because the source records them as resolved, not open. The source does not show whether the previous manual review took place or why no response timestamp is visible. [followthrough:prior-2026-03-02-trigger-cases-at-2026-03-09] See [case detail](evidence/prior-trigger-case-followthrough.csv).\n\n**Still visible:** 104 open P1 tickets are strictly past the resolution SLA. All have a visible first response. This is a separate advisory, outside the approved recurring trigger; no resolution-only action is defined. [followthrough:resolution-advisory-by-segment-2026-03-09] See [case detail by ticket](evidence/open-p1-resolution-advisory-cases-2026-03-09.csv) and [segment summary](evidence/README.md#resolution-advisory-by-tier-and-region).\n\n**Completeness:** The completed creation week of March 2 reconciles 235/235 tickets across nine segments. That manifest covers creation counts only. The March 9 cohort is partial; first-response and resolution event completeness remain unknown. [followthrough:coverage-two-week-pooled-2026-03-09] Source detail also lacks assignees, customer descriptions, and cause evidence. These records do not establish customer harm.\n\nPrepared as a local shadow brief for the queue lead; it has not been sent. Existing policy is unchanged. Evidence and source keys are listed in [evidence/README.md](evidence/README.md).\n",
+      "actor_seconds": 230.6518460829975,
+      "mcp_calls": 8,
+      "workspace_operations": 19,
+      "usage": {
+        "input_tokens": 739777,
+        "cached_input_tokens": 663296,
+        "uncached_input_tokens": 76481,
+        "output_tokens": 21720,
+        "responses": 1
+      },
+      "model": "gpt-6-luna",
+      "effort": "xhigh",
+      "process_complete": true,
+      "deliverables_complete": true,
+      "originals_unchanged": true,
+      "provider_clean": true,
+      "report_sha256": "7a73e66b0021ea63fcbb55ea1a65f6da30a0b5438c318a14bac08f755301b2bb",
+      "brief_sha256": "2717ccc4279758adcb3f79fb879c9d8c088bd4d818b540939dd1af204f45a0e4",
+      "support_files": {
+        "evidence/README.md": {
+          "sha256": "0f29690e90f490c2d26dde46129d347480af2933c107f80cc537a860e4d1c351",
+          "bytes": 3441
+        },
+        "evidence/open-p1-resolution-advisory-cases-2026-03-09.csv": {
+          "sha256": "3e10497ecdb974d2b15116ed7d04264b59bf1db6ea4305f397f18869faf30e4f",
+          "bytes": 10841
+        },
+        "evidence/prior-trigger-case-followthrough.csv": {
+          "sha256": "a04ea16253db67f8b1b2238f88f91d084f2c39022afde5bbfc64e7f3d130afbf",
+          "bytes": 9159
+        }
+      }
+    },
+    "signalweave": {
+      "human_brief": "# Harbor priority queue update\n\n**Source cutoff: 2026-03-09 06:00 UTC** · Synthetic historical snapshot · Routine local brief; no recipients and not sent.\n\n## No unanswered response-clock trigger\n\nAt this cutoff, **0 of 117 source-known open P1 tickets** meet the approved rule: priority 1, open, no visible first-response timestamp, and strictly past the tier response SLA.\n\nThe **80 tickets that qualified on March 2** are all marked resolved in the March 9 snapshot, each with `resolved_at_utc = 2026-03-03T12:00:00Z`. Their first-response timestamps remain blank. They no longer qualify because the rule requires an open ticket. The source does not show why they were resolved, whether a prior human handoff occurred, or whether customers received a response. [Case-by-case reconciliation](evidence/prior-trigger-followthrough-2026-03-09.csv).\n\n## Separate resolution-clock review\n\n**104 open P1 tickets with visible first responses** are past their tier resolution SLA. The most overdue is `t-af08e05ccc6e3ea7e19685e7`: 1,504.4 hours past its 12-hour self_service resolution clock (1,516.4 hours since creation). This remains outside the approved unanswered-only trigger. [All 104 cases and clock values](evidence/resolution-advisory-2026-03-09.csv).\n\nSuggested next step: have the queue lead review this resolution-only list. Whether a separate resolution-focused handoff is wanted remains unresolved.\n\n## History and limits\n\nThe retained snapshots show unanswered response-clock breaches of **0/88 open P1** on Feb 23, **80/184** on Mar 2, and **0/117** on Mar 9. Resolution-clock counts were **81, 171, and 104**. These are point-in-time source-known counts, not rates, a complete-queue trend, or evidence of cause.\n\nThe source covers tickets known since 2026-01-05; there is no opening backlog or event-completeness guarantee. The Feb 23 enterprise/north cohort partition reports 94 expected and 94 observed tickets, marked complete against its manifest; that does not certify event completeness or the full queue. Cause, customer harm, customer descriptions, assignees, and prior handoff state are not established. See [evidence notes and provenance](evidence/README.md).\n\n",
+      "actor_seconds": 314.55820575001417,
+      "mcp_calls": 16,
+      "workspace_operations": 21,
+      "usage": {
+        "input_tokens": 1020795,
+        "cached_input_tokens": 920576,
+        "uncached_input_tokens": 100219,
+        "output_tokens": 32298,
+        "responses": 1
+      },
+      "model": "gpt-6-luna",
+      "effort": "xhigh",
+      "process_complete": true,
+      "deliverables_complete": true,
+      "originals_unchanged": true,
+      "provider_clean": true,
+      "report_sha256": "3664fba383f09c8239fd9c7da4ba80d17b8a8d74c4f07ec3b1d3481919f08de2",
+      "brief_sha256": "7b5369a996ef01a3c7f83f3dbc89060c6ba617d6ef209c25a7f60e6fa7ff3870",
+      "support_files": {
+        "evidence/README.md": {
+          "sha256": "82de76de93613e4eb2f126986894140548214da8567427b9df7f9076894ed93f",
+          "bytes": 2568
+        },
+        "evidence/prior-trigger-followthrough-2026-03-09.csv": {
+          "sha256": "5c848ddabe7e7e3393b47e73b0c7b33b1d642a7db4bf2a48c74660b7cb218a18",
+          "bytes": 12392
+        },
+        "evidence/resolution-advisory-2026-03-09.csv": {
+          "sha256": "340bc56123570ac828922d6526308d7e27aa7faa2b433e3d8ed28f46c5f8729c",
+          "bytes": 10941
+        }
+      }
+    }
+  }
+}
