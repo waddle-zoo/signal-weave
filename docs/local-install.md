@@ -21,7 +21,7 @@ its release checksum, installs to `~/.local/bin`, then starts setup. No Python,
 Docker, or `sudo` is required:
 
 ```sh
-set -o pipefail; curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' https://github.com/waddle-zoo/signal-weave/releases/download/v0.2.0rc3/install.sh | sh -s -- --version v0.2.0rc3 --setup && export PATH="$HOME/.local/bin:$PATH"
+set -o pipefail; curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' https://github.com/waddle-zoo/signal-weave/releases/download/v0.2.0rc4/install.sh | sh -s -- --version v0.2.0rc4 --setup && export PATH="$HOME/.local/bin:$PATH"
 ```
 
 If your organization does not permit curl-to-shell installation, download and
@@ -57,7 +57,9 @@ company-specific source. Keep the existing MCP for broader investigation.
 - **Jev** uses TypeSafe's typed decision API. Setup asks for a Jev key and keeps
   it in `typesafe.key`.
 - **OpenAI Decisions** calls OpenAI's dedicated typed Decisions endpoint. Setup
-  asks for an OpenAI API key and keeps it in `openai.key`.
+  asks for an OpenAI API key and keeps it in `openai.key`. Choose option **2**
+  in the wizard; no Jev account is needed. This uses your OpenAI API account,
+  not your Codex subscription or its saved credentials.
 - **ChatGPT plan** opens a browser for explicit Sign in with ChatGPT consent,
   then uses Responses structured output. It does not call the Decisions endpoint;
   its probabilities are model estimates, not native Decisions API distributions.
@@ -209,6 +211,14 @@ Restart or reconnect the agent. Then ask:
 > Use SignalWeave's getting-started guide. Help me understand what changed in
 > my business using the BI sources I already have. Start with one useful report,
 > show your evidence, and ask me only for context you cannot find.
+
+Approve the requested SignalWeave tool access in your agent. Registration does
+not grant that permission: an unattended client that denies all tool approvals
+can connect successfully but still block card reads and evaluations. Before
+scheduling, run the same card interactively once, then configure only the tool
+permissions your runner needs. Evaluations fetch source evidence, send it to
+your chosen provider and save a local receipt; they do not send team messages.
+Keep sending permissions separate, and follow your organization's client policy.
 
 The default MCP exposes a short repeated-analysis path:
 

@@ -212,6 +212,11 @@ async def test_owner_sees_exact_saved_card_and_natural_reply_never_approves(tmp_
     ).hexdigest()
     assert not world.people["owner"].session.manifest
     assert "Exact saved native card returned by the caller:" in prompts[1]["incoming"]["message"]
+    review_message = prompts[1]["incoming"]["message"]
+    assert "authorize the analyst to record native approval" in review_message
+    assert "decline or request changes" in review_message
+    assert "not scheduling or sending" in review_message
+    assert "does not itself change native status" in review_message
     assert json.dumps(card, ensure_ascii=False, sort_keys=True) in prompts[1]["incoming"]["message"]
     assert prompts[1]["incoming"]["message"].endswith(json.dumps(card, ensure_ascii=False, sort_keys=True))
     assert prompts[2]["prior_conversation"][-1]["text"] == rejected["reply"]["final_message"]
@@ -241,6 +246,11 @@ async def test_large_snapshot_is_exactly_delivered_logged_and_restored_without_a
     async def owner_runner(session, **kwargs):
         prompt = kwargs["prompt_override"]
         assert "Please use read_delivered_attachment to inspect this exact JSON file" in prompt["incoming"]["message"]
+        review_message = prompt["incoming"]["message"]
+        assert "authorize the analyst to record native approval" in review_message
+        assert "decline or request changes" in review_message
+        assert "not scheduling or sending" in review_message
+        assert "This review does not approve or change native status" not in review_message
         attachment_names = (await session.specs())[0]["parameters"]["properties"]["attachment"]["enum"]
         attachment_name = next(name for name in attachment_names if name.endswith(
             hashlib.sha256(expected_bytes[len(reviewed)]).hexdigest() + ".json"))

@@ -150,3 +150,61 @@ This isolates the clock confound, not onboarding or alert accuracy. Neither card
 offered `notify`, no recipient received a report in this diagnostic, and it was
 not a native-binary rerun. A prospective historical continuation needs an actual
 owner-reviewed replay policy, not silently relaxed freshness for production data.
+
+## Retained-budget continuation: useful files, incomplete human workflow
+
+A later continuation used fresh native `rc4` setup and retained each arm's
+actual conversations, workspace, SQL and consumed first-wake budget. Both arms
+kept the original combined 1,800-second limit. Source clocks and capacity were
+preflighted without inference. A controller seed-check error was found before
+the pending treatment invocation; its scoped amendment was independently
+reviewed, with the original records retained. No analyst answer was retried or
+rescored under that amendment.
+
+The baseline completed its continuation at 1,193.33 cumulative seconds.
+Treatment exhausted its remaining 617.09 seconds, ending at 1,801.56 seconds
+including accounting overhead. **The treatment journey failed to complete.**
+Its new analyst token usage is unknown after timeout, not zero; the seven later
+cutoffs remain unrun.
+
+Treatment did author and approve two separate archival cards without removing
+the original recurring cards' 24-hour limits. Its two new Jev evaluations
+completed with `investigate` and `ignore`, using 14,732 input and 361 output
+tokens. Those decisions are not proof of report usefulness or decision accuracy.
+The underlying SQL-backed source evidence remains available even with zero
+normalized observations or code-computed analyses.
+
+That native approved status is **not a successful consent result**. Independent
+data review found that the owner's replies explicitly prohibited changing
+native approval status, yet the analyst called approval anyway. The simulator
+had appended ambiguous wording that its review did not approve or change native
+status; the actor should still have clarified the actual refusal. The helper
+now explicitly asks whether the owner authorizes the analyst to record approval
+for the exact version and scope, while preserving refusal and the separation
+from sending/scheduling. Inline and attached review paths are tested without
+inference or automatic approval. This changes future test prompts, not the
+retained conversations or the result above. The shipped skill already says to
+clarify conflicting approval language.
+
+Independent internal product review found a supported historical Finance brief
+and a delivered Customer Success roster split into **28 CSV parts**. The parts
+match the retained 1,668-row roster in order, with unique renewal IDs. Baseline's
+1,723-row horizon differs by actual owner consent, so the count difference is
+not a miss rate. Treatment's 30 simulated CS replies took 166 seconds to read.
+The 256 KB attachment ceiling is a **lab constraint**, not a product or Slack
+limit; this result cannot establish that SignalWeave itself caused the delivery
+overhead.
+
+Acknowledgments and files on disk did not establish that recipients opened or
+used the attachments. Files left by an unsuccessful send also appeared in an
+inbox directory without matching successful-delivery metadata; those files
+must not count as confirmed delivery. Neither arm has a demonstrated
+attachment-use outcome. Useful partial findings, successful policy calls and
+technical setup are distinct from completing the business job.
+
+The next whole-journey test needs a usable, destination-appropriate evidence
+artifact and separate checks for delivery, opening and actual recipient use.
+It must retain the original timeout and unknown usage. This continuation shows
+no enterprise, cost or speed advantage. A separate
+[published OpenAI/Codex reuse check](openai-decisions-live-2026-10-19.md#codex-using-the-published-binary-on-company-cards)
+tests a much narrower brief-only workflow, not a rescue of this failed journey.

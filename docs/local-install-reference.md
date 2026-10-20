@@ -130,13 +130,20 @@ native release.
 - **[`v0.2.0rc3`](https://github.com/waddle-zoo/signal-weave/releases/tag/v0.2.0rc3):**
   published from `main`, with bounded deferred evidence handoffs, corrected
   receipt paths, absolute BI citations, comparison-meaning checks, and the
-  configured decision runtime for the default MCP factory. This is the version
-  pinned in the installation guides. All three native runners passed. The
+  configured decision runtime for the default MCP factory. All three native
+  runners passed. The
   downloaded Apple Silicon executable also passed the actual GitHub installer,
   guided setup, isolated Codex registration, canonical skill installation,
   credential update, live local Superset/Jev card, replay, and uninstall checks.
   See the [scoped release evidence](evidence/cards-native-release-2026-10-14.md).
-- **Current source after `rc3` (not a published native release):** adds the
+- **[`v0.2.0rc4`](https://github.com/waddle-zoo/signal-weave/releases/tag/v0.2.0rc4):**
+  published from `main` commit `de7d769`, and pinned in the installation guides.
+  All three native builds passed. The actual published Apple Silicon download
+  passed piped installation, hidden-key OpenAI Decisions setup, real isolated
+  Codex registration, source health, a live typed decision, restart replay,
+  uninstall and reinstall. No Jev credential was configured. See the
+  [live OpenAI and release evidence](evidence/openai-decisions-live-2026-10-19.md).
+  This release also adds the
   reviewed-query source path (`queries schema/import/list`) through the existing
   Superset/Preset connection without a custom reader or SDK; these commands are
   absent from the published `rc3` binary. It also adds the
@@ -150,8 +157,12 @@ native release.
   authorized investigation tools. The company MCP bridge also accepts a single
   JSON text snapshot when structured content is omitted or null, with the same typed
   source and tenant checks; older published builds require structured content.
-  Use an explicitly identified source build for these capabilities and verify
-  its embedded production fingerprint; the version string alone is insufficient.
+  OpenAI evidence packets preserve SQL-only facts and no longer double-count
+  JSON escaping in their input estimate; judgment-budget deferrals retain
+  pageable evidence for the agent. Credential-file validation accepts the
+  newline written by setup while still rejecting embedded whitespace. Verify
+  a download's checksum and embedded build identity when reproducing results;
+  a version string alone is insufficient.
 
 Release maintainers must update the pinned install commands in `README.md` and
 `docs/local-install.md`, and this compatibility section, when a new native
