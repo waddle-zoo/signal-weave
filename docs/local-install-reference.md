@@ -140,7 +140,7 @@ native release.
   credential update, live local Superset/Jev card, replay, and uninstall checks.
   See the [scoped release evidence](evidence/cards-native-release-2026-10-14.md).
 - **[`v0.2.0rc4`](https://github.com/waddle-zoo/signal-weave/releases/tag/v0.2.0rc4):**
-  published from `main` commit `de7d769`, and pinned in the installation guides.
+  published from `main` commit `de7d769`.
   All three native builds passed. The actual published Apple Silicon download
   passed piped installation, hidden-key OpenAI Decisions setup, real isolated
   Codex registration, source health, a live typed decision, restart replay,
@@ -166,6 +166,14 @@ native release.
   newline written by setup while still rejecting embedded whitespace. Verify
   a download's checksum and embedded build identity when reproducing results;
   a version string alone is insufficient.
+- **[`v0.2.0rc5`](https://github.com/waddle-zoo/signal-weave/releases/tag/v0.2.0rc5):**
+  published from `main` commit `2eab41f`, and pinned in the installation guides.
+  Adds visible download stages and terminal progress, quieter status output,
+  and install-once runtime packaging with stable agent command paths and guarded
+  runtime removal. All three native platforms passed installed setup, MCP,
+  upgrade and uninstall checks. The published Apple Silicon download also passed
+  the actual HTTPS terminal journey described below. See
+  [startup measurements](#startup-measurements).
 
 Release maintainers must update the pinned install commands in `README.md` and
 `docs/local-install.md`, and this compatibility section, when a new native
@@ -220,6 +228,17 @@ archive; this was not an internet download benchmark or a human-panel study.
 An earlier attempt failed because the harness had not created its isolated
 `CODEX_HOME`; correcting that test setup allowed registration. Provider and
 analytical behavior were not changed or re-benchmarked by this startup work.
+
+On 2026-10-20, the published `rc5` installer and archive from GitHub also passed
+a fresh scripted terminal setup with the real download bar and all four stages
+observed, isolated actual Codex registration, local source health, upgrade, and
+uninstall preserving configuration. The executable embedded commit `2eab41f`,
+the same production fingerprint above, and `dirty=false`. Five additional
+sequential launches of that download measured median help at 0.15 s and offline
+health at 0.49 s. Its offline native MCP smoke passed; the live OpenAI check
+above used the preceding same-fingerprint local build, not another published
+provider run. All three platform lifecycle gates passed in the
+[release workflow](https://github.com/waddle-zoo/signal-weave/actions/runs/39366963314).
 
 ### Python CLI
 
