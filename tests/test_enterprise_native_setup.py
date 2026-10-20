@@ -60,6 +60,30 @@ def test_extract_candidate_rejects_ambiguous_or_nonregular_target(
     assert not person.exists()
 
 
+def test_candidate_extracts_runtime_files_without_tar_path_extraction(tmp_path):
+    archive = tmp_path / "folder.tar.gz"
+    digest = _archive(archive, [("signalweave", b"native", "file"), ("_internal/lib/python.so", b"runtime", "file")])
+    person = tmp_path / "person"
+    result = setup.extract_candidate(archive, digest, person)
+    assert result["runtime_files"] == 1
+    assert (person / ".local/bin/_internal/lib/python.so").read_bytes() == b"runtime"
+
+
+@pytest.mark.parametrize("members", [
+    [("_internal/../escape", b"bad", "file")],
+    [("_internal/link", b"../../outside", "symlink")],
+    [("_internal/a", b"one", "file"), ("_internal/a", b"two", "file")],
+    [("_internal/a", b"file", "file"), ("_internal/a/b", b"collision", "file")],
+])
+def test_candidate_rejects_unsafe_runtime_before_creating_home(tmp_path, members):
+    archive = tmp_path / "bad-folder.tar.gz"
+    digest = _archive(archive, [("signalweave", b"native", "file"), *members])
+    person = tmp_path / "person"
+    with pytest.raises(ValueError):
+        setup.extract_candidate(archive, digest, person)
+    assert not person.exists()
+
+
 def test_isolated_environment_sets_provider_deny_and_source_import_path(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:

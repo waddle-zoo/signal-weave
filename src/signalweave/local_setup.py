@@ -265,7 +265,9 @@ def _ask(label: str, default: str = "") -> str:
 
 def _ask_source() -> str:
     """Ask for a connector using a human-readable menu, while accepting names."""
-    print("\nChoose a source to connect:")
+    from .cli_output import emphasis
+
+    print("\n" + emphasis("Choose a source to connect:"))
     print("  1) Superset       dashboards and charts")
     print("  2) Preset         hosted Superset")
     print("  3) Trino          warehouse catalog")
@@ -276,7 +278,9 @@ def _ask_source() -> str:
 
 
 def _ask_decision_provider() -> str:
-    print("\nChoose how SignalWeave should make recurring card decisions:")
+    from .cli_output import emphasis
+
+    print("\n" + emphasis("Choose how SignalWeave should make recurring card decisions:"))
     print("  1) Jev                 TypeSafe typed decisions; requires a Jev API key")
     print("  2) OpenAI Decisions    Typed API decisions; requires an OpenAI API key")
     print("  3) ChatGPT plan        No API key; browser consent, Responses (not Decisions API)")
@@ -289,7 +293,9 @@ def _ask_decision_provider() -> str:
 
 def _ask_agent() -> str:
     """Ask which local agent should receive the MCP connection."""
-    print("\nChoose the agent that will use SignalWeave:")
+    from .cli_output import emphasis
+
+    print("\n" + emphasis("Choose the agent that will use SignalWeave:"))
     print("  1) Codex")
     print("  2) Claude Code")
     selected = _ask("Agent", "codex").lower()
@@ -938,6 +944,10 @@ def agent_config(home: str | Path | None, agent: str) -> str:
     root = resolve_home(home)
     # sys.executable retains the venv path; resolving its symlink would lose it.
     command = os.path.abspath(sys.executable)
+    if getattr(sys, "frozen", False):
+        from .managed_install import command_path
+
+        command = str(command_path(Path(command)))
     args = ([] if getattr(sys, "frozen", False) else ["-m", "signalweave.cli"]) + [
         "serve", "--transport", "stdio", "--home", str(root),
     ]

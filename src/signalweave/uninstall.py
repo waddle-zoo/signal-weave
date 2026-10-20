@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import errno
 import os
 import shutil
 import stat
@@ -9,6 +10,7 @@ import sys
 from pathlib import Path
 
 from .local_setup import SetupError, read_config, resolve_home
+from .managed_install import inspect_managed_install
 
 
 def _check_binary(binary: Path) -> None:
@@ -49,7 +51,9 @@ def uninstall(home: str | Path | None = None, *, purge: bool = False, yes: bool 
         )
     binary = Path(os.path.abspath(sys.executable))
     root = resolve_home(home)
-    _check_binary(binary)
+    managed = inspect_managed_install(binary, include_retained=True)
+    if managed is None:
+        _check_binary(binary)
     if purge and root.exists():
         _check_purge(root, binary)
     elif purge and root.is_symlink():
@@ -60,7 +64,12 @@ def uninstall(home: str | Path | None = None, *, purge: bool = False, yes: bool 
     print("  codex mcp remove signalweave")
     print("  claude mcp remove --scope user signalweave")
     print("Agent configuration, agent credentials, and installed workflow skills are not edited.")
-    print(f"Remove executable: {binary}")
+    if managed is None:
+        print(f"Remove executable: {binary}")
+    else:
+        print(f"Remove command launcher: {managed.launcher}")
+        for runtime in managed.runtime_dirs:
+            print(f"Remove managed runtime: {runtime}")
     if purge:
         print(f"Permanently remove local configuration, credentials, cards, and receipts: {root}")
         print("External credential files and remote authorizations are not removed or revoked.")
@@ -77,12 +86,29 @@ def uninstall(home: str | Path | None = None, *, purge: bool = False, yes: bool 
             print("Canceled; nothing was removed.")
             return False
 
-    # Recheck immediately before mutation. No recursive deletion outside root.
-    _check_binary(binary)
+    # Recheck immediately before mutation. Managed deletion stays within verified
+    # version directories; the containing runtime root is removed only if empty.
+    if managed is None:
+        _check_binary(binary)
+    else:
+        current_plan = inspect_managed_install(binary, include_retained=True)
+        if current_plan != managed:
+            raise SetupError("Managed install changed after review; refusing to uninstall")
     if purge and root.exists():
         _check_purge(root, binary)
         shutil.rmtree(root)
         print("Local data removed permanently; recovery requires your own backup.")
-    binary.unlink()
-    print("SignalWeave executable removed. Reinstall to restore the command.")
+    if managed is None:
+        binary.unlink()
+        print("SignalWeave executable removed. Reinstall to restore the command.")
+    else:
+        for runtime in managed.runtime_dirs:
+            shutil.rmtree(runtime)
+        managed.launcher.unlink()
+        try:
+            managed.runtime_root.rmdir()
+        except OSError as error:
+            if error.errno not in {errno.ENOTEMPTY, errno.EEXIST}:
+                raise
+        print("SignalWeave launcher and managed runtimes removed. Reinstall to restore the command.")
     return True

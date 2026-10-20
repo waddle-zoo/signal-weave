@@ -61,8 +61,11 @@ gh attestation verify ./signalweave-vVERSION-darwin-arm64.tar.gz --repo waddle-z
 
 Checksums detect corruption; they do not independently authenticate a compromised
 release account. The installer downloads only HTTPS URLs under this repository,
-restricts archive members to three regular files, and streams the binary without
-extracting archive paths. It smoke-tests before installing. It does not enforce
+checks the checksum, and accepts only bounded regular files at allowlisted paths:
+the executable, license, build metadata, and optional `_internal/` runtime files.
+Links, special files, duplicate paths, and parent traversal are rejected. Legacy
+one-file archives are streamed; directory bundles are extracted into a private
+versioned runtime directory. It smoke-tests before installing. It does not enforce
 attestation verification automatically. macOS binaries are not Developer-ID
 signed/notarized. Do not disable security controls to make them run.
 
@@ -176,16 +179,49 @@ To build a standalone executable for the current platform:
 ```sh
 uv sync --extra binary
 uv run python scripts/build_binary.py
-./dist/signalweave --help
-./dist/signalweave setup
+./dist/signalweave/signalweave --help
+./dist/signalweave/signalweave setup
 ```
 
-Copy the executable to a persistent location before generating your agent config.
+Keep the complete native bundle together; copying only its executable will
+leave out the runtime. Put the bundle in a persistent location before generating
+agent configuration. Normal release installs manage this for you.
 Each release target must pass its native runner's offline smoke test before
 publication. Windows is not a release target. macOS signing/notarization is not
-configured; do not bypass your company's endpoint-security policy. This is a PyInstaller one-file executable,
-not a cross-compiled Rust/Go binary. OS sandboxes that deny its extraction or
-semaphore operations can prevent startup.
+configured; do not bypass your company's endpoint-security policy. This is a
+PyInstaller bundle, not a cross-compiled Rust/Go binary. The current build installs
+the runtime once rather than extracting a one-file application on every launch.
+Older releases through `rc4` use the one-file layout. OS security checks can
+still delay the first launch; restricted execution or semaphore operations can
+prevent startup.
+
+### Startup measurements
+
+On one Apple Silicon Mac, five interleaved process launches compared the published
+`rc4` executable with an installed `rc5` build of production source fingerprint
+`c2aa02884e1a79d41293b678b195e21fcbb71475dfc74f7d3be84f59fedc9f67`:
+
+| Command | rc4 median | rc5 median |
+| --- | ---: | ---: |
+| `--help` | 4.88 s | 0.17 s |
+| `--version` | 4.84 s | 0.17 s |
+| Offline `health --json` | 6.12 s | 0.51 s |
+
+These are repeated-launch wall times, not cold-cache, download, inference, or
+warehouse-query benchmarks. The first candidate health launch took 1.59 s and
+remains included in the five samples. The change avoids the repeated temporary
+runtime extraction documented for [PyInstaller one-file builds](https://pyinstaller.org/en/stable/operating-mode.html).
+
+The same scripted terminal journey exercised hidden-key setup, actual isolated
+Codex registration, the bundled skill, a local company MCP, a live OpenAI typed
+decision, restart replay, upgrade, and uninstall with configuration preserved.
+Installer downloads used fixture HTTPS transport carrying the actual native
+archive; this was not an internet download benchmark or a human-panel study.
+An earlier attempt failed because the harness had not created its isolated
+`CODEX_HOME`; correcting that test setup allowed registration. Provider and
+analytical behavior were not changed or re-benchmarked by this startup work.
+
+### Python CLI
 
 Alternatively, install the Python CLI (Python 3.11+):
 

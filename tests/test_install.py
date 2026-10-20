@@ -30,8 +30,11 @@ def install_env(tmp_path):
         folder.mkdir()
     fake_curl = commands / "curl"
     fake_curl.write_text(f"#!{sys.executable}\n" + '''
-import os, pathlib, shutil, sys
+import json, os, pathlib, shutil, sys
 args = sys.argv[1:]
+if os.environ.get('CURL_ARGS_LOG'):
+    with open(os.environ['CURL_ARGS_LOG'], 'a') as log:
+        log.write(json.dumps(args) + '\\n')
 assert args[args.index('--proto') + 1] == '=https'
 assert args[args.index('--proto-redir') + 1] == '=https'
 assert '--fail' in args and '--location' in args
