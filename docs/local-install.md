@@ -21,7 +21,7 @@ its release checksum, installs to `~/.local/bin`, then starts setup. No Python,
 Docker, or `sudo` is required:
 
 ```sh
-set -o pipefail; curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' https://github.com/waddle-zoo/signal-weave/releases/download/v0.2.0rc4/install.sh | sh -s -- --version v0.2.0rc4 --setup && export PATH="$HOME/.local/bin:$PATH"
+set -o pipefail; curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' https://github.com/waddle-zoo/signal-weave/releases/download/v0.2.0rc5/install.sh | sh -s -- --version v0.2.0rc5 --setup && export PATH="$HOME/.local/bin:$PATH"
 ```
 
 If your organization does not permit curl-to-shell installation, download and
