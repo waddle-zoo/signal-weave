@@ -5,6 +5,12 @@ A fresh local native candidate completed setup, offline health, normal-profile
 MCP startup, a live typed `notify` judgment and receipt replay across process
 restart. This is integration proof, not an enterprise-readiness certification.
 
+The frozen local `rc4` candidate was built from `b155de0`, production-source
+fingerprint `054ef3d6fb9a544a4e4154fcce6734407c6061622e5646b1ac1e1fa23e5f9a57`
+and executable SHA-256 `8b691244a81270b7f6dc5f0a70d98f63cc5e9768c7f9ddcd5acfd7b8dafa5513`.
+Its isolated installer/reinstall/uninstall check passed, as did 5,162 offline
+tests (13 skipped). These are local-candidate checks, not a public-download claim.
+
 ## What the live testing caught
 
 - The adapter reused an experimental sampled synthesis. SQL-only evidence could
