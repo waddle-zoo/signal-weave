@@ -270,4 +270,3 @@ def test_uninstall_leaves_unknown_candidate_shaped_file(managed_install_fixture)
     assert uninstall.uninstall(yes=True)
     assert unknown.read_text() == "keep"
     assert install["runtime_root"].exists()
-
