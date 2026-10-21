@@ -94,7 +94,12 @@ efficiency win.
 
 Independent source reconciliation checked 81 explicit set/row/time assertions
 without a mismatch among compared values; it did not verify every supplemental
-claim. Both produced useful supported handoffs, but routine evidence is mostly
+claim. An independent checker review reproduced the ledger and tested altered
+IDs, counts, and rates. It also found duplicate-key and fractional-count gaps
+in that one-off checker; neither occurred in the inspected inputs. This is not
+certification of a general validator or every message claim.
+
+Both produced useful supported handoffs, but routine evidence is mostly
 new-item deltas and counts rather than a full current worklist. All 266
 delivered attachment copies matched their byte/hash records; only one treatment
 business attachment and no baseline attachments had a recorded read. Delivered
