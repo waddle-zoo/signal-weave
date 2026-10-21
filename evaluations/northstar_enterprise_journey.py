@@ -38,13 +38,14 @@ from evaluations.installed_trial_transport import (
     _minimal_environment,
     _private_file,
 )
+from evaluations.native_runtime_identity import verify_native_runtime
 from evaluations.northstar_source_authoring import public_paths
 from evaluations.raw_superset_onboarding import usage_snapshot
 from scripts.binary_provenance import ROOT, verify_binary
 from signalweave.mcp_server import AGENT_PROFILE_TOOLS
 from signalweave.query_source import load_query_catalog
 
-PROTOCOL = "northstar-retrospective-enterprise-journey-v2"
+PROTOCOL = "northstar-retrospective-enterprise-journey-v3"
 ORDER = ("baseline", "signalweave")
 PERIOD_ENDS = (
     "2026-08-03", "2026-08-10", "2026-08-17", "2026-08-24",
@@ -70,6 +71,7 @@ LOCAL_TOOLS = frozenset({
 IMPORT_TOOL = "operator_import_query"
 METHOD_FILES = (
     "evaluations/northstar_enterprise_journey.py",
+    "evaluations/native_runtime_identity.py",
     "evaluations/northstar_workspace_journey.py",
     "evaluations/northstar_source_authoring.py",
     "evaluations/pine_courier_onboarding.py",
@@ -331,6 +333,7 @@ async def prepare(root, binary, codex, key_file, source_executable, source_check
         comparison=("fresh forward treatment only; retained prior pair, not a new paired baseline"
                     if treatment_only else f"{first_arm} first, one attempt each"),
         bootstrap=bootstrap,
+        native_runtime=study["native_runtime"],
         source_tool_names=sorted(setup.SOURCE_TOOLS),
         source_tool_server_count=len(source_names),
         source_tool_exposed_count=len(setup.SOURCE_TOOLS),
@@ -413,6 +416,8 @@ def verify(study: dict, root: Path) -> None:
     elif study.get("order") not in (list(ORDER), list(reversed(ORDER))):
         raise ValueError("Unknown actor order")
     bootstrap = study["bootstrap"]
+    verify_native_runtime(Path(study["installed_binary"]), study.get("binary", {}),
+                          study.get("native_runtime"))
     if verify_binary(Path(study["installed_binary"]), ROOT) != study["binary"]:
         raise ValueError("The installed native candidate changed")
     if setup._sha(Path(study["codex"]["path"])) != study["codex"]["sha256"]:

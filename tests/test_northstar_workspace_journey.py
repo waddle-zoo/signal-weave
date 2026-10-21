@@ -95,10 +95,34 @@ def test_native_research_setup_copies_complete_release_layout(tmp_path, layout):
     if layout:
         (source/"_internal/nested").mkdir(parents=True)
         (source/"_internal/nested/runtime").write_bytes(b"runtime bytes")
-    study.copy_native_candidate(binary, target/"signalweave", {"bundle_layout": layout})
+    identity = {"bundle_layout": layout}
+    frozen_runtime = study.copy_native_candidate(binary, target/"signalweave", identity)
     assert (target/"signalweave").read_bytes() == binary.read_bytes()
+    assert frozen_runtime == study.inventory_native_runtime(binary, identity)
+    assert study.verify_native_runtime(target/"signalweave", identity, frozen_runtime) == frozen_runtime
     if layout:
         assert (target/"_internal/nested/runtime").read_bytes() == b"runtime bytes"
+
+
+def test_native_research_setup_rejects_copy_that_differs_from_source_runtime(tmp_path, monkeypatch):
+    source, target = tmp_path/"source", tmp_path/"person/bin"
+    source.mkdir()
+    target.mkdir(parents=True)
+    binary = source/"signalweave"
+    binary.write_bytes(b"verified fixture executable")
+    runtime = source/"_internal/runtime"
+    runtime.parent.mkdir()
+    runtime.write_bytes(b"source runtime")
+    real_copytree = study.shutil.copytree
+
+    def drifted_copy(src, dst, **kwargs):
+        result = real_copytree(src, dst, **kwargs)
+        (Path(dst)/"runtime").write_bytes(b"copy drift")
+        return result
+
+    monkeypatch.setattr(study.shutil, "copytree", drifted_copy)
+    with pytest.raises(ValueError, match="runtime inventory changed"):
+        study.copy_native_candidate(binary, target/"signalweave", {"bundle_layout": "directory-v1"})
 
 
 @pytest.mark.parametrize("kind", ["missing", "empty", "link", "fifo"])
@@ -117,6 +141,6 @@ def test_native_research_setup_refuses_invalid_runtime_before_copy(tmp_path, kin
         (internal/"outside").symlink_to(binary)
     elif kind == "fifo":
         os.mkfifo(internal/"pipe")
-    with pytest.raises(ValueError, match="runtime"):
+    with pytest.raises(ValueError, match="(?i)runtime"):
         study.copy_native_candidate(binary, target/"signalweave", {"bundle_layout": "directory-v1"})
     assert not list(target.iterdir())

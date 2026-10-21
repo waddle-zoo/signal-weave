@@ -417,7 +417,9 @@ async def test_prepare_freezes_canonical_read_grants_and_preflights_each_arm(tmp
         study = {
             "protocol": journey.setup.PROTOCOL,
             "method": {}, "limits": {}, "binary": {"candidate": "verified"},
-            "installed_binary": str(binary), "source_executable": str(source_executable),
+            "installed_binary": str(binary),
+            "native_runtime": {"bundle_layout": "onefile-legacy", "external_runtime_used": False},
+            "source_executable": str(source_executable),
             "source_executable_sha256": "source-sha", "source_environment": {"python": "pinned"},
             "source_revision": "source-revision", "source_checkout": str(source_checkout),
             "url": "http://127.0.0.1:18089", "codex": {"path": str(codex)},
@@ -461,6 +463,7 @@ async def test_prepare_freezes_canonical_read_grants_and_preflights_each_arm(tmp
 
     frozen = journey.setup.shared.read(root / "study.json")
     assert result["prepared"] and result["provider_requests"] == 0
+    assert frozen["native_runtime"]["external_runtime_used"] is False
     assert identity_resolvers == [journey.pine.first.pinned_codex]
     assert frozen["source_tool_server_count"] == 137
     assert "arms" not in frozen["bootstrap"]

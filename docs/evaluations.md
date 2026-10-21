@@ -10,7 +10,7 @@ navigation in the immutable [`437ab297` snapshot](https://github.com/waddle-zoo/
 
 | Study | Result and limit |
 | --- | --- |
-| [Published-rc5 workflow trials — Oct 20–21](evidence/workflow-product-2026-10-20.md) | Northstar fresh SQL/card onboarding and seven live-Jev receipts worked. Both agents delivered correct core weekly findings; treatment supplied a verified investigation worklist absent from baseline. Treatment was 18.2% slower, used more uncached frontier tokens, and both sent unnecessary messages. Original research-quota-censored pair retained; Harbor full-month recurrence is running after an explicit operator-assisted owner handoff. No general advantage or enterprise-readiness claim. |
+| [Published-rc5 workflow trials — Oct 20–21](evidence/workflow-product-2026-10-20.md) | Northstar: both delivered supported core findings; treatment added a verified worklist but was 18.2% slower. Harbor: both completed 28 daily/four weekly checks; treatment made 32 live-Jev recurring calls and applied the approved card revision. Supported handoffs coexist with evidence-access gaps, additional onboarding effort and different approved scopes. Original censored run and review corrections retained. No general advantage or enterprise-readiness claim. |
 | [Published rc4 / OpenAI Decisions replay — Oct 19](evidence/openai-decisions-live-2026-10-19.md) | Download/setup, live decision and restart replay; one Codex brief from two existing company cards and authenticated HTTP replay. Known-card outcomes matched 46/48, including all 8 qualifying notify routes. Approval-blocked attempt and TLS failure retained. Not new-company onboarding, external delivery, or an agent advantage. |
 | [Meridian onboarding diagnostics — Oct 19](evidence/meridian-onboarding-diagnostics-2026-10-19.md) | 5,000 accounts and 118 assets. Original failures retained. Later treatment authored archival cards and completed two Jev calls, then timed out during recipient follow-through; file presence does not prove attachment use and usage is unknown. One cutoff per study—not eight successful reviews or an accuracy/cost win. |
 | [OrbitWorks whole journey — Oct 19](evidence/orbitworks-whole-journey-2026-10-19.md) | Agent-authored SQL/card, owner clarification, six source cutoffs, supported referrals, and final handoff. Treatment sent 0 no-trigger FYIs versus 5 baseline; 15 vs 26 local messages is descriptive, not a human-time or causal win. Two treatment timeouts needed separate recovery; original usage remains unknown. |
@@ -38,6 +38,6 @@ and [full historical index](archive/research/evaluations-2026-10-20.md).
 ## Remaining study stages
 
 The [October 20 workflow-product protocol](../evaluations/protocols/workflow-product-2026-10-20.json)
-records stage scope and claim limits. Northstar results are above; Harbor's
-month-long recurrence remains in progress. The separate new-company
+records stage scope and claim limits. Northstar and Harbor results are above,
+including corrected review interpretations. The separate new-company
 quiet/ambiguity transfer stage is not admitted or executed.

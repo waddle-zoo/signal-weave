@@ -32,6 +32,12 @@ This read-only reconciliation separates forwarded requests from local research
 budget rejections. It does not change the original result, undo a censored run,
 or infer billing cost from token counts.
 
+Fresh native journey studies freeze the executable identity and its external
+runtime inventory before paid actors. Later checks reject missing or changed
+runtime contents before executing the binary. Use an older report's pinned
+method revision to inspect its original study; a newer harness guard does not
+retroactively certify or rescore earlier runs.
+
 ## Historical harness tests
 
 Five older fixture/scoring cohorts are kept outside default pytest discovery.

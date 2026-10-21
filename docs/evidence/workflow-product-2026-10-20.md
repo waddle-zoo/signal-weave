@@ -66,17 +66,53 @@ and an owner policy change. A real local company MCP reads isolated SQLite
 history; this is not a hosted vendor integration. Every daily cutoff contains
 qualifying work, so this cohort cannot measure quiet-day suppression.
 
-The baseline completed the month but lost the Operations destination from its
-retained notes: later weekly reports were generated and delivered to the daily
-queue recipients instead. Two late simulated-feedback calls hit the research
-reply cap; preserve that censoring rather than claiming a clean paired result.
+The baseline completed the month. Initial process review called the later
+absence of Operations messages a routing miss; closed-message review corrected
+that interpretation: during recurrence the owner explicitly authorized the
+queue lead and duty manager for weekly drafts. Those deliveries followed the
+approved change. The original records and prior interpretation remain in Git;
+this is not a demonstrated SignalWeave routing advantage. Two late simulated
+feedback calls hit the research reply cap, so the pair is not a clean
+feedback-completeness comparison.
 
 Both SignalWeave onboarding stages completed with live Jev. Independent review
 found weekly recurring-delivery consent unfinished. One separately reviewed
 simulated-owner question completed permission for local manual-review drafts,
 without analytical repairs. This is **operator-assisted completion**, not
 zero-touch onboarding. Its extra interaction is accounted separately. The
-bounded recurring run is in progress; no paired Harbor quality verdict yet.
+bounded recurring run subsequently completed all 28 cutoffs and 32 live-Jev
+requests with known usage, unchanged inputs, and no recorded errors. Recurrence
+took 2,008 seconds versus baseline's 1,660. Both arms completed 28 daily and
+four weekly checks. The treatment's 32 distinct receipts preserve daily v2
+through March 8 and approved v3 from the March 9 policy change onward.
+
+Across onboarding and operation, treatment took **56.9 minutes** including the
+extra owner confirmation, versus **37.0 minutes** for baseline. Uncached
+frontier input was 896,152 versus 589,946 tokens. Treatment made 35 total Jev
+calls, with no upstream error or local rejection. This does not show an
+efficiency win.
+
+Independent source reconciliation checked 81 explicit set/row/time assertions
+without a mismatch among compared values; it did not verify every supplemental
+claim. Both produced useful supported handoffs, but routine evidence is mostly
+new-item deltas and counts rather than a full current worklist. All 266
+delivered attachment copies matched their byte/hash records; only one treatment
+business attachment and no baseline attachments had a recorded read. Delivered
+files are not proof of completed review or ticket action.
+
+Review corrections are retained explicitly: a cross-packet approval claim was
+retired, the pre-approval draft snapshot was not the final approved v3 state,
+and baseline caller errors absent from the person-reply ledger were confirmed
+in the actual trace. These were review-evidence gaps, not product failures.
+
+The owners' approved scopes also differ: treatment includes overdue resolution
+follow-up from onboarding and permits a caveated observed-cohort ratio;
+baseline initially emphasizes unanswered first response and withholds a
+whole-week rate without event-completeness evidence. Grade each against its
+actual agreement, not one common decision label or an equal-workload claim.
+
+Original run methods are retained at commit `c7f97df`; later research-harness
+repairs must not reverify or rescore these frozen records as a new run.
 
 ## Reproduction and claim boundaries
 

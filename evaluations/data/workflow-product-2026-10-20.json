@@ -8,6 +8,14 @@
   "control": "Same Luna, 27 Superset analytical tools, owner policy, workspace, SQL/code and automation abilities, without SignalWeave",
   "setup_boundary": "Actual isolated terminal wizard, Codex registration and skill after research-helper archive extraction/copy; not a new public-curl-installer or real-human novice study",
   "operator_boundary": "The isolated actor uses a research-only operator callback to forward its own query file to the real native query-import CLI. This substitutes for the host terminal access an ordinary Codex user would grant; it supplies no analytical SQL or card. It is not an extra public MCP tool.",
+  "subsequent_runtime_guard_check": {
+    "scope": "New research-harness guard exercised against the actual published rc5 bundle, after the completed studies; not retroactive immutability proof",
+    "runtime_files": 208,
+    "runtime_bytes": 68279050,
+    "runtime_fingerprint": "87dd00d58a788f52e7bbcf3654f41f253033468945797720f972bda62512fedb",
+    "native_runtime_verified": true,
+    "provider_calls": 0
+  },
   "timing_scope": "Analyst trajectory wall time includes business discovery, card/procedure onboarding and recurrence; excludes release download, wizard/preflight and independent review. Arms ran serially on the same host with shared source/cache conditions; differences are descriptive, not causal effects.",
   "northstar": {
     "source": "Real local Superset over the finalized synthetic warehouse, not an as-known-at-the-time backtest",
@@ -85,7 +93,8 @@
     }
   },
   "harbor": {
-    "status": "Baseline full journey and both treatment onboarding stages closed; a separately reviewed owner-activation handoff is complete. Treatment recurrence requires new independent admission. No paired business-quality result yet.",
+    "status": "Both three-phase trajectories and the separate owner-activation handoff are closed. Independent source, process and partially label-blinded message reviews are retained with explicit corrections; no general comparative advantage established.",
+    "frozen_method_source_commit": "c7f97df",
     "source": "Company MCP over isolated synthetic SQLite event-history snapshots, not a vendor-cloud connector",
     "people": "Five model-simulated company roles, not real humans",
     "workflows": ["Daily priority-ticket handoff", "Weekly support-commitment digest"],
@@ -95,7 +104,8 @@
       "frontier_and_person_usage_known": true,
       "messages_including_onboarding": 72,
       "operations_messages": 1,
-      "later_weekly_operations_briefs": "Generated on all due dates, but sent to queue-lead/duty-manager instead of Operations. Verified baseline notes omitted the Operations destination; the recurrence agent read those notes. Observed intent-persistence miss, not cadence suppression or demonstrated caller filtering of an authored route. Both monitors remain registered.",
+      "later_weekly_operations_briefs": "Initial setup used Operations. During recurrence the agent asked the owner, who explicitly authorized queue-lead/duty-manager for Monday briefs and weekly threshold-review drafts during the 28-cutoff study. Later messages followed that approved change; they are not missed approved handoffs.",
+      "corrected_interpretation": "The earlier public/process interpretation called the absent Operations messages a routing/intent-persistence miss. Closed-packet review found the later explicit owner consent, which supersedes that interpretation. Original records and prior Git revisions remain; do not claim this as a SignalWeave advantage. Role fidelity and changed owner choices require separate treatment.",
       "simulated_person_replies": {"complete": 71, "failed_person_reply_call_cap": 2},
       "recipient_attachment_read_events": 0,
       "interpretation": "Process completion is not business success. Late simulated feedback was research-resource-censored; no clean full-journey comparative efficiency claim."
@@ -115,9 +125,46 @@
       "extra_output_tokens": 119,
       "seconds": 7.053417416987941,
       "usage_known": true,
-      "interpretation": "Operator-assisted onboarding completion, not zero-touch onboarding or an original preregistered stage. Include this extra usage in any whole-journey accounting. The reply alone does not admit recurrence."
+      "interpretation": "Operator-assisted onboarding completion, not zero-touch onboarding or an original preregistered stage. Include this extra usage in any whole-journey accounting. A separate new independent admission permitted the subsequent bounded recurrence; the original BLOCK is unchanged."
+    },
+    "treatment_recurring_process": {
+      "terminal_sha256": "8c23cc0363428d6948e8e88a63ad2dd4d949073d5d231fb5831f3c90c027dd0d",
+      "new_admission_sha256": "00e4f19d9be7b9fdc66bc13c0987a3f4b4ce487476b03d46792f3ad4021d4f1f",
+      "seconds": 2008.1996813339938,
+      "process_complete": true,
+      "inputs_unchanged": true,
+      "usage_known": true,
+      "uncached_frontier_input_tokens": 495568,
+      "frontier_output_tokens": 158004,
+      "jev_requests": 32,
+      "jev_input_tokens": 238352,
+      "jev_output_tokens": 4280,
+      "recorded_errors": 0,
+      "messages_including_onboarding": 66,
+      "interpretation": "All 28 source cutoffs completed. These are process/usage facts, not an accuracy, usefulness, equal-workload speed or enterprise-readiness claim."
+    },
+    "closed_review": {
+      "retained_review_hashes": {
+        "process_review": "0ecbd0ea064c75a3613a04cf9c9891037ed6b54110ff04da05f42c2e7488904e",
+        "original_reader_review": "3fa279610289917573867326f1e10e02d4c199e4eabf066540c6858da3cc5c7c",
+        "reader_amendment_01": "2ad1a68fd675bd175bce1086acdf87ad1b48a90fc6cf0ef4986d682c17f83fbd",
+        "reader_amendment_02": "083e8330e4a2b8a6ef1fa6212302655219ad878eb5687fce77e42b3ea467d326",
+        "quantitative_ledger": "d9e20a055b70d09748b4f8cf6533d16ae25327c04c454cea78fb29a21915ea06"
+      },
+      "baseline_checks": {"daily": 28, "weekly": 4, "completed": 32},
+      "treatment_checks": {"daily": 28, "weekly": 4, "unique_live_receipts": 32, "notify": 32},
+      "policy_revision": "Treatment daily v2 receipts cover February 23–March 8; approved v3 covers March 9–22. Both monitors remain registered. A pre-approval draft snapshot is not the final native status.",
+      "whole_journey_seconds": {"baseline": 2217.207218, "treatment_actor_phases": 3404.782799, "treatment_extra_owner_handoff": 7.053417},
+      "whole_journey_uncached_frontier_input_tokens": {"baseline": 589946, "treatment": 896152},
+      "whole_journey_jev_usage": {"requests": 35, "input_tokens": 262898, "output_tokens": 4743, "errors": 0, "local_rejections": 0},
+      "attachments": {"baseline_delivered_copies": 193, "treatment_delivered_copies": 73, "missing_or_hash_mismatches": 0, "baseline_business_attachment_reads": 0, "treatment_business_attachment_reads": 1, "treatment_additional_owner_card_snapshot_reads": 6},
+      "source_check": "81 explicit set/row/time-context reconciliation assertions had no mismatch among compared values. Unverified fields and blank values remain unverified, not imputed. Assertions are not an accuracy score.",
+      "reader_result": "Both trajectories have useful supported handoffs and reader-access gaps: recurring detail is mostly new-item deltas/counts rather than a full current worklist, and final attachment use is unproven. Baseline corrected an early weekly population-scope ambiguity. No completed ticket action or real-human usability is established.",
+      "review_corrections": "Original review and two amendments retained. Cross-packet approval attribution was retired; a draft confirmation snapshot could not establish final native status; actual post-approval results show v3 approved. Baseline's later caller ValueErrors were real trace events absent from the person-reply ledger, not an invented explanation. Later owner-authorized weekly routing is not a baseline miss.",
+      "comparison_limit": "More time and frontier input were observed with treatment; approved policies differ and baseline feedback is cap-censored. No clean equal-workload efficiency or Jev-specific causal claim."
     },
     "readiness_limit": "The saved baseline query does not establish event completeness; whole-week rates are withheld. The weekly threshold branch is unproven.",
+    "policy_comparability": "Grade each arm against its actual owner-approved scope. Treatment already includes overdue resolution follow-up alongside the primary unanswered first-response queue; baseline initially focuses on unanswered first response until the dated owner change. The treatment owner also permits an explicitly caveated observed-cohort ratio that the baseline owner withholds as a whole-week rate. These differences prevent a simple equal-workload or common-decision-label comparison.",
     "quiet_state_limit": "Every daily cutoff has qualifying work; this cohort cannot establish quiet-day suppression."
   },
   "proof_boundaries": [
