@@ -1,104 +1,41 @@
-# Evaluation evidence index
+# Current whole-agent and release evidence
 
-This is a map, not a leaderboard. Start with the [proof standard and
-reproduction guide](evaluation.md); read each linked report's protocol and
-limitations before reusing a result.
+This is a short current index, not a leaderboard. Failures, timeouts, unknown
+usage, overhead, and mixed outcomes stay visible; these bounded journeys do
+not establish general superiority. The full historical index is preserved
+[here](archive/research/evaluations-2026-10-20.md), with its original
+navigation in the immutable [`437ab297` snapshot](https://github.com/waddle-zoo/signal-weave/blob/437ab297bb621c724edc71b138b5ff774759c51f/docs/evaluations.md).
 
-Research roadmap: [human and agent workflow research plan](workflow-research-plan.md).
-Its larger sampling plan remains prospective, not a completed benchmark or an
-additional result. Known-company development journeys are listed below.
-Its first [operational-history source checkpoint](evidence/harbor-operational-history-2026-10-17.md)
-validates historical inputs and native extraction, not agent or human outcomes.
+## Latest journeys and release checks
 
-## Current product-path evidence
+| Study | Result and limit |
+| --- | --- |
+| [Published rc4 / OpenAI Decisions replay — Oct 19](evidence/openai-decisions-live-2026-10-19.md) | Download/setup, live decision and restart replay; one Codex brief from two existing company cards and authenticated HTTP replay. Known-card outcomes matched 46/48, including all 8 qualifying notify routes. Approval-blocked attempt and TLS failure retained. Not new-company onboarding, external delivery, or an agent advantage. |
+| [Meridian onboarding diagnostics — Oct 19](evidence/meridian-onboarding-diagnostics-2026-10-19.md) | 5,000 accounts and 118 assets. Original failures retained. Later treatment authored archival cards and completed two Jev calls, then timed out during recipient follow-through; file presence does not prove attachment use and usage is unknown. One cutoff per study—not eight successful reviews or an accuracy/cost win. |
+| [OrbitWorks whole journey — Oct 19](evidence/orbitworks-whole-journey-2026-10-19.md) | Agent-authored SQL/card, owner clarification, six source cutoffs, supported referrals, and final handoff. Treatment sent 0 no-trigger FYIs versus 5 baseline; 15 vs 26 local messages is descriptive, not a human-time or causal win. Two treatment timeouts needed separate recovery; original usage remains unknown. |
+| [Northstar current-native journey — Oct 19](evidence/northstar-whole-journey-2026-10-19.md#current-native-fresh-agent-onboarding-through-delivery) | Scripted setup, agent-authored SQL/card, owner read, approval, and three fresh-agent/live-Jev reviews produced five local inbox messages and a feedback investigation. Earlier helper-blocked attempt remains. This forward run is not a new pair and was slower/more token-intensive than its retained baseline. |
+| [Harbor whole-company journey — Oct 19](evidence/harbor-whole-journey-2026-10-19.md) | Fifteen source-supported daily packages; stopped at the simulated owner quota with 13 dates unrun. Baseline completed source checks but missed two handoffs. No full-month or superiority claim. |
+| [Northstar Superset journey — Oct 19](evidence/northstar-whole-journey-2026-10-19.md) | Seven live-Jev reviews, investigation, nine delivered messages, and twelve readable attachments. Core weekly figures/routes were supported, but messages need less plumbing and one follow-up is redundant. Baseline was faster and used fewer frontier tokens; the original owner-fixture failure remains. |
+| [Pine Courier whole journey — Oct 19](evidence/pine-whole-journey-2026-10-19.md) | Three live-Jev observations, five local inbox messages, and feedback. Figures/routes were supported; next-action clarity, recipient-open evidence, and a final-summary attribution remain gaps. Baseline also succeeded faster and with fewer tokens. Original wrapper failure retained; no general advantage. |
+| [Published rc5 release gates — Oct 20](local-install-reference.md#startup-measurements) / [release workflow](https://github.com/waddle-zoo/signal-weave/actions/runs/39366963314) | Published rc5 scripted terminal setup, real Codex registration, source-health checks, upgrade, and uninstall passed all three platform gates. Published rc5 provider/MCP smoke was offline. The separate live OpenAI integration reused the same fingerprint as the preceding local build. The new full business journey is still in progress; this is release/integration proof, not business efficacy. |
 
-| Question | Start here | What it does—and does not—show |
-| --- | --- | --- |
-| OpenAI Decisions without Jev setup | [Published install, Codex reuse and Northstar replay](evidence/openai-decisions-live-2026-10-19.md) | Actual rc4 download/setup, live decision and restart replay; one Codex brief from two existing company cards; authenticated HTTP replay. Known-card replay matched 46/48 outcomes and all 8 qualifying notify routes. Approval-blocked attempt and TLS failure retained. Not fresh company onboarding, actual delivery or a Luna-agent advantage. |
-| Larger-company onboarding diagnostics | [Meridian first pairs and continuation](evidence/meridian-onboarding-diagnostics-2026-10-19.md) | 5,000 accounts and 118 assets. Original failures retained. Later treatment authored archival cards and completed two new Jev calls, but timed out during recipient follow-through; useful files are not proof of attachment use. New analyst usage is unknown. One cutoff per study, not eight successful reviews or an accuracy/cost win. |
-| Fresh native setup, ambiguous business definitions and recurring follow-through | [OrbitWorks whole journey](evidence/orbitworks-whole-journey-2026-10-19.md) | Agent-authored SQL/card, owner clarification, six source cutoffs, two supported CS referrals per arm and a final handoff. Treatment sent zero no-trigger CS FYIs versus five baseline FYIs; 15 versus 26 local messages is descriptive, not a human-time or causal win. Two treatment timeouts required separate recoveries; original usage stays unknown. No total-cost, scale or uninterrupted-onboarding claim. |
-| Current native install through recurring reports and feedback investigation | [Northstar current-native journey](evidence/northstar-whole-journey-2026-10-19.md#current-native-fresh-agent-onboarding-through-delivery) | Fresh scripted setup, agent-authored SQL/card, exact-card owner read, native approval and three fresh-agent/live-Jev reviews. Five actual inbox messages include a feedback-driven investigation of unresolved carrier leads. Earlier helper-blocked treatment retained; the forward run is not a new pair and is slower/more token-intensive than its retained baseline. |
-| Whole-company onboarding, daily delivery and changing policy | [Harbor whole journey](evidence/harbor-whole-journey-2026-10-19.md) | Actual native setup, agent-authored queries/cards, live Jev and simulated recipients. Fifteen source-supported daily packages; stopped at the simulated owner quota, with thirteen dates unrun. Baseline completed all source checks but missed two handoffs. No full-month or superiority claim. |
-| Fresh Superset onboarding through seven company reviews | [Northstar whole journey](evidence/northstar-whole-journey-2026-10-19.md) | Agent-authored query/card, explicit approval, seven live-Jev evaluations, investigation, nine delivered messages and twelve readable attachments. Core weekly figures/routes independently supported; messages need less plumbing and one follow-up is redundant. Baseline was faster and used fewer frontier tokens. Original owner-fixture failure retained; not a shared-memory or superiority result. |
-| Complete installation-to-recurring-company workflow | [Pine Courier whole journey](evidence/pine-whole-journey-2026-10-19.md) | Fresh native setup, agent-authored query/card, approval, three live-Jev observations, investigation, five actual local inbox messages and feedback. Delivered figures/routes independently supported; next-action clarity, recipient-open evidence and an unsupported final-summary attribution remain gaps. Baseline also succeeds and is faster/uses fewer tokens. Original failed wrapper attempt retained; no general advantage claimed. |
-| Useful first answer into a reusable weekly review | [Pine Courier first readout](evidence/pine-first-readout-2026-10-18.md) | Both agents correctly distinguished flat delivery performance from rising volume. Treatment saved a real draft and verified SQL, but did not connect them; it took more time and total tokens. Two historical synthetic readouts, no approval, live Jev, recurrence or overall advantage. |
-| Follow an earlier handoff after the check goes quiet | [Harbor follow-through](evidence/harbor-handoff-followthrough-2026-10-18.md) | Both successors traced the prior cases and produced correct, reachable detail. Treatment added a manual-review suggestion but took more time/tokens. Historical Jev receipts were reused; zero new judgments. Not new onboarding, external delivery or a demonstrated overall advantage. |
-| Natural exceptions and successor investigation | [Northstar follow-through](evidence/northstar-exception-followthrough-2026-10-18.md) | Three unchanged-policy native branches and both useful successor handoffs completed, including signed-OIDC reuse. Treatment adds verified category localization but takes more frontier work; no comparative advantage established. Baseline's separate history-gap brief prints unqualified growth across unequal coverage. Not a completed causal investigation or enterprise-readiness result. |
-| Retained query into a native recurring check | [Native query journey and capable baseline](evidence/query-source-onboarding-2026-10-18.md) | Repaired native path completed expert migration, a useful first readout, unchanged fresh-cutoff execution and a counted writer. Baseline's own code also produced a useful brief with no recurring inference and additional reconciliation. Two known quiet checkpoints; no SignalWeave speed/cost/accuracy or ROI advantage established. Original failed handoff and research-guard failures remain recorded. |
-| First useful sales answer into repeated checks | [Northstar ordinary-workspace journey](evidence/northstar-workspace-first-use-2026-10-18.md) | Both agents returned useful analysis. Two rolling checkpoint pairs refreshed real data without operator analytical rescue; treatment repaired its own date renderer. Jev correctly ignored the first increase but incorrectly investigated the second; the frontier caught it. A confirmed optional-to-mandatory handoff bug was repaired separately. Six component probes identify no general policy fix. Treatment was slower/more costly in those rolling phases. No net-workflow or unassisted-onboarding advantage established; older failed/censored attempts remain. |
-| Repeated fulfillment assessments and case follow-up | [Redwood workflow](evidence/redwood-workflow-2026-10-17.md) | Original six-context journey had no overall treatment win. First ordinary-file attempts stopped/timed out and remain recorded. A separately admitted as-of pair completed: treatment took 196 vs 249 seconds and supplied 30 actual open-case records, but two supporting-evidence errors prevent an error-free handoff claim. Both gave useful main findings. Known-company, expert-assisted continuation—not onboarding, real delivery or overall superiority. |
-| First readout through repeated handoffs | [Harbor onboarding and assisted continuation](evidence/harbor-onboarding-2026-10-17.md) | Original onboarding saved useful readouts but added prerequisites; it remains closed. Separate expert-assisted continuation completed three current native/live-Jev receipts and three briefs per arm, correctly finding 80 qualifying records and intended reviewers. Treatment used fewer tools but more recurring tokens/time and a longer message. No net human advantage, real-human setup or actual delivery established; source/status follow-through and recipient-accessible detail remain gaps. |
-| New company-source authoring | [Closed Harbor attempt](../evaluations/data/harbor-raw-onboarding-v1-summary.json) | Raw support data, existing metric views and fixed SQL exports passed native preflight. One analyst timed out amid recorded host sleep; no final readout or known usage, no baseline, no Jev. Environment-censored, not onboarding success or comparative product evidence. |
-| Persistent context setup | [Current native CLI and HTTP checks](evidence/domain-context-preview-2026-10-14.md#native-context-controls-setup-and-transport-not-analytical-quality) | A new private home persists opt-in through the CLI; guide/tools, history and card bindings survive reconnect/disable/re-enable. Signed hosted lifecycle uses a synthetic issuer. Two integration journeys, not business or real-human onboarding samples. Startup friction and comparative value remain open. |
-| Data-gap owner routing repair | [Forward native check](evidence/domain-context-preview-2026-10-14.md#forward-native-routing-regression) | Rebuilt binary kept the configured Data Trust route for a live low-support Jev data-gap result using the exact retained agent publication. One Jev request, no new agent or human message, no retries. The original failed pair is not rescored. |
-| Same-conversation analytical report | [Closed guided workflow](evidence/domain-context-preview-2026-10-14.md#same-conversation-agent-report-completed-process-wrong-policy-route) | Both agents completed correct historical arithmetic and useful messages. SignalWeave's low-support fallback changed the owner's Data Trust route to Analytics; baseline routed correctly. Three saved-chart queries each, treatment slower with more tokens. Process completion is not business acceptance. [Exact messages and usage](../evaluations/data/agent-report-handoff-v1-summary.json). |
-| Corrected publisher feasibility | [Closed quota-censored v2](evidence/domain-context-preview-2026-10-14.md#corrected-frontier-publisher-quota-stop-still-no-completed-report) | Registry isolation passed; the actual analyst made 36 valid tool calls but hit the undisclosed research quota before publishing. Unknown usage, no Jev/writer/final report. Two censored attempts remain, not a product failure or benefit result. |
-| Actual frontier publisher to human message | [Closed harness attempt](evidence/domain-context-preview-2026-10-14.md#actual-frontier-publisher-attempt-stopped-by-the-harness) | One analyst made five valid BI calls, then the research transport stopped a built-in MCP metadata request. Unknown frontier usage; no publication, Jev, writer or human report. Retained as censored—not product accuracy, benefit or onboarding evidence. |
-| Native analyst-publication handoff | [Closed integration check](evidence/domain-context-preview-2026-10-14.md#native-analyst-publication-handoff) | One approved card, three supplied publication revisions and three live Jev requests: pending/hypothesis-only investigate, observed decline notify. Version/hash, original capture time, parent chain and no-inference replay retained. Scripted approval and synthetic findings; no frontier analyst, human onboarding, sent alerts or comparative business claim. |
-| Retained card to matched-day investigation | [Closed Northstar follow-up](evidence/domain-context-preview-2026-10-14.md#retained-northstar-follow-up-matched-day-investigation-completed) | Both agents completed supported monthly and matched-day reports with live sources; treatment used one live Jev evaluation and its configured data-gap route. Both had twenty successful tools; treatment was slower and used more tokens. No new onboarding, notification, causal proof or overall superiority. [Exact messages and usage](../evaluations/data/retained-raw-followup-v1-summary.json). |
-| Raw-source onboarding through fresh reporting | [Completed Northstar v2 workflow](evidence/domain-context-preview-2026-10-14.md#completed-raw-source-workflow-raw-northstar-workflow-v2) | Actual Superset discovery, agent-authored card, expert source reads, synthetic owner consent, native approval and live Jev completed. Both final reports supported; treatment used more tokens overall. One known-company observation, no sent alerts, completed matched-day investigation or comparative superiority. [Actual messages, source excerpt and usage](../evaluations/data/raw-northstar-workflow-v2-summary.json). |
-| Opt-in domain-context preview | [Current context/card evidence](evidence/domain-context-preview-2026-10-14.md) | Two retained courier observations used the actual reviewed context and live Jev; both arms' routes/math supported, no overall quality or cost lift. Baseline gave better repair context; treatment added a correct but denser decline breakdown and one unnecessary reread. Original v7 onboarding remains unqualified. [Actual messages, source facts and usage](../evaluations/data/retained-context-courier-summary.json); retail results and earlier negatives retained. |
-| Raw Northstar onboarding attempt | [Actual censored record](../evaluations/data/raw-northstar-onboarding-summary.json) | Actual local Superset discovery, no prepared card. Baseline hit the 24-call experiment cap before submitting; treatment never started and token cost is unknown. This is a harness failure, not a product comparison or onboarding pass. |
-| Main cards/native release | [October 14 rc3 release evidence](evidence/cards-native-release-2026-10-14.md) | Main merge, all three native runners, and a real GitHub download through scripted human setup, isolated Codex registration, canonical skill, credential update, live local Superset/Jev card, replay, and uninstall. Integration proof, not customer efficacy or broad alert accuracy. |
-| Unpooled October 13 evidence | [Agent workflow study](evidence/agent-workflow-study-2026-10-13.md) | The completed decision-first v4 cohort is 6/6 synthetic families and 108 paired periods: native 108/108, baseline 108/108, treatment 107/108. Treatment took 3,091.2s vs 2,063.6s (+49.8%) despite 36 quiet frontier skips; excludes onboarding/review, with no dollar claim (cached-token billing unknown). The separate Oct 13 Superset payload failure was 150,456 bytes / 50,152 estimated tokens vs a 12,000-token limit; the 2,923-test suite missed it. |
-| October 14 native Superset paired handoff | [Agent workflow study](evidence/agent-workflow-study-2026-10-13.md) | Original-policy treatment completed a report with judgment deferred; explicit-deferred exhausted 60 tool calls with no submission. Post-run source comparison found metadata/contract and quality `cache_status` differences. The reads were not the same input; no superiority or total-cost claim. This remains separate from the October 13 payload failure. |
-| October 14 cache-qualified Northstar readouts | [Agent workflow study](evidence/agent-workflow-study-2026-10-13.md) | Two repeats/four saved reports; strict snapshot parity stayed different, with cache-only variance opted in for descriptive reports. Both treatments deferred with zero reported Jev attempts. Timing totals are asymmetric; report reviews found citation/coverage gaps. Not four quality passes, a Jev-benefit result, or a speed win. |
-| Install and first report | [October 13 local onboarding and recurring pilot](evidence/local-onboarding-and-recurring-pilot-2026-10-13.md#fresh-install-to-first-useful-report); [current native journey record](evidence/current-native-human-onboarding-2026-10-13.json); [RC2 installer process check](evidence/release-rc2-2026-10-12-installer.json) | A fingerprint-checked local native candidate, terminal setup, real Codex registration, local Superset access, and two first reports. The installer check uses a simulated release transport and dummy credentials. The Northstar data is synthetic; this was not a human usability panel. The current source candidate is not the published download. Separately, a clean RC2 receipt-page replay and guide-only stdio handoff succeeded; neither tested fresh source/provider evaluation or report quality. |
-| Card onboarding and recurring use | [Full October 13 synthesis](evidence/local-onboarding-and-recurring-pilot-2026-10-13.md#reviewed-card-to-recurring-decisions); [four-case owner-channel pilot](evidence/native-cadence-owner-channel-pilot-2026-10-13.json); [twelve-period expansion](evidence/native-cadence-twelve-period-2026-10-13.json); [known-regression cases](evidence/native-quality-known-regressions-2026-10-13.json) | Read the synthesis before the individual pilots: it retains failed and mixed cohorts. The twelve-period expansion was 12/12 baseline, 10/12 treatment final-agent outcomes, and 6/12 native routed judgments; it showed no treatment advantage. A separate four-case functional pass is not an accuracy or speed win. |
-| Investigation path | [Published-preview local investigation proof](local-investigation-proof.md); [Northstar multi-step paired comparison](evidence/northstar-multistep-paired-live-comparison-2026-10-06.md) | The local investigation used live Jev with synthetic company data. The six-case paired Northstar replay used synthetic snapshots and live Jev; it improved some evidence handoffs, not general correctness, cost, latency, or production readiness. |
-| Comparative evidence | [Paired-agent results](paired-agent-trial-results.md); [October 6 comparative synthesis](evidence/live-comparative-evidence-summary-2026-10-06.md); [Helio connected-Preset comparison](evidence/helio-preset-mcp-paired-2026-10-06.md) | These are historical, controlled synthetic/cached-source comparisons. They include ties and unsafe outcomes; they are not customer benchmarks. Read them alongside the newer mixed October 13 results above, not as a pooled or current product score. |
+These reports include simulated owners/recipients and local inboxes where stated;
+they are not a real-human usability panel or proof of external Slack/email
+delivery. Each report identifies the source, model, and sink that actually ran.
 
-The October 13 recurring pilot's machine-readable details are also available in
-the [Northstar pilot record](evidence/northstar-native-recurring-pilot-2026-10-13.json)
-and [native-cadence method review](evidence/native-cadence-method-review-2026-10-13.md).
-The review records a prior availability-only run with zero Jev use and a later
-production-guided run with native judgment errors; neither is silently pooled
-into the four-case functional pass.
+## Earlier mixed paired-period result
 
-## Historical Northstar research
+The October 13 decision-first study covered 108 paired periods across six
+synthetic families: native 108/108, baseline 108/108, treatment 107/108. The
+treatment took 3,091.2 seconds versus 2,063.6 seconds (**+49.8%**) despite 36
+quiet frontier skips; onboarding/review was excluded and cached-token billing
+was unknown. This does not show overall superiority. Separately, a 150,456-byte
+(about 50,152-token) Superset payload exceeded a 12,000-token limit, a failure
+the then-2,923-test suite missed. See the [retained study record](evidence/agent-workflow-study-2026-10-13.md)
+and [full historical index](archive/research/evaluations-2026-10-20.md).
 
-- These are chiefly **curated-card execution** studies, not evidence that an
-  agent can onboard a company or author a correct expert card. Their source
-  scope, policies, labels, and/or role behavior are prepared for the trial.
-- [168-workflow Northstar scale report](https://github.com/waddle-zoo/signal-weave/blob/ca8a10b69c08a81e793a4860538fa7a9e0b80bd0/docs/northstar-scale-trial.md)
-  describes owner-authored cards and generated personas. The report claims
-  96.43% exact workflow outcomes, but the saved `artifacts/northstar-scale`
-  report is absent from this checkout; see the
-  [evidence re-audit](https://github.com/waddle-zoo/signal-weave/blob/ca8a10b69c08a81e793a4860538fa7a9e0b80bd0/docs/northstar-evidence-reaudit-2026-10-03.md).
-  Treat the headline as not independently auditable here, not as onboarding
-  accuracy.
-- [Northstar corporation replay](https://github.com/waddle-zoo/signal-weave/blob/ca8a10b69c08a81e793a4860538fa7a9e0b80bd0/docs/northstar-corporation-trial.md)
-  reports 48 workflows with pre-curated policy and simulated roles. The same
-  [re-audit](https://github.com/waddle-zoo/signal-weave/blob/ca8a10b69c08a81e793a4860538fa7a9e0b80bd0/docs/northstar-evidence-reaudit-2026-10-03.md)
-  flags a mismatch between its saved Jev report and retained fixture/trace;
-  do not present 48/48 as independently verified evidence.
-- [Northstar longitudinal panel](https://github.com/waddle-zoo/signal-weave/blob/ca8a10b69c08a81e793a4860538fa7a9e0b80bd0/docs/northstar-longitudinal-panel-trial.md)
-  replays one human-authored card over eight simulated months (48 workflows).
-  Follow-up diagnostic facts and role participants are scripted; this tests
-  consuming supplied evidence and handoffs, not autonomous cause discovery.
-- [Northstar Growth Analytics historical replay](northstar-growth-history-trial.md)
-  covers 48 synthetic cases with live Jev. The card was revised once after an
-  initial miss pattern, so the final 48/48 replay is a repeatability check—not
-  an untouched holdout. Its comparator is a movement-only rule, its handoff
-  checks do not run a frontier agent, and its adversarial gate is a mechanical
-  report script rather than reviewer agents.
-- [Local binary onboarding trials](installed-onboarding-trial-2026-10-03.md):
-  useful historical install, source, and transfer evidence; reports explicitly
-  limit claims to synthetic traces and disabled delivery. This is separate
-  from the curated-card execution results above.
+## In progress—not results
 
-## How to read the labels
-
-- “Live” identifies the component that actually ran (for example, a local
-  Superset service or configured Jev API); it does not mean customer data.
-  Northstar and Helio measurements are synthetic or cached fixtures.
-- A company-MCP simulation, mocked provider/transport, simulated outbox, or
-  `simulation://` destination is not a third-party connector or external
-  delivery. No linked trial establishes real Slack delivery.
-- Historical reports name the executable actually tested. See
-  [release compatibility](local-install-reference.md#release-compatibility)
-  for the current published preview; newer source fixes are not evidence about
-  an older downloaded executable.
-- Do not convert small known-case cohorts into a general accuracy, adoption,
-  enterprise, cost, or speed claim. Keep failed, censored, non-use, and mixed
-  runs in their own denominators; the linked synthesis does so.
+The [October 20 workflow-product protocol](../evaluations/protocols/workflow-product-2026-10-20.json)
+is staged for execution, not a result. It records planned stages and claim
+limits only; this index will be updated after the actual runs.

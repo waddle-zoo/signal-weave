@@ -66,7 +66,7 @@ threshold held uncertain notifications for investigation.
 ## Adversarial review
 
 The independent reviewer is
-[`evaluations/everything_tracking_adversarial_review.py`](../evaluations/everything_tracking_adversarial_review.py).
+[`evaluations/everything_tracking_adversarial_review.py`](../../../evaluations/everything_tracking_adversarial_review.py).
 It independently checks:
 
 - one result per case and reproducible aggregate metrics;
@@ -98,7 +98,7 @@ findings: []
 ```
 
 The reviewer itself has mutation tests in
-[`tests/test_everything_tracking_trial.py`](../tests/test_everything_tracking_trial.py)
+[`test_everything_tracking_trial.py`](../../../evaluations/tests/historical/test_everything_tracking_trial.py)
 for a mutated unsafe result and a consistent safe report.
 
 ## What this demonstrates

@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "question": "Does a user receive useful, supported recurring analysis with less ongoing work when their capable BI agent also has SignalWeave?",
+  "status": "staged_execution_not_results",
+  "release": "v0.2.0rc5",
+  "production_source_sha256": "c2aa02884e1a79d41293b678b195e21fcbb71475dfc74f7d3be84f59fedc9f67",
+  "primary_treatment": "Luna xhigh with the published default-profile MCP, bundled SignalWeave skill and live Jev for narrow saved-policy decisions",
+  "control": "The same Luna model, company BI tools, source definitions, business owners, local inboxes, persistent notes, SQL and deterministic automation capabilities, without SignalWeave",
+  "claim_unit": "A company workflow trajectory, not each dependent source date or API call",
+  "methodological_sources": [
+    {
+      "url": "https://www.anthropic.com/research/demystifying-evals-for-ai-agents",
+      "application": "Inspect retained traces and actual final environment/messages; software-test success and actor self-reports do not establish the desired outcome"
+    },
+    {
+      "url": "https://arxiv.org/abs/2406.12045",
+      "application": "Evaluate interaction with simulated company users, tools and policy; keep repeated-trial reliability distinct from one successful trajectory"
+    }
+  ],
+  "stages": [
+    {
+      "id": "northstar-release-replication",
+      "scope": "Fresh setup, agent-authored SQL and reviewed card, seven finalized historical fulfillment periods, useful weekly messages and investigations",
+      "company_environments": 1,
+      "arms": 2,
+      "periods_per_arm": 7,
+      "owner": "Explicitly scripted business owner, not a model or real human",
+      "connector": "Actual local Superset and community Superset MCP; same 27 analytical source tools per arm",
+      "time_boundary": "Retrospective finalized warehouse, not an as-known-at-the-time backtest",
+      "method": "evaluations.northstar_enterprise_journey",
+      "maximum_jev_requests": 9,
+      "claim_limit": "Known-company current-release replication, not untouched holdout or enterprise superiority"
+    },
+    {
+      "id": "harbor-full-month",
+      "scope": "Separate queue and weekly onboarding, agent-authored source queries and cards, daily checks, Monday briefs, owner policy change, feedback and final handoff",
+      "company_environments": 1,
+      "arms": 2,
+      "daily_cutoffs_per_arm": 28,
+      "workflows_per_arm": 2,
+      "owner": "Five model-simulated company roles with bounded knowledge and recorded clarification/consent, not actual humans",
+      "connector": "Actual read-only company MCP over isolated source SQLite snapshots, not a vendor-cloud connector",
+      "time_boundary": "Only events available by each source cutoff are visible to either arm",
+      "method": "evaluations.harbor_enterprise_journey",
+      "native_profile": "Normal agent profile plus six explicitly enabled optional domain-context tools; 17 tools verified in preflight",
+      "maximum_jev_requests": 48,
+      "claim_limit": "Known development history; every existing daily state has qualifying work, so this cohort cannot establish quiet-day suppression or false-alert precision"
+    },
+    {
+      "id": "new-company-quiet-and-ambiguity-transfer",
+      "status": "not_admitted_not_executed",
+      "scope": "Freeze independently seeded raw histories and owner policies before either agent sees them; include quiet, onset, recovery, delayed/corrected data, optional versus required missing evidence and definition ambiguity",
+      "requirements": [
+        "Materially different source populations and business meaning, not renamed metrics or chart copies",
+        "Counterbalanced arm order and repeated fresh onboarding before claiming repeatability",
+        "Independent raw-source arithmetic and arm-blinded human-message review",
+        "Preflight source availability, tooling parity, ordinary owner consent and resource capacity",
+        "A separately reviewed protocol and finite inference budget before spending"
+      ]
+    }
+  ],
+  "primary_outcomes": [
+    "Supported, useful first answer and correctly retained business meaning",
+    "Important issues communicated to the right intended recipient without unsupported all-clears or causes",
+    "Concision, actionable next step and accessible evidence in the actual delivered message",
+    "Faithful recurring policy after feedback or a definition/owner change",
+    "Total onboarding, repair, review and recurring effort, including unfinished and failed attempts"
+  ],
+  "measurements": [
+    "Complete and incomplete trajectories with explicit denominators",
+    "Actual local deliveries, redundant messages, missed requested handoffs and recipient attachment reads separately",
+    "Independently recomputed quantities, populations, periods and coverage",
+    "Frontier input, cached input, uncached input, output, provider calls and known provider usage",
+    "Wall time with concurrent workload and source/cache conditions disclosed; no total-dollar claim when billing is unknown",
+    "Card/source versions, approval evidence, receipt reuse and live-inference identities"
+  ],
+  "execution_rules": [
+    "Zero-inference setup and source/transport preflight precede paid agents; failures remain in a separate attempt ledger",
+    "Independent admission binds the exact study and passing preflight hashes",
+    "No researcher supplies or repairs the analytical SQL, card, baseline helper or final message",
+    "Both agents may correct their own ordinary tool errors and ask their company experts",
+    "A timeout is an incomplete attempt; retain unknown usage as unknown, never zero, and do not silently retry into success",
+    "Do not start the next paid stage with unknown prior usage or above its frozen budget ceiling",
+    "Readiness for recurrence requires review of the actual reusable procedure and policy branches, not a single positive readout",
+    "Quiet exception checks may skip frontier work; routine requested digests still require a useful message in both arms",
+    "Keep source correctness, native judgments, agent outcomes and simulated recipient usefulness separate",
+    "No source facts, scored labels or future snapshots are exposed to actors",
+    "Simulated inboxes are not Slack; simulated owners are not real-human usability participants",
+    "Keep all original failure and negative-result records during archival cleanup"
+  ]
+}

@@ -57,10 +57,10 @@ where a dashboard movement alone creates an alert—was:
 - 12 missed stale-data escalations;
 - human review required for all 48 workflows.
 
-The live output is in
-[`artifacts/northstar-corporation/jev-report.md`](../artifacts/northstar-corporation/jev-report.md).
-Those generated artifacts are ignored by Git because they can contain local
-trial data and should not be treated as source code.
+The live run writes to `artifacts/northstar-corporation/jev-report.md`, but that
+generated output is not present in this checkout. Such artifacts are ignored
+by Git because they can contain local trial data and should not be treated as
+source code.
 
 ## Run it
 
@@ -78,7 +78,7 @@ Use `--evaluator research` for a local wiring run without network access. That
 mode is explicitly a test double and is not evidence for Jev quality.
 
 The organization configuration lives in
-[`evaluations/data/northstar-corporation.json`](../evaluations/data/northstar-corporation.json).
+[`evaluations/data/northstar-corporation.json`](../../../evaluations/data/northstar-corporation.json).
 The production package is not changed by this simulation.
 
 ## What this proves—and what it does not

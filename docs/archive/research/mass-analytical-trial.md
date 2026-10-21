@@ -88,6 +88,6 @@ PYTHONPATH=src:. \
 ```
 
 The editable workload and cost assumptions are in
-[`evaluations/data/mass-analytical-scenarios.json`](../evaluations/data/mass-analytical-scenarios.json).
-The generated report is
-[`artifacts/mass-analytical-trial.md`](../artifacts/mass-analytical-trial.md).
+[`evaluations/data/mass-analytical-scenarios.json`](../../../evaluations/data/mass-analytical-scenarios.json).
+The trial writes a generated report to `artifacts/mass-analytical-trial.md`;
+that ignored output is not present in this checkout.
