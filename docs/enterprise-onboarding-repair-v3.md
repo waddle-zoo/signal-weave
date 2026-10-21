@@ -2,7 +2,7 @@
 
 Status: prospective protocol; live acceptance not yet established.
 
-The [first repair probe](enterprise-onboarding-repair-v2.md#probe-01-result)
+The [first repair probe](archive/research/enterprise-onboarding-repair-v2.md#probe-01-result)
 failed. In particular, a valid-looking numeric selector checked a different
 quantity from the owner's intended rule. Final LLM correction cannot count as a
 correct native SignalWeave decision.

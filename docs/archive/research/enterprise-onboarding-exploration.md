@@ -106,7 +106,7 @@ failure cannot be expressed by the current result types.
 ## Generalized scenario matrix
 
 The fixture in
-[`evaluations/data/onboarding-scenarios.json`](../evaluations/data/onboarding-scenarios.json)
+[`evaluations/data/onboarding-scenarios.json`](../../../evaluations/data/onboarding-scenarios.json)
 covers 30 cases across seven fictional tenants, ten domains, and five company shapes. The original
 11-case baseline remains useful for comparison; the expanded cases deliberately
 stress seedless onboarding, non-BI assets, workflow composition, lifecycle
@@ -156,7 +156,7 @@ metadata, Jev ranking, or the approval gate.
 
 ## First exploratory run
 
-The branch harness is [onboarding_contract_trial.py](../evaluations/onboarding_contract_trial.py)
+The branch harness is [onboarding_contract_trial.py](../../../evaluations/onboarding_contract_trial.py)
 and is run with:
 
 ```bash
@@ -232,7 +232,7 @@ three to five questions such as:
 ```
 
 The prototype readiness assessor is
-[`onboarding_readiness.py`](../evaluations/onboarding_readiness.py). It turns
+[`onboarding_readiness.py`](../../../evaluations/onboarding_readiness.py). It turns
 these into typed blockers instead of leaving them as prose warnings.
 
 ### Enterprise control-plane gaps

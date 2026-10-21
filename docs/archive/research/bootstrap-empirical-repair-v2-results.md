@@ -1,6 +1,6 @@
 # Live onboarding repair: three accepted cards, twelve exact runs
 
-The [predeclared development regression](bootstrap-empirical-repair-v2.md) passed
+The [predeclared development regression](../../bootstrap-empirical-repair-v2.md) passed
 on frozen commit `65ae247`: **3/3 agent-authored cards accepted; 12/12 subsequent
 Jev monitoring runs matched outcomes, delivery keys, exact endpoints and required
 evidence.** No person edited these cards during the run. No notifications were sent.
@@ -103,9 +103,9 @@ comparative approval. It specifically limited the finance result to signed-statu
 policy execution, not diagnostic explainability. This is internal adversarial
 review, not external peer review.
 
-Inspect the [manifest](evidence/bootstrap-empirical-repair-v2-01/manifest.json),
-[report](evidence/bootstrap-empirical-repair-v2-01/report.json), and
-[losslessly compressed journal](evidence/bootstrap-empirical-repair-v2-01/events.jsonl.gz).
+Inspect the [manifest](../../evidence/bootstrap-empirical-repair-v2-01/manifest.json),
+[report](../../evidence/bootstrap-empirical-repair-v2-01/report.json), and
+[losslessly compressed journal](../../evidence/bootstrap-empirical-repair-v2-01/events.jsonl.gz).
 The report verifies the source/data freeze before and after execution.
 
 SHA-256 of the original uncompressed files (copies verified byte-identical):

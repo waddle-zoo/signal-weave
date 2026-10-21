@@ -8,7 +8,7 @@ or enterprise-readiness claim follows from this run.
 Frozen revision `3940da2ec6107a3d10a19f5a347fadccf9a9feeb`; seed 20261002;
 the same two known-failure companies and all periods from v3-03. Dataset digest
 `bb559f8f482911af51d8649ea096fae08bc4244d9088f92f183751be917969b2`.
-The [pre-run declaration](bootstrap-repair-ledger.md) retains the unchanged raw
+The [pre-run declaration](../../bootstrap-repair-ledger.md) retains the unchanged raw
 fixtures, labels, shared tools, budgets and pricing. This is retrospective
 development, not a fresh holdout or an isolated experiment on either the watch
 repair or the authoring descriptions. No expert-authored cards were supplied.
@@ -72,7 +72,7 @@ does not excuse the investigate-versus-notify policy violation.
 
 ## Independent narrative review
 
-[Internal blind review](evidence/bootstrap-codex-regression-v3-04/review.md)
+[Internal blind review](../../evidence/bootstrap-codex-regression-v3-04/review.md)
 graded baseline 5 supported/1 qualified and treatment 4 supported/1 qualified/
 1 unsupported. The unsupported treatment recommendation is the database event's
 notify outcome. Both qualified outputs emit a canonical population-scoped zero
@@ -86,9 +86,9 @@ mandatory rollout details and population-scoped arithmetic. No retrospective
 rescore was used. These ambiguities do not remove the observed policy rewrite,
 missing route or agent correction burden.
 
-[Results](evidence/bootstrap-codex-regression-v3-04/results.json),
-[blind packet](evidence/bootstrap-codex-regression-v3-04/blind-review.json) and
-[sealed mapping](evidence/bootstrap-codex-regression-v3-04/review-key.json) retain
+[Results](../../evidence/bootstrap-codex-regression-v3-04/results.json),
+[blind packet](../../evidence/bootstrap-codex-regression-v3-04/blind-review.json) and
+[sealed mapping](../../evidence/bootstrap-codex-regression-v3-04/review-key.json) retain
 all outputs and usage. Full local report SHA-256:
 `87ae591db621bfba0789b36be021dede58d89efdd7259641fa00300ce8e396f4`.
 The results file's pending-review field is historical; the separate completed

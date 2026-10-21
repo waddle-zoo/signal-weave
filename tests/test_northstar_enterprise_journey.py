@@ -79,6 +79,31 @@ def test_known_incomplete_baseline_is_not_a_treatment_censor_and_artifact_names_
         journey._check_prior_baseline({**baseline, "inputs_unchanged": False})
 
 
+def test_request_ceiling_allows_token_batched_evaluations_and_tracks_censoring():
+    assert journey.LIMITS["jev_requests_total"] >= len(journey.PERIOD_ENDS) * 8 + 8
+    clean = journey.research_censoring([{"kind": "api.response", "provider": "jev"}])
+    assert clean["provider_budget_bound"] is False
+    censored = journey.research_censoring([
+        {"kind": "api.rejected", "provider": "jev", "reason": "global_api_request_budget_exhausted"},
+        {"kind": "api.error", "provider": "jev", "error_type": "HTTP_429"},
+    ])
+    assert censored["jev_request_budget_rejections"] == 1
+    assert censored["provider_budget_bound"] is True
+    assert "Harness injected" in censored["interpretation"]
+
+
+def test_reverse_arm_order_reuses_same_usage_and_source_guards(tmp_path):
+    study = {"order": ["signalweave", "baseline"]}
+    journey._check_actor_order(study, tmp_path, "signalweave")
+    with pytest.raises(ValueError, match="frozen study order"):
+        journey._check_actor_order(study, tmp_path, "baseline")
+    (tmp_path / "signalweave.json").write_text(json.dumps({
+        "inputs_unchanged": True,
+        "usage": {"known": True, "usage": {"input_tokens": 100, "uncached_input_tokens": 80}},
+    }))
+    journey._check_actor_order(study, tmp_path, "baseline")
+
+
 async def test_both_arms_have_same_company_owner_and_inbox_contract_but_only_treatment_has_import(tmp_path):
     baseline_workspace = _workspace(tmp_path, "baseline")
     treatment_workspace = _workspace(tmp_path, "signalweave")
@@ -392,7 +417,9 @@ async def test_prepare_freezes_canonical_read_grants_and_preflights_each_arm(tmp
         study = {
             "protocol": journey.setup.PROTOCOL,
             "method": {}, "limits": {}, "binary": {"candidate": "verified"},
-            "installed_binary": str(binary), "source_executable": str(source_executable),
+            "installed_binary": str(binary),
+            "native_runtime": {"bundle_layout": "onefile-legacy", "external_runtime_used": False},
+            "source_executable": str(source_executable),
             "source_executable_sha256": "source-sha", "source_environment": {"python": "pinned"},
             "source_revision": "source-revision", "source_checkout": str(source_checkout),
             "url": "http://127.0.0.1:18089", "codex": {"path": str(codex)},
@@ -436,6 +463,7 @@ async def test_prepare_freezes_canonical_read_grants_and_preflights_each_arm(tmp
 
     frozen = journey.setup.shared.read(root / "study.json")
     assert result["prepared"] and result["provider_requests"] == 0
+    assert frozen["native_runtime"]["external_runtime_used"] is False
     assert identity_resolvers == [journey.pine.first.pinned_codex]
     assert frozen["source_tool_server_count"] == 137
     assert "arms" not in frozen["bootstrap"]

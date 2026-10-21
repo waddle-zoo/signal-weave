@@ -24,7 +24,7 @@ domains, and five company shapes:
 | Multi-enterprise transfer | `acme-health-quality-seedless`, `meridian-bank-competing-risk`, `brightline-retail-dashboardless`, `orbit-logistics-revoked`, `cobalt-media-paginated`, `redwood-manufacturing-no-match` |
 
 The full fixtures remain in
-[`evaluations/data/onboarding-scenarios.json`](../evaluations/data/onboarding-scenarios.json).
+[`evaluations/data/onboarding-scenarios.json`](../../../evaluations/data/onboarding-scenarios.json).
 They are data, not production branches or demo logic.
 
 ## Results before and after the readiness hardening
@@ -112,7 +112,7 @@ records that as safe only when the card remains non-approval-ready.
 ## Adversarial review
 
 The independent reviewer is
-[`evaluations/onboarding_adversarial_review.py`](../evaluations/onboarding_adversarial_review.py).
+[`evaluations/onboarding_adversarial_review.py`](../../../evaluations/onboarding_adversarial_review.py).
 It does not use the readiness implementation to decide whether the fixture has
 coverage. It separately audits:
 

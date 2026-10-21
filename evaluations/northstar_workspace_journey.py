@@ -36,12 +36,13 @@ from evaluations.installed_trial_transport import (
     _private_file,
 )
 from evaluations.native_human_superset_journey import terminal_setup
+from evaluations.native_runtime_identity import inventory_native_runtime, verify_native_runtime
 from evaluations.raw_superset_onboarding import usage_snapshot
 from evaluations.redwood_workspace_compatibility import sandbox_preflight
 from scripts.binary_provenance import verify_binary
 from signalweave.mcp_server import AGENT_PROFILE_TOOLS
 
-PROTOCOL = "northstar-workspace-first-use-v2"
+PROTOCOL = "northstar-workspace-first-use-v3"
 LIMITS = {"actors": 2, "jev_requests": 0, "mcp_tools": 90, "workspace_tools": 40,
           "response_seconds": 600, "between_actor_input_stop": 4_000_000,
           "between_actor_uncached_stop": 350_000}
@@ -103,6 +104,7 @@ def task(treatment):
 
 def method():
     names = ["evaluations/northstar_workspace_journey.py", "evaluations/harbor_workflow_actor.py",
+             "evaluations/native_runtime_identity.py",
              "evaluations/codex_trial_transport.py", "evaluations/codex_workspace.py",
              "evaluations/installed_trial_transport.py", "evaluations/native_human_superset_journey.py",
              "evaluations/raw_superset_onboarding.py", "evaluations/redwood_workspace_compatibility.py",
@@ -196,8 +198,7 @@ async def prepare(root, binary, codex, key_file, source_executable, source_check
     _private_dir(home/".codex")
     _private_dir(home/"tmp")
     installed = home/".local/bin/signalweave"
-    shutil.copyfile(binary, installed)
-    installed.chmod(0o700)
+    native_runtime = copy_native_candidate(binary, installed, identity)
     key_file = Path(key_file).absolute()
     key = key_file.read_text().strip()
     audit = Audit(path=root/"preparation.jsonl", secrets=(key,))
@@ -205,7 +206,8 @@ async def prepare(root, binary, codex, key_file, source_executable, source_check
              "source_revision": revision, "source_checkout": str(source_checkout),
              "source_executable": str(source_executable), "source_executable_sha256": _sha(source_executable),
              "source_environment": source_environment_identity(source_executable),
-             "binary": identity, "installed_binary": str(installed), "key_file": str(key_file),
+             "binary": identity, "native_runtime": native_runtime,
+             "installed_binary": str(installed), "key_file": str(key_file),
              "codex": await (codex_identity_resolver or pinned_codex)(codex), "url": url, "arms": {},
              "scope": "Scripted fresh native setup and two independent first-use analysts on synthetic Northstar in real local Superset; not published installation, customers, recurring efficacy or superiority."}
     env = _minimal_environment(home)
@@ -263,9 +265,30 @@ async def prepare(root, binary, codex, key_file, source_executable, source_check
     return {"prepared": True, "analyst_invocations": 0, "provider_requests": 0}
 
 
+def copy_native_candidate(binary: Path, installed: Path, identity: dict) -> dict:
+    """Copy a verified release executable with its runtime, not a launcher alone.
+
+    This is isolated research setup, not the public installer. Published runtime
+    archives contain only regular files; reject links or special files rather
+    than importing outside data into the fake person's home.
+    """
+    native_runtime = inventory_native_runtime(binary, identity)
+    internal = binary.parent / "_internal"
+    if identity.get("bundle_layout") == "directory-v1":
+        if internal.is_symlink() or not internal.is_dir():
+            raise ValueError("Directory native bundle requires its _internal runtime")
+        shutil.copytree(internal, installed.parent / "_internal", symlinks=True)
+    shutil.copyfile(binary, installed)
+    installed.chmod(0o700)
+    verify_native_runtime(installed, identity, native_runtime)
+    return native_runtime
+
+
 def verify(study, root):
     if study["protocol"] != PROTOCOL or study["method"] != method() or study["limits"] != LIMITS:
         raise ValueError("Frozen study method changed")
+    verify_native_runtime(Path(study["installed_binary"]), study.get("binary", {}),
+                          study.get("native_runtime"))
     if verify_binary(Path(study["installed_binary"]), ROOT) != study["binary"]:
         raise ValueError("Native candidate changed")
     if _sha(Path(study["codex"]["path"])) != study["codex"]["sha256"]:
