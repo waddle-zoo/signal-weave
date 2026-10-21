@@ -196,8 +196,7 @@ async def prepare(root, binary, codex, key_file, source_executable, source_check
     _private_dir(home/".codex")
     _private_dir(home/"tmp")
     installed = home/".local/bin/signalweave"
-    shutil.copyfile(binary, installed)
-    installed.chmod(0o700)
+    copy_native_candidate(binary, installed, identity)
     key_file = Path(key_file).absolute()
     key = key_file.read_text().strip()
     audit = Audit(path=root/"preparation.jsonl", secrets=(key,))
@@ -261,6 +260,27 @@ async def prepare(root, binary, codex, key_file, source_executable, source_check
     study["warehouse"] = await asyncio.to_thread(warehouse_fingerprint)
     shared.write(root/"study.json", study)
     return {"prepared": True, "analyst_invocations": 0, "provider_requests": 0}
+
+
+def copy_native_candidate(binary: Path, installed: Path, identity: dict) -> None:
+    """Copy a verified release executable with its runtime, not a launcher alone.
+
+    This is isolated research setup, not the public installer. Published runtime
+    archives contain only regular files; reject links or special files rather
+    than importing outside data into the fake person's home.
+    """
+    internal = binary.parent / "_internal"
+    if identity.get("bundle_layout") == "directory-v1":
+        if internal.is_symlink() or not internal.is_dir():
+            raise ValueError("Directory native bundle requires its _internal runtime")
+        members = list(internal.rglob("*"))
+        if (not members or len(members) > 20_000
+                or any(p.is_symlink() or not (p.is_dir() or p.is_file()) for p in members)
+                or sum(p.stat().st_size for p in members if p.is_file()) > 512_000_000):
+            raise ValueError("Expected bounded regular native runtime files")
+        shutil.copytree(internal, installed.parent / "_internal")
+    shutil.copyfile(binary, installed)
+    installed.chmod(0o700)
 
 
 def verify(study, root):

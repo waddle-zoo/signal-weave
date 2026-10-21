@@ -83,3 +83,40 @@ def test_inventory_keeps_large_real_source_replies_and_hashes_exact_bytes(tmp_pa
     (tmp_path/"other").symlink_to(response)
     with pytest.raises(ValueError, match="symlink"):
         study.workspace_inventory(tmp_path)
+
+
+@pytest.mark.parametrize("layout", [None, "directory-v1"])
+def test_native_research_setup_copies_complete_release_layout(tmp_path, layout):
+    source, target = tmp_path/"source", tmp_path/"person/bin"
+    source.mkdir()
+    target.mkdir(parents=True)
+    binary = source/"signalweave"
+    binary.write_bytes(b"verified fixture executable")
+    if layout:
+        (source/"_internal/nested").mkdir(parents=True)
+        (source/"_internal/nested/runtime").write_bytes(b"runtime bytes")
+    study.copy_native_candidate(binary, target/"signalweave", {"bundle_layout": layout})
+    assert (target/"signalweave").read_bytes() == binary.read_bytes()
+    if layout:
+        assert (target/"_internal/nested/runtime").read_bytes() == b"runtime bytes"
+
+
+@pytest.mark.parametrize("kind", ["missing", "empty", "link", "fifo"])
+def test_native_research_setup_refuses_invalid_runtime_before_copy(tmp_path, kind):
+    import os
+
+    source, target = tmp_path/"source", tmp_path/"person/bin"
+    source.mkdir()
+    target.mkdir(parents=True)
+    binary = source/"signalweave"
+    binary.write_bytes(b"verified fixture executable")
+    internal = source/"_internal"
+    if kind != "missing":
+        internal.mkdir()
+    if kind == "link":
+        (internal/"outside").symlink_to(binary)
+    elif kind == "fifo":
+        os.mkfifo(internal/"pipe")
+    with pytest.raises(ValueError, match="runtime"):
+        study.copy_native_candidate(binary, target/"signalweave", {"bundle_layout": "directory-v1"})
+    assert not list(target.iterdir())
