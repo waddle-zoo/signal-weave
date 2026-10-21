@@ -81,11 +81,11 @@ Onboarding failed, so a favorable per-call timing cannot establish product ROI.
 A Luna adversary and the main reviewer examined code and retained results. The
 adversary rejected promotion and comparative-win claims. This is internal review,
 not external peer review. The follow-up is [a separately declared, capped
-development regression](bootstrap-empirical-repair-v2.md), not a new holdout.
+development regression](../../bootstrap-empirical-repair-v2.md), not a new holdout.
 
-Inspect the [frozen inputs and hashes](evidence/bootstrap-empirical-v1-01/manifest.json),
-[unchanged report](evidence/bootstrap-empirical-v1-01/report.json), and
-[compressed raw journal](evidence/bootstrap-empirical-v1-01/events.jsonl.gz).
+Inspect the [frozen inputs and hashes](../../evidence/bootstrap-empirical-v1-01/manifest.json),
+[unchanged report](../../evidence/bootstrap-empirical-v1-01/report.json), and
+[compressed raw journal](../../evidence/bootstrap-empirical-v1-01/events.jsonl.gz).
 The journal is a lossless compression of the original, including failed attempts.
 
 SHA-256 of the original uncompressed files (copies verified byte-identical):

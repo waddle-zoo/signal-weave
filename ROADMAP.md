@@ -51,7 +51,7 @@ card and per source domain.
 
 ### Bootstrap a company
 
-The [October 1 live Codex/Jev trial](docs/codex-bootstrap-trial-2026-10-01.md)
+The [October 1 live Codex/Jev trial](docs/archive/research/codex-bootstrap-trial-2026-10-01.md)
 exposed approval failures before repeat monitoring. Prioritize these before
 claiming easy agent-led onboarding:
 

@@ -4,7 +4,7 @@ The repaired workflow completes, but comparative benefit is still unproven.
 Final routing is correct in all six treatment cases; native SignalWeave routing
 is jointly correct in only three. The agent is still doing important repairs.
 
-This follows the pre-run declaration in [the repair ledger](bootstrap-repair-ledger.md).
+This follows the pre-run declaration in [the repair ledger](../../bootstrap-repair-ledger.md).
 Known-failure companies Kindred Helpdesk and Cinder Database Cloud were selected
 before dispatch, with all periods and both arms. This is retrospective
 development, not a fresh holdout or a representative success estimate.
@@ -70,7 +70,7 @@ as six autonomous successes.
 
 ## Evaluation defects remain visible
 
-[Independent blind review](evidence/bootstrap-codex-regression-v3-03/review.md)
+[Independent blind review](../../evidence/bootstrap-codex-regression-v3-03/review.md)
 found 11 supported narratives, one qualified, none unsupported. All final routes
 follow public policy. The qualification is a baseline omitted recovery request.
 The review disagrees with both arms' strict missing-population zero-delta penalty
@@ -83,8 +83,8 @@ requests in instructions shared by both arms. Use a coherent time-series ledger
 or call these independent conditions. Neither critique removes the observed
 native routing defects or establishes lower cost.
 
-[Results](evidence/bootstrap-codex-regression-v3-03/results.json),
-[blind packet](evidence/bootstrap-codex-regression-v3-03/blind-review.json), and
-[sealed mapping](evidence/bootstrap-codex-regression-v3-03/review-key.json)
+[Results](../../evidence/bootstrap-codex-regression-v3-03/results.json),
+[blind packet](../../evidence/bootstrap-codex-regression-v3-03/blind-review.json), and
+[sealed mapping](../../evidence/bootstrap-codex-regression-v3-03/review-key.json)
 retain configuration, hashes, costs and all outputs. The results file's pending
 review marker is historical; the separate completed review supplies that result.

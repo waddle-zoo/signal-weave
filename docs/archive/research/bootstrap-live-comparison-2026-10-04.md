@@ -329,9 +329,9 @@ The strong-superiority gate remains intentionally false. The next proof bar is
 blinded narrative review of evidence bundles, a larger held-out multi-period
 cohort with a current source fingerprint, and measured provider/query economics
 using real connector telemetry. The onboarding reviewer is
-[`evaluations/bootstrap_onboarding_review.py`](../evaluations/bootstrap_onboarding_review.py);
+[`evaluations/bootstrap_onboarding_review.py`](../../../evaluations/bootstrap_onboarding_review.py);
 its phrase checks are diagnostics only and do not replace semantic owner review.
 The current machine-readable compact evidence is in
-[`evidence/bootstrap-live-comparison-2026-10-04.json`](evidence/bootstrap-live-comparison-2026-10-04.json).
+[`evidence/bootstrap-live-comparison-2026-10-04.json`](../../evidence/bootstrap-live-comparison-2026-10-04.json).
 The independent reviewer is
-[`evaluations/bootstrap_live_comparison_review.py`](../evaluations/bootstrap_live_comparison_review.py).
+[`evaluations/bootstrap_live_comparison_review.py`](../../../evaluations/bootstrap_live_comparison_review.py).

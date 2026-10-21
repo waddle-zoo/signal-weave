@@ -111,7 +111,7 @@ their execution semantics. The correction budget was not exhausted. Other
 rejections, including an extra team name and widened data-gap rule, were legitimate.
 
 Raw evidence and integrity export:
-[probe archive](evidence/enterprise-onboarding-repair-v2-probe-01/).
+[probe archive](../../evidence/enterprise-onboarding-repair-v2-probe-01).
 The original failed six-company run remains intact. The full-suite run on this
 freeze reported 2,053 passes, four skips and seven old-contract assertion failures:
 four expected ignored extra source fields, and three expected a later stale-review

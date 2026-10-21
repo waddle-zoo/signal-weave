@@ -89,7 +89,7 @@ Automated profile tests cover the MCP allowlist, approved-card execution,
 idempotent receipts, and delivery-disabled behavior. A test double verifies the
 MCP handoff; it is not live Jev evidence. Historical live-Jev and Northstar
 replays are summarized in the [decision proof](live-jev-proof-2026-09-27.md).
-Separately, the [enterprise onboarding trial](enterprise-onboarding-journeys-2026-10-02.md)
+Separately, the [enterprise onboarding trial](archive/research/enterprise-onboarding-journeys-2026-10-02.md)
 reports a synthetic first-use gap. Do not conflate onboarding failures with
 Jev's card decision quality, and do not treat synthetic replays as customer
 validation or a universal accuracy guarantee.

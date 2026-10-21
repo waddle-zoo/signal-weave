@@ -10,6 +10,7 @@ navigation in the immutable [`437ab297` snapshot](https://github.com/waddle-zoo/
 
 | Study | Result and limit |
 | --- | --- |
+| [Northstar published-rc5 paired repeats — Oct 20](../evaluations/data/workflow-product-2026-10-20.json) | Fresh SQL/card onboarding and seven live-Jev receipts worked. Both agents delivered correct core weekly findings; treatment supplied a verified investigation worklist absent from baseline. Treatment was 18.2% slower, used more uncached frontier tokens, and both sent unnecessary messages. Original research-quota-censored pair retained. No general advantage or enterprise-readiness claim. |
 | [Published rc4 / OpenAI Decisions replay — Oct 19](evidence/openai-decisions-live-2026-10-19.md) | Download/setup, live decision and restart replay; one Codex brief from two existing company cards and authenticated HTTP replay. Known-card outcomes matched 46/48, including all 8 qualifying notify routes. Approval-blocked attempt and TLS failure retained. Not new-company onboarding, external delivery, or an agent advantage. |
 | [Meridian onboarding diagnostics — Oct 19](evidence/meridian-onboarding-diagnostics-2026-10-19.md) | 5,000 accounts and 118 assets. Original failures retained. Later treatment authored archival cards and completed two Jev calls, then timed out during recipient follow-through; file presence does not prove attachment use and usage is unknown. One cutoff per study—not eight successful reviews or an accuracy/cost win. |
 | [OrbitWorks whole journey — Oct 19](evidence/orbitworks-whole-journey-2026-10-19.md) | Agent-authored SQL/card, owner clarification, six source cutoffs, supported referrals, and final handoff. Treatment sent 0 no-trigger FYIs versus 5 baseline; 15 vs 26 local messages is descriptive, not a human-time or causal win. Two treatment timeouts needed separate recovery; original usage remains unknown. |
@@ -17,7 +18,7 @@ navigation in the immutable [`437ab297` snapshot](https://github.com/waddle-zoo/
 | [Harbor whole-company journey — Oct 19](evidence/harbor-whole-journey-2026-10-19.md) | Fifteen source-supported daily packages; stopped at the simulated owner quota with 13 dates unrun. Baseline completed source checks but missed two handoffs. No full-month or superiority claim. |
 | [Northstar Superset journey — Oct 19](evidence/northstar-whole-journey-2026-10-19.md) | Seven live-Jev reviews, investigation, nine delivered messages, and twelve readable attachments. Core weekly figures/routes were supported, but messages need less plumbing and one follow-up is redundant. Baseline was faster and used fewer frontier tokens; the original owner-fixture failure remains. |
 | [Pine Courier whole journey — Oct 19](evidence/pine-whole-journey-2026-10-19.md) | Three live-Jev observations, five local inbox messages, and feedback. Figures/routes were supported; next-action clarity, recipient-open evidence, and a final-summary attribution remain gaps. Baseline also succeeded faster and with fewer tokens. Original wrapper failure retained; no general advantage. |
-| [Published rc5 release gates — Oct 20](local-install-reference.md#startup-measurements) / [release workflow](https://github.com/waddle-zoo/signal-weave/actions/runs/39366963314) | Published rc5 scripted terminal setup, real Codex registration, source-health checks, upgrade, and uninstall passed all three platform gates. Published rc5 provider/MCP smoke was offline. The separate live OpenAI integration reused the same fingerprint as the preceding local build. The new full business journey is still in progress; this is release/integration proof, not business efficacy. |
+| [Published rc5 release gates — Oct 20](local-install-reference.md#startup-measurements) / [release workflow](https://github.com/waddle-zoo/signal-weave/actions/runs/39366963314) | Published rc5 scripted terminal setup, real Codex registration, source-health checks, upgrade, and uninstall passed all three platform gates. Published rc5 provider/MCP smoke was offline. The separate live OpenAI integration reused the same fingerprint as the preceding local build. Release/integration proof, not business efficacy. |
 
 These reports include simulated owners/recipients and local inboxes where stated;
 they are not a real-human usability panel or proof of external Slack/email
@@ -34,8 +35,9 @@ was unknown. This does not show overall superiority. Separately, a 150,456-byte
 the then-2,923-test suite missed. See the [retained study record](evidence/agent-workflow-study-2026-10-13.md)
 and [full historical index](archive/research/evaluations-2026-10-20.md).
 
-## In progress—not results
+## Remaining study stages
 
 The [October 20 workflow-product protocol](../evaluations/protocols/workflow-product-2026-10-20.json)
-is staged for execution, not a result. It records planned stages and claim
-limits only; this index will be updated after the actual runs.
+records stage scope and claim limits. Northstar results are above; Harbor's
+month-long recurrence remains in progress. The separate new-company
+quiet/ambiguity transfer stage is not admitted or executed.

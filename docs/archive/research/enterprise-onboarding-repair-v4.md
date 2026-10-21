@@ -62,10 +62,10 @@ probe is not a customer study, marketing result, or generalized reliability
 claim.
 
 The saved reviewer qualification remains archived at
-[owner-review-qualification-v4-01](evidence/owner-review-qualification-v4-01/README.md).
+[owner-review-qualification-v4-01](../../evidence/owner-review-qualification-v4-01/README.md).
 The raw v4 evidence, compressed trace and episodes, frozen configuration, and
 hash audit are in
-[enterprise-onboarding-repair-v4-probe-01](evidence/enterprise-onboarding-repair-v4-probe-01/).
+[enterprise-onboarding-repair-v4-probe-01](../../evidence/enterprise-onboarding-repair-v4-probe-01).
 
 Counts below are `correct / three monitoring periods`; onboarding and completion
 are `complete / intended`. “Final” is the submitted agent result. “Native” is
@@ -113,7 +113,7 @@ interpreted as a controlled comparison of native systems.
 
 The treatment onboarding trace shows a valid request with nonempty
 `decision_guidance` and no `watch_for`/`questions` being rejected with
-`intent-detail-required` at [src/signalweave/onboarding.py:525](../src/signalweave/onboarding.py:525).
+`intent-detail-required` at [src/signalweave/onboarding.py:525](../../../src/signalweave/onboarding.py#L525).
 The author then added a required completeness watch and onboarding completed.
 The condition checks only those two fields and ignores usable decision guidance;
 this is a production authoring/acceptance defect, not evidence that the original

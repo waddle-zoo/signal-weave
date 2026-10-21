@@ -5,7 +5,7 @@ one unnecessary evidence requirement, but native outcome and recipient-key
 correctness remained 4/6. Final agent routing was 5/6 versus baseline 6/6.
 This does not establish a comparative benefit or enterprise readiness.
 
-The [frozen protocol](bootstrap-owner-reviewed-v4.md) ran once at
+The [frozen protocol](../../bootstrap-owner-reviewed-v4.md) ran once at
 `b2210e5272cccb896d4b98fc9b20e9fc86573b7e`, seed 20261002, on the same two
 known-failure development companies as v3-04. This is not a fresh holdout even
 though the retained fixture split is named `holdout`. Fixtures and scoring were
@@ -83,7 +83,7 @@ The model owner reviewer also missed this mismatch. The trace is preserved, not
 retrospectively relabeled. This exact lookup belongs in a code-owned onboarding
 check against the supplied directory, not another semantic model judgment.
 
-The separate [post-run endpoint audit](evidence/bootstrap-owner-reviewed-v4-01/endpoint-audit.json)
+The separate [post-run endpoint audit](../../evidence/bootstrap-owner-reviewed-v4-01/endpoint-audit.json)
 finds only **2/6** native runs jointly match outcome, recipient keys and exact
 configured endpoints. It is an additional diagnostic, not a substituted primary
 endpoint or proof of actual delivery. The original 4/6 score remains unchanged.
@@ -91,7 +91,7 @@ endpoint or proof of actual delivery. The original 4/6 score remains unchanged.
 ## Blind narrative review
 
 A fresh internal reviewer saw only public business evidence and anonymized final
-outputs: [review](evidence/bootstrap-owner-reviewed-v4-01/review.md).
+outputs: [review](../../evidence/bootstrap-owner-reviewed-v4-01/review.md).
 Baseline: 5 supported, 1 qualified. Treatment: 3 supported, 2 qualified,
 1 unsupported. All 32 structured numeric claims reproduce the supplied arithmetic;
 the two population-scoped zero-latency claims still lack population validation.
@@ -105,10 +105,10 @@ coverage requirement, missing native route or incorrect endpoint strings.
 
 ## Retained evidence and next experiment
 
-[Compact results](evidence/bootstrap-owner-reviewed-v4-01/results.json),
-[blind packet](evidence/bootstrap-owner-reviewed-v4-01/blind-review.json),
-[mapping](evidence/bootstrap-owner-reviewed-v4-01/review-key.json), and
-[owner requests, decisions, cards and native results](evidence/bootstrap-owner-reviewed-v4-01/owner-review-and-native.json)
+[Compact results](../../evidence/bootstrap-owner-reviewed-v4-01/results.json),
+[blind packet](../../evidence/bootstrap-owner-reviewed-v4-01/blind-review.json),
+[mapping](../../evidence/bootstrap-owner-reviewed-v4-01/review-key.json), and
+[owner requests, decisions, cards and native results](../../evidence/bootstrap-owner-reviewed-v4-01/owner-review-and-native.json)
 preserve the failure. Full local report SHA-256:
 `738421956b6d4e7577bb8998c9d4dc743302d69922908a2d3788d754d35198bb`.
 The results' pending-review field records export time; the separate review is complete.

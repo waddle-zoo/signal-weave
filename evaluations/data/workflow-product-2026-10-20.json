@@ -1,0 +1,93 @@
+{
+  "format_version": 1,
+  "scope": "Current-release development replications; not general enterprise efficacy evidence",
+  "release": "v0.2.0rc5",
+  "production_source_sha256": "c2aa02884e1a79d41293b678b195e21fcbb71475dfc74f7d3be84f59fedc9f67",
+  "archive_sha256": "3b57202f39f4567d1b37a99e694444452260dda08838de68cec717ea1da15629",
+  "treatment": "Luna xhigh, published native MCP, bundled skill, agent-authored SQL/card and live Jev policy judgments",
+  "control": "Same Luna, 27 Superset analytical tools, owner policy, workspace, SQL/code and automation abilities, without SignalWeave",
+  "setup_boundary": "Actual isolated terminal wizard, Codex registration and skill after research-helper archive extraction/copy; not a new public-curl-installer or real-human novice study",
+  "northstar": {
+    "source": "Real local Superset over the finalized synthetic warehouse, not an as-known-at-the-time backtest",
+    "owner": "Scripted simulated Dispatch owner",
+    "unit": "Two repetitions of the same seven-period company task, four trajectories; periods are not independent enterprises",
+    "oracle_sha256": "983b7bbf1b8a19418cfb11be386b7fabab11695e67f60d62f9776c80d9ae3519",
+    "cohorts": [
+      {"start": "2026-07-27", "end_exclusive": "2026-08-03", "shipments": 511, "damaged": 5, "dates": 7, "outcome": "ignore"},
+      {"start": "2026-08-03", "end_exclusive": "2026-08-10", "shipments": 497, "damaged": 12, "dates": 7, "outcome": "investigate"},
+      {"start": "2026-08-10", "end_exclusive": "2026-08-17", "shipments": 527, "damaged": 4, "dates": 7, "outcome": "ignore"},
+      {"start": "2026-08-17", "end_exclusive": "2026-08-24", "shipments": 524, "damaged": 4, "dates": 7, "outcome": "ignore"},
+      {"start": "2026-08-24", "end_exclusive": "2026-08-31", "shipments": 502, "damaged": 6, "dates": 7, "outcome": "ignore"},
+      {"start": "2026-08-31", "end_exclusive": "2026-09-07", "shipments": 504, "damaged": 3, "dates": 7, "outcome": "ignore"},
+      {"start": "2026-09-07", "end_exclusive": "2026-09-14", "shipments": 154, "damaged": 0, "dates": 5, "missing_dates": ["2026-09-12", "2026-09-13"], "outcome": "insufficient_data"}
+    ],
+    "routine_delivery": "Dispatch digest every period, including ignore; separate Data Operations handoff for the missing dates",
+    "original_pair": {
+      "status": "Closed research-quota-censored diagnostic; original records not rescored",
+      "order": ["baseline", "signalweave"],
+      "study_sha256": "3c486197475fe4255e0c099a2d9422ad01cfb0d9ce06f106a5fa1bb469358791",
+      "baseline": {"seconds": 486.53364841701114, "uncached_input_tokens": 177215, "output_tokens": 50031, "messages": 8, "attachments": 8, "physical_sqllab_executions": 12},
+      "signalweave": {
+        "seconds": 801.8645229999966, "uncached_input_tokens": 248657, "output_tokens": 90059,
+        "messages": 9, "attachments": 3, "physical_sqllab_executions": 17,
+        "native_periods_completed": 4, "forwarded_jev_requests": 9, "successful_jev_responses": 9,
+        "local_research_budget_rejections": 3, "upstream_errors": 0,
+        "original_terminal_provider_usage": "unknown; retained unchanged",
+        "separate_reconciled_response_usage": {"input_tokens": 121692, "output_tokens": 1184}
+      },
+      "reader_result": "Both sets' core figures/routes supported; treatment messages longer. Three later native checks were blocked by the nine-request research ceiling, not Jev. No clean reliability or efficiency comparison."
+    },
+    "fresh_pair": {
+      "status": "Both trajectories closed and independently reviewed; no research-provider rejection",
+      "protocol": "northstar-retrospective-enterprise-journey-v2",
+      "order": ["signalweave", "baseline"],
+      "reused_cards_sql_or_outputs": false,
+      "study_sha256": "bea58b294809754f4868c8a75f72a6919dc8cdd469c5ae283117a03fbe17aea7",
+      "preflight_sha256": "35c976fa9728387082636214d0a8287339f89bc669d9c42f7ff0ab88939d05b4",
+      "baseline": {
+        "terminal_sha256": "70ef2a5559f5fb096dd9aaca19c71ba90e4da33c69c4bb3a9230541522dbc03e",
+        "seconds": 621.2344014580012, "first_delivery_seconds": 280.4192447079986,
+        "input_tokens": 7489761, "cached_input_tokens": 7324672, "uncached_input_tokens": 165089, "output_tokens": 69772,
+        "messages": 11, "body_whitespace_words": 1819, "attachments": 0, "physical_sqllab_executions": 25,
+        "core_period_figures_and_routes_supported": 7, "frontier_usage_known": true, "inputs_unchanged": true
+      },
+      "signalweave": {
+        "terminal_sha256": "03875c49f63d1f9827b54f83b8dcc4bf9de5cd09ca06e5dbb5429e5c86fb4b1f",
+        "seconds": 734.365494416008, "first_delivery_seconds": 370.84832920800545,
+        "input_tokens": 13094257, "cached_input_tokens": 12796032, "uncached_input_tokens": 298225, "output_tokens": 82966,
+        "messages": 11, "body_whitespace_words": 1531, "attachments": 17, "physical_sqllab_executions": 20,
+        "core_period_figures_and_routes_supported": 7, "native_periods_completed_with_receipts": 7,
+        "native_outcomes": {"ignore": 5, "investigate": 1, "insufficient_data": 1},
+        "forwarded_jev_requests": 7, "successful_jev_responses": 7, "local_research_budget_rejections": 0, "upstream_errors": 0,
+        "jev_input_tokens": 67398, "jev_output_tokens": 1134, "frontier_usage_known": true, "inputs_unchanged": true
+      },
+      "reader_review_sha256": "c4e9b59b92548d1c7050ba827ea54153c31e13951c13aca4055af4d56bd15be5",
+      "reader_method": "Independent Luna reviewer prepared rubric before original label-C/D inbox packets; knew source oracle, not traces, mapping or timing. Unedited tooling clues make blinding partial.",
+      "reader_findings": [
+        "Both delivered seven digests, the qualifying investigation and missing-date handoff; no core claim contradicted the oracle.",
+        "The SignalWeave run supplied a copy-verified 12-record damage worklist matching every oracle ID and an explicit follow-up; baseline supplied neither worklist nor attachments.",
+        "Both sent unnecessary monitoring-metadata questions to Data Operations. SignalWeave also sent evaluation-process commentary to Dispatch, an audience mismatch.",
+        "The oracle supports trigger-worklist IDs, but did not verify supplemental daily distributions, late rates, delivery-time averages or service/region/date attributes. Supporting copies do not establish recipient opens."
+      ],
+      "query_accounting": "Independent read-only SQLLab metadata matches all captured query IDs: baseline 25, treatment 20 (12 direct plus eight native reads). Original pair was baseline 12 versus treatment 17. Counts do not measure scanned bytes or warehouse cost.",
+      "conclusion": "Reviewed-card recurrence and a useful investigation handoff work in this known scenario. Treatment took 18.2% longer and more uncached frontier tokens; no speed/cost, fewer-message, general superiority or Jev-specific causal benefit is established."
+    }
+  },
+  "harbor": {
+    "status": "Baseline onboarding stages closed; independently admitted 28-day recurrence in progress. Treatment not admitted.",
+    "source": "Company MCP over isolated synthetic SQLite event-history snapshots, not a vendor-cloud connector",
+    "people": "Five model-simulated company roles, not real humans",
+    "workflows": ["Daily priority-ticket handoff", "Weekly support-commitment digest"],
+    "readiness_limit": "The saved baseline query does not establish event completeness; whole-week rates are withheld. The weekly threshold branch is unproven.",
+    "quiet_state_limit": "Every daily cutoff has qualifying work; this cohort cannot establish quiet-day suppression."
+  },
+  "proof_boundaries": [
+    "Adaptive repetitions on known history are not independent holdouts or statistical significance.",
+    "This whole-stack comparison does not isolate Jev from the skill, card context, retrieval or frontier behavior.",
+    "Deliveries are simulated local inboxes, not Slack/email or proof that a human read or acted.",
+    "Billing cost is unknown; tokens and SQL counts are not monetary savings.",
+    "All 208 copied runtime files matched rc5 in a separate post-setup check; these studies did not prospectively freeze the runtime inventory.",
+    "Raw traces remain in ignored artifacts/workflow-proof-2026-10-20. Hashes alone are not public reproduction of those private records.",
+    "The new-company quiet/ambiguity transfer stage is not admitted or executed. Enterprise readiness is not established."
+  ]
+}
