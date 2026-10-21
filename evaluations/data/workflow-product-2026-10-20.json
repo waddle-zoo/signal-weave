@@ -8,6 +8,7 @@
   "control": "Same Luna, 27 Superset analytical tools, owner policy, workspace, SQL/code and automation abilities, without SignalWeave",
   "setup_boundary": "Actual isolated terminal wizard, Codex registration and skill after research-helper archive extraction/copy; not a new public-curl-installer or real-human novice study",
   "operator_boundary": "The isolated actor uses a research-only operator callback to forward its own query file to the real native query-import CLI. This substitutes for the host terminal access an ordinary Codex user would grant; it supplies no analytical SQL or card. It is not an extra public MCP tool.",
+  "timing_scope": "Analyst trajectory wall time includes business discovery, card/procedure onboarding and recurrence; excludes release download, wizard/preflight and independent review. Arms ran serially on the same host with shared source/cache conditions; differences are descriptive, not causal effects.",
   "northstar": {
     "source": "Real local Superset over the finalized synthetic warehouse, not an as-known-at-the-time backtest",
     "owner": "Scripted simulated Dispatch owner",
@@ -68,22 +69,60 @@
         "Both delivered seven digests, the qualifying investigation and missing-date handoff; no core claim contradicted the oracle.",
         "The SignalWeave run supplied a copy-verified 12-record damage worklist matching every oracle ID and an explicit follow-up; baseline supplied neither worklist nor attachments.",
         "Both sent unnecessary monitoring-metadata questions to Data Operations. SignalWeave also sent evaluation-process commentary to Dispatch, an audience mismatch.",
-        "The oracle supports trigger-worklist IDs, but did not verify supplemental daily distributions, late rates, delivery-time averages or service/region/date attributes. Supporting copies do not establish recipient opens."
+        "The initial reader oracle did not verify supplemental daily/late/delivery-time/record-attribute claims; the separate posthoc warehouse check below expands that coverage. Supporting copies still do not establish recipient opens."
       ],
+      "supplemental_validation": {
+        "method": "Posthoc independent read-only warehouse SQL plus direct CSV reconciliation; original oracle and reader review unchanged",
+        "source_sql_sha256": "34cde54baade413fbdf9cc91110cf106a6f0601ca1d7acda0e8ec5bf1e390419",
+        "reference_sha256": "14cc00dcf98ce84067a63da6143451d807f545e7dc1337b15cd2e170059db382",
+        "review_sha256": "4fb328dab5d761914f5e77c7c050d1f5bfbc5ad52e526babfa919c805bac3b45",
+        "reviewed_units": {"message_bodies": 22, "weekly_cohorts": 7, "daily_buckets": 49, "carrier_week_groups": 28, "late_rate_and_mean_periods": 7, "copied_damage_csv_files": 5, "csv_records": 30, "attachment_hashes": 17},
+        "result": "No contradiction in the quantitative claims checked; all 30 CSV rows matched live damaged-source records on every included field. These are coverage units, not a global accuracy percentage.",
+        "limits": "Current warehouse contents do not independently reconstruct historical source versions. No delivery-monitor entry does not establish a delivery defect or freshness. Source tables do not certify owner policy or human receipt/use."
+      },
       "query_accounting": "Independent read-only SQLLab metadata matches all captured query IDs: baseline 25, treatment 20 (12 direct plus eight native reads). Original pair was baseline 12 versus treatment 17. Counts do not measure scanned bytes or warehouse cost.",
       "conclusion": "Reviewed-card recurrence and a useful investigation handoff work in this known scenario. Treatment took 18.2% longer and more uncached frontier tokens; no speed/cost, fewer-message, general superiority or Jev-specific causal benefit is established."
     }
   },
   "harbor": {
-    "status": "Baseline onboarding stages closed; independently admitted 28-day recurrence in progress. Treatment not admitted.",
+    "status": "Baseline full journey and both treatment onboarding stages closed; a separately reviewed owner-activation handoff is complete. Treatment recurrence requires new independent admission. No paired business-quality result yet.",
     "source": "Company MCP over isolated synthetic SQLite event-history snapshots, not a vendor-cloud connector",
     "people": "Five model-simulated company roles, not real humans",
     "workflows": ["Daily priority-ticket handoff", "Weekly support-commitment digest"],
+    "baseline_process_observations": {
+      "recurrence_seconds": 1660.3085002920125,
+      "inputs_unchanged": true,
+      "frontier_and_person_usage_known": true,
+      "messages_including_onboarding": 72,
+      "operations_messages": 1,
+      "later_weekly_operations_briefs": "Generated on all due dates, but sent to queue-lead/duty-manager instead of Operations. Verified baseline notes omitted the Operations destination; the recurrence agent read those notes. Observed intent-persistence miss, not cadence suppression or demonstrated caller filtering of an authored route. Both monitors remain registered.",
+      "simulated_person_replies": {"complete": 71, "failed_person_reply_call_cap": 2},
+      "recipient_attachment_read_events": 0,
+      "interpretation": "Process completion is not business success. Late simulated feedback was research-resource-censored; no clean full-journey comparative efficiency claim."
+    },
+    "treatment_onboarding": {
+      "queue": {"seconds": 973.3597333340149, "uncached_frontier_input_tokens": 225723, "frontier_output_tokens": 96017, "jev_requests": 1, "jev_input_tokens": 6816, "jev_output_tokens": 129},
+      "weekly": {"seconds": 423.22338483299245, "uncached_frontier_input_tokens": 174861, "frontier_output_tokens": 42135, "jev_requests": 2, "jev_input_tokens": 17730, "jev_output_tokens": 334},
+      "process_complete_and_inputs_unchanged": true,
+      "actor_provider_and_person_usage_known": true,
+      "interpretation": "Closed setup trajectories, not proof of later recurrence. The raw-MCP bridge and six opt-in domain-context tools were enabled; this is not the default Superset-only setup surface."
+    },
+    "operator_assisted_owner_handoff": {
+      "reason": "Weekly card approval covered evaluation, not recurring delivery. The original independent recurrence BLOCK is retained.",
+      "method": "One separately reviewed ordinary simulated-owner clarification; no source, policy, card, procedure or native status edits, no analytical model or Jev call, no business delivery.",
+      "result": "The actual simulated owner explicitly authorized due weekly local manual-review drafts to Operations within the bounded historical study, excluding external sends and production scheduling.",
+      "extra_uncached_input_tokens": 6788,
+      "extra_output_tokens": 119,
+      "seconds": 7.053417416987941,
+      "usage_known": true,
+      "interpretation": "Operator-assisted onboarding completion, not zero-touch onboarding or an original preregistered stage. Include this extra usage in any whole-journey accounting. The reply alone does not admit recurrence."
+    },
     "readiness_limit": "The saved baseline query does not establish event completeness; whole-week rates are withheld. The weekly threshold branch is unproven.",
     "quiet_state_limit": "Every daily cutoff has qualifying work; this cohort cannot establish quiet-day suppression."
   },
   "proof_boundaries": [
     "Adaptive repetitions on known history are not independent holdouts or statistical significance.",
+    "The Superset lab permits SELECT through SQLLab with DML disabled. It is not a viewer-only Preset integration or production RBAC test.",
     "This whole-stack comparison does not isolate Jev from the skill, card context, retrieval or frontier behavior.",
     "Deliveries are simulated local inboxes, not Slack/email or proof that a human read or acted.",
     "Billing cost is unknown; tokens and SQL counts are not monetary savings.",
