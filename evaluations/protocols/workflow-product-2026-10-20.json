@@ -29,7 +29,21 @@
       "time_boundary": "Retrospective finalized warehouse, not an as-known-at-the-time backtest",
       "method": "evaluations.northstar_enterprise_journey",
       "maximum_jev_requests": 9,
-      "claim_limit": "Known-company current-release replication, not untouched holdout or enterprise superiority"
+      "disposition": "Closed v1 diagnostic: both agents completed, but the research proxy exhausted its nine-call cap and injected three HTTP 429s. Original records remain unchanged at source revision a131be1.",
+      "claim_limit": "Known-company diagnostic with research-resource interference, not a clean native reliability or efficiency comparison"
+    },
+    {
+      "id": "northstar-counterbalanced-resource-repair",
+      "protocol_revision": "northstar-retrospective-enterprise-journey-v2",
+      "scope": "New fresh paired onboarding and seven-period execution, treatment first; no previous cards, SQL, notes or business outputs copied",
+      "company_environments": 1,
+      "new_independent_company": false,
+      "arms": 2,
+      "periods_per_arm": 7,
+      "maximum_jev_requests": 64,
+      "budget_basis": "The previous execution required token-budgeted watch and outcome request batches, not one provider call per check. Reserve up to eight batches per period plus eight setup/recovery calls. This finite ceiling does not require those calls to be spent.",
+      "resource_audit": "Count research-proxy rejections separately from actual upstream failures. Any rejection contaminates native reliability/efficiency interpretation regardless of correct final messages.",
+      "claim_limit": "Adaptive method repair on known historical data; not a holdout, statistical power claim or causal estimate of the budget change"
     },
     {
       "id": "harbor-full-month",

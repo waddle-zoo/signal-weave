@@ -44,7 +44,7 @@ from scripts.binary_provenance import ROOT, verify_binary
 from signalweave.mcp_server import AGENT_PROFILE_TOOLS
 from signalweave.query_source import load_query_catalog
 
-PROTOCOL = "northstar-retrospective-enterprise-journey-v1"
+PROTOCOL = "northstar-retrospective-enterprise-journey-v2"
 ORDER = ("baseline", "signalweave")
 PERIOD_ENDS = (
     "2026-08-03", "2026-08-10", "2026-08-17", "2026-08-24",
@@ -53,7 +53,11 @@ PERIOD_ENDS = (
 LIMITS = {
     "actors": 2,
     "attempts_per_arm": 1,
-    "jev_requests_total": 9,
+    # One evaluation can use multiple token-budgeted question batches. The
+    # original nine-call research cap manufactured 429s during a seven-period
+    # run. Provision eight batches per period plus eight setup/recovery calls;
+    # this is a ceiling, not a target or permission to retry into a better score.
+    "jev_requests_total": 64,
     "seconds_per_actor": 1800,
     "mcp_calls_per_actor": 120,
     "workspace_calls_per_actor": 100,
@@ -289,9 +293,13 @@ def _prior_attempts(previous: Path) -> dict:
 
 
 async def prepare(root, binary, codex, key_file, source_executable, source_checkout,
-                  url="http://127.0.0.1:18089", *, treatment_only=False, prior_study=None):
+                  url="http://127.0.0.1:18089", *, treatment_only=False, prior_study=None,
+                  first_arm="baseline"):
     """Reuse the actual isolated Superset/native/Codex setup; zero paid calls."""
     _require_source_docker_context()
+    if first_arm not in ORDER or (treatment_only and first_arm != "baseline"):
+        raise ValueError("Select a valid paired first arm; standalone checks have no paired order")
+    paired_order = [first_arm, *(arm for arm in ORDER if arm != first_arm)]
     if treatment_only != (prior_study is not None):
         raise ValueError("A forward treatment check requires --treatment-only and --prior-study together")
     prior_attempts = _prior_attempts(prior_study) if treatment_only else None
@@ -319,9 +327,9 @@ async def prepare(root, binary, codex, key_file, source_executable, source_check
         protocol=PROTOCOL,
         method=method(),
         limits=LIMITS,
-        order=["signalweave"] if treatment_only else list(ORDER),
+        order=["signalweave"] if treatment_only else paired_order,
         comparison=("fresh forward treatment only; retained prior pair, not a new paired baseline"
-                    if treatment_only else "baseline first, one attempt each"),
+                    if treatment_only else f"{first_arm} first, one attempt each"),
         bootstrap=bootstrap,
         source_tool_names=sorted(setup.SOURCE_TOOLS),
         source_tool_server_count=len(source_names),
@@ -349,7 +357,7 @@ async def prepare(root, binary, codex, key_file, source_executable, source_check
         scope=(
             "One fresh forward SignalWeave attempt with its prior pair retained across seven retrospective "
             if treatment_only else
-            "One baseline-first and one SignalWeave agent attempt across seven retrospective "
+            "One fresh paired attempt in the declared arm order across seven retrospective "
         ) + (
             "Northstar delivery cohorts, using the current downloaded native, isolated Codex "
             "setup, the existing 137-tool community Superset server with its frozen 27-tool "
@@ -402,7 +410,7 @@ def verify(study: dict, root: Path) -> None:
         retained = study.get("prior_attempts", {})
         if not retained or _prior_attempts(Path(retained["root"])) != retained:
             raise ValueError("Retained forward-check ledger changed")
-    elif study.get("order") != list(ORDER):
+    elif study.get("order") not in (list(ORDER), list(reversed(ORDER))):
         raise ValueError("Unknown actor order")
     bootstrap = study["bootstrap"]
     if verify_binary(Path(study["installed_binary"]), ROOT) != study["binary"]:
@@ -1080,6 +1088,23 @@ def _check_actor_order(study: dict, root: Path, arm: str) -> None:
         _check_prior_baseline(prior[0])
 
 
+def research_censoring(events: list[dict]) -> dict:
+    """Keep research-manufactured provider failures separate from product faults."""
+    rejected = sum(
+        event.get("kind") == "api.rejected" and event.get("provider") == "jev"
+        and event.get("reason") == "global_api_request_budget_exhausted"
+        for event in events
+    )
+    return {
+        "jev_request_budget_rejections": rejected,
+        "provider_budget_bound": bool(rejected),
+        "interpretation": (
+            "Harness injected HTTP 429s; not a clean native reliability or efficiency comparison"
+            if rejected else "No research provider-request rejection observed; business review remains required"
+        ),
+    }
+
+
 async def actor(root: Path, arm: str, review: Path | None = None):
     root = Path(root).absolute()
     review = Path(review) if review else root / "admission-review.json"
@@ -1153,6 +1178,7 @@ async def actor(root: Path, arm: str, review: Path | None = None):
         result["usage"] = usage_snapshot(audit.events, result["frontier_invocations"])
         result["provider"] = provider_usage(audit, budget.used)
         result["provider_requests"] = budget.used
+        result["research_censoring"] = research_censoring(audit.events)
         try:
             verify(study, root)
             result["inputs_unchanged"] = True
@@ -1178,6 +1204,8 @@ def main():
     prep.add_argument("--source-executable", type=Path, required=True)
     prep.add_argument("--source-checkout", type=Path, required=True)
     prep.add_argument("--url", default="http://127.0.0.1:18089")
+    prep.add_argument("--first-arm", choices=ORDER, default="baseline",
+                      help="Freeze paired order before execution; use both orders across repetitions")
     prep.add_argument("--treatment-only", action="store_true", help="Fresh forward treatment; does not replace prior results")
     prep.add_argument("--prior-study", type=Path, help="Retained terminal records and costs for a forward treatment")
     for name in ("preflight", "actor"):
