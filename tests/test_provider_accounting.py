@@ -1,6 +1,8 @@
+import json
+
 import pytest
 
-from evaluations.provider_accounting import provider_accounting
+from evaluations.provider_accounting import main, provider_accounting
 
 
 def response(request_id=1, usage=None):
@@ -40,3 +42,24 @@ def test_zero_real_calls_and_foreign_provider_events_remain_zero():
     assert result["usage_known"]
     assert result["forwarded_attempts"] == 0
     assert result["usage"] == {"input_tokens": 0, "output_tokens": 0}
+
+
+def test_cli_reads_actual_trace_without_modifying_it(tmp_path, monkeypatch, capsys):
+    trace = tmp_path / "trace.jsonl"
+    original = "\n".join(json.dumps(event) for event in [request(), response()]) + "\n"
+    trace.write_text(original)
+    monkeypatch.setattr("sys.argv", ["provider_accounting", str(trace)])
+    main()
+    assert json.loads(capsys.readouterr().out)["usage_known"] is True
+    assert trace.read_text() == original
+
+
+@pytest.mark.parametrize("raw", ["not-json", "[]\n", '"string"\n'])
+def test_cli_rejects_malformed_trace_instead_of_claiming_zero(tmp_path, monkeypatch, capsys, raw):
+    trace = tmp_path / "trace.jsonl"
+    trace.write_text(raw)
+    monkeypatch.setattr("sys.argv", ["provider_accounting", str(trace)])
+    with pytest.raises(SystemExit) as error:
+        main()
+    assert error.value.code == 2
+    assert capsys.readouterr().out == ""

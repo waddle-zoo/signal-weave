@@ -26,6 +26,12 @@ Completed agent-run workflows and their results are indexed in
 censoring, and limitations; a passing harness test is not a substitute for a
 fresh agent run. Keep different study attempts and denominators separate.
 
+For a retained JSONL provider audit, run
+`uv run python -m evaluations.provider_accounting artifacts/<study>/<arm>.jsonl`.
+This read-only reconciliation separates forwarded requests from local research
+budget rejections. It does not change the original result, undo a censored run,
+or infer billing cost from token counts.
+
 ## Historical harness tests
 
 Five older fixture/scoring cohorts are kept outside default pytest discovery.
