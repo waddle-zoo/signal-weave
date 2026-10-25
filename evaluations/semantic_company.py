@@ -398,7 +398,7 @@ class SemanticCompany:
             evidence.append(Evidence(
                 source_key=source.key, subject_id="measurement-publication", subject_label="Source measurement publication",
                 statement=f"Source owner {publication['source_owner']} signed off on this measurement publication. {publication['correction']}",
-                values=publication, provenance=provenance + [f"measurement-publication:{publication['publication_id']}"],
+                values=publication, provenance=provenance + [publication["publication_id"]],
             ))
         metadata = {"source_identity": {"tenant_id": self.tenant_id, "adapter": source.adapter, "resource": source.resource,
                 "semantic_metric_id": row["metric_id"]}, "source_sql": query, "metric_revision": row["revision"],

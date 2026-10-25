@@ -5,7 +5,102 @@ This tests existing cards, reviewed context and source exports—not a new seman
 engine. The frontier agent discovers definitions and writes the analysis;
 OpenAI Decisions applies the saved policy.
 
-## Installation and actual runtime
+## Publication-aware follow-up
+
+The initial studies below exposed two different gaps: a changed closed-period
+measurement lacked source-owned correction evidence, and onboarding preserved
+the business-alert recipient without completing the owner's data-review routes.
+Neither is solved by forcing a conservative judgment into a business alert.
+
+The prospective owner brief now explicitly names Finance for data/definition
+review as well as qualifying business alerts. MCP and bundled-skill guidance
+explain that required-evidence failures may produce `insufficient_data`; preserve
+an intended review route or make caller-owned repair explicit. No engine gate,
+threshold, automatic recipient fallback or new mandatory card schema was added.
+The source fixture separately publishes an inspectable correction with its exact
+superseded/current data snapshots, unchanged metric revision and query hash.
+Both arms can inspect the same publication; it supplies no oracle or causal story.
+
+A fresh SaaS canary (`published-refresh-v3-saas-canary`) completed four reader
+reports, four agent-authored gap/conflict review handoffs, eight fresh native
+OpenAI Decisions evaluations and one required-definition-edit deferral.
+Independent review checked all eight human briefs, the four actual local-inbox
+messages, phase source evidence and routes: no material numerical, causal or
+routing error. Corrected revenue was USD 18,070.59 versus USD 17,716.12 (+2%).
+One delivered body omitted the synthetic-fixture caveat present in its supporting
+uncertainties/final reply; that presentation miss remains recorded.
+
+The earlier v2 canary was interrupted after three completed reader reports while
+the research grader was corrected to accept both owner-permitted review enums
+symmetrically. Its fourth reader is censored with unknown usage; it is not pooled
+with the completed canary or relabelled a provider failure.
+
+The larger prospective cohort uses the **0.2.0 native candidate** built from
+`81181a8`, production fingerprint
+`cf58379fe3598260c552661f6fc2d7d32110c6da19a88258273956d0e19f4d80`.
+All three fresh onboardings preserved the approved canonical source, shared
+reviewed definition and intended business/review routes. **All 60 canonical
+reader reports passed the structured figure, scope, revision and policy checks**
+against changed measurements, not the older onboarding figures. Each treatment
+reader called the native evaluator. Actual SQLite inputs are backed up and
+hashed before each phase, outside agent access.
+
+| Company | Ordinary / SignalWeave correct readers | Median seconds, ordinary / SignalWeave | Fresh onboarding seconds |
+| --- | ---: | ---: | ---: |
+| Retail | 10/10 / 10/10 | 33.23 / 40.56 | 180.61 |
+| SaaS | 10/10 / 10/10 | 30.97 / 45.27 | 122.10 |
+| Marketplace, authenticated HTTP | 10/10 / 10/10 | 31.87 / 38.49 | 172.72 |
+
+These timings exclude onboarding; the three company processes ran concurrently.
+SignalWeave added overhead, not a measured speed advantage, and the equal-context
+baseline also answered correctly. Provider cost remains uninstrumented.
+
+The review stages stopped separately, without rescoring:
+
+- Marketplace baseline gap: delivered to Finance but submitted `recipients=[]`.
+- SaaS treatment conflict: delivered to Finance but submitted `recipients=[]`.
+- Retail treatment gap: attempted an invalid inbox label, finalized the report,
+  then could not retry. It accurately reported that nothing was delivered.
+
+Seven review episodes completed; six actually delivered. Four passed every
+strict check. Independent review found a contradictory test instruction:
+"Recipients are empty when no alert is warranted" conflicts with an owner-requested
+data review that is not a business alert. The two empty-audience submissions
+followed that instruction while delivering correctly. Retail's missed delivery
+is a real caller-workflow failure, not a provider or card-onboarding failure.
+
+A prospective research-only correction makes review audiences explicit, declares
+the test sink's sole valid address in its schema, and explains that report
+finalization closes delivery. Both arms get the same corrected contract; no
+argument is auto-corrected and no grader is relaxed. Original failures remain.
+Separate review/policy supplementation and final independent review are pending.
+This is not yet a completed whole-protocol or published stable-download claim.
+
+Independent prose review covered all 60 canonical reports and seven completed
+review episodes. The canonical figures and supported implications were sound in
+both arms. Citation/presentation limits remain: some briefs omit population or
+fixture qualifiers or include operator chatter, and a SaaS baseline gap message
+contains an incorrect snapshot ID despite correct figures. Nineteen marketplace
+submissions inherited a duplicated publication-reference prefix from the source
+fixture itself, rather than inventing it. The prospective fixture fixes that
+prefix without changing measurement or publication records. Source-owned
+references still need checking; a typed decision is not citation validation.
+
+The 0.2.0 candidate passed all three native platform gates in
+[run 40216114409](https://github.com/waddle-zoo/signal-weave/actions/runs/40216114409),
+including real archive install and PTY setup. The local full suite passed
+5,312 tests, with 13 skipped, when granted its required terminal/loopback access.
+An earlier sandboxed run retained three permission-related failures; it is not
+reported as a product pass. The packaged interactive wizard also registered
+with the actual Codex CLI and checked source health in a disposable home.
+
+The frozen protocol records the main research modules. Its source-hash list
+omits the imported audit/redaction helper; that helper is recoverable at clean
+commit `81181a8` as `evaluations/bootstrap_agent_trial.py`, SHA-256
+`01ee8ad009f7b33c5fec6c21f2b6334007f5a8b3dc997a16a2aba063ab3c4e7b`.
+This supplementary identity does not rewrite the captured protocols.
+
+## Earlier installation and runtime checks
 
 The published Apple Silicon `v0.2.0rc5` passed isolated live OpenAI setup,
 normal 11-tool MCP startup, a synthetic `notify`, and receipt replay after
@@ -62,7 +157,7 @@ or stale-note robustness. A separate forward-change stage updates the ledger
 after onboarding while retaining old notes and the same definition/card. It
 checks new values and the now-non-alerting policy without exposing the oracle.
 
-## Results and retained stops
+## Earlier results and retained stops
 
 The primary cohorts stopped with **53 of 60 planned canonical readers** completed,
 plus eight gross/conflict agent reports. All 53 canonical readers reported the

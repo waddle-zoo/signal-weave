@@ -225,6 +225,10 @@ async def test_source_publication_supersedes_ledger_snapshot_and_persists(tmp_pa
     assert restored.metadata["data_snapshot_id"] == refreshed_id == publication["data_snapshot_id"]
     assert restored.metadata["measurement_publication"] == publication
     assert any(item.values == publication for item in restored.evidence)
+    publication_evidence = next(item for item in restored.evidence if item.values == publication)
+    assert publication["publication_id"] in publication_evidence.provenance
+    assert not any(ref.startswith("measurement-publication:measurement-publication:")
+                   for ref in publication_evidence.provenance)
 
 
 @pytest.mark.parametrize("profile", ["retail", "saas", "marketplace"])

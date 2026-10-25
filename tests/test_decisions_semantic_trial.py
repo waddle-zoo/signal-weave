@@ -9,6 +9,7 @@ from evaluations.decisions_semantic_trial import (
     grade_policy,
     grade_review,
     has_owner_routes,
+    reader_instructions,
     save_ledger_snapshot,
 )
 
@@ -115,6 +116,37 @@ async def test_live_agent_uses_actual_native_tool_schemas_without_replacing_comp
     tools = {tool["name"]: tool for tool in await reader.specs()}
     assert tools["evaluate_insight_card"]["description"] == "Native contract"
     assert {"search_company_assets", "read_company_asset", "read_finance_notes", "submit_report"} <= tools.keys()
+
+
+@pytest.mark.asyncio
+async def test_review_tools_declare_address_audience_and_completion_order_without_fixing_outputs():
+    from jsonschema import ValidationError, validate
+
+    reader = Episode(Company(), None, review_delivery=True)
+    tools = {tool["name"]: tool for tool in await reader.specs()}
+    send = tools["send_finance_review"]
+    valid = {"destination": "agent://finance", "message": "Review coverage", "source_refs": ["company|metric:net-revenue"]}
+    validate(valid, send["parameters"])
+    with pytest.raises(ValidationError):
+        validate({**valid, "destination": "simulated-local-finance-inbox"}, send["parameters"])
+    assert "parallel" in send["description"]
+    assert "No later delivery" in tools["submit_report"]["description"]
+    recipients = tools["submit_report"]["parameters"]["properties"]["recipients"]
+    assert "data/definition reviewers" in recipients["description"]
+    # Empty audience remains a possible report, not auto-filled into a pass.
+    assert "minItems" not in recipients
+    assert await reader.call("send_finance_review", valid) == {
+        "delivered": True, "sink": "simulated-local-finance-inbox", "human_acknowledged": False,
+    }
+    with pytest.raises(ValueError, match="already been delivered"):
+        await reader.call("send_finance_review", valid)
+
+
+@pytest.mark.parametrize("treatment", [False, True])
+def test_shared_reader_instructions_do_not_confuse_review_audience_with_business_alerts(treatment):
+    text = reader_instructions(treatment)
+    assert "neither a business alert nor an owner-requested data/definition review" in text
+    assert "Recipients are empty when no alert is warranted" not in text
 
 
 @pytest.mark.parametrize("condition,outcome,routes", [

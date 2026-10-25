@@ -94,7 +94,7 @@ def reader_instructions(treatment):
         "You own the explanation; a policy label is not the analysis. If judgment is deferred, use available evidence without inventing an outcome. "
         "Return a concise human brief, at most 140 words. Do not claim a delivery without a confirming tool receipt; never claim scheduling or human acknowledgement. "
         "Complete with submit_report: source-owned metric identity/revision, amounts in full currency units (not thousands), "
-        "YYYY-MM periods and inspectable source refs. Recipients are empty when no alert is warranted; otherwise use the exact owner-defined destination."
+        "YYYY-MM periods and inspectable source refs. Recipients are empty when neither a business alert nor an owner-requested data/definition review is warranted; otherwise use the exact owner-defined destination."
         " Set resolution_status to resolved only when the requested basis is established, otherwise unresolved. "
         "Unresolved answers may preserve attributed source figures, but must not present a definitive reconciled company amount."
     )
@@ -174,8 +174,8 @@ class Episode:
             tools += [{"name": tool.name, "description": tool.description, "parameters": tool.inputSchema}
                       for tool in await self.native.list_tools()]
         if self.review_delivery:
-            tools += [spec("send_finance_review", "Deliver one concise review request to the simulated Finance inbox. This is a local test sink, not Slack/email or a human acknowledgement.", {
-                "destination": {"type": "string"}, "message": {"type": "string"},
+            tools += [spec("send_finance_review", "Deliver one concise review request to agent://finance, the only authorized simulated inbox. Check its delivery receipt before finalizing submit_report; do not call those two tools in parallel. This is a local test sink, not Slack/email or a human acknowledgement.", {
+                "destination": {"type": "string", "enum": ["agent://finance"]}, "message": {"type": "string"},
                 "source_refs": {"type": "array", "items": {"type": "string"}},
             }, ["destination", "message", "source_refs"])]
         if self.onboarding:
@@ -183,7 +183,7 @@ class Episode:
                            {"card_id": {"type": "string"}, "context_id": {"type": "string"},
                             "handoff": {"type": "string"}}, ["card_id", "context_id", "handoff"])]
         else:
-            tools += [spec("submit_report", "Return the business brief and its inspectable facts; does not send a message.", {
+            tools += [spec("submit_report", "Finalize the episode with the business brief and inspectable facts; does not send a message. If delivery was requested, call only after checking the delivery result. No later delivery is allowed after finalization.", {
                 "metric_id": {"type": "string"}, "definition_revision": {
                     "type": "string", "pattern": "^r[0-9]+$",
                     "description": "Exact revision ID from this fixture's source catalog, e.g. r3; put competing revisions in uncertainties, not here. Not the SignalWeave context revision."},
@@ -193,7 +193,8 @@ class Episode:
                 "unit": {"type": "string"}, "current_period": {"type": "string"},
                 "previous_period": {"type": "string"}, "source_refs": {"type": "array", "items": {"type": "string"}},
                 "outcome": {"type": "string", "enum": ["ignore", "investigate", "insufficient_data", "notify", "deferred", "not_applicable"]},
-                "recipients": {"type": "array", "items": {"type": "string"}},
+                "recipients": {"type": "array", "items": {"type": "string"},
+                               "description": "All intended recipients of this report, including data/definition reviewers, not only business-alert recipients. Preserve the exact owner-approved destination IDs."},
                 "message": {"type": "string"}, "uncertainties": {"type": "array", "items": {"type": "string"}},
             }, ["metric_id", "definition_revision", "resolution_status", "current", "previous", "unit", "current_period",
                 "previous_period", "source_refs", "outcome", "recipients", "message", "uncertainties"])]
