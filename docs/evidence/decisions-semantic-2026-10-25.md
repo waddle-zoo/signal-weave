@@ -5,13 +5,50 @@ This tests existing cards, reviewed context and source exports—not a new seman
 engine. The frontier agent discovers definitions and writes the analysis;
 OpenAI Decisions applies the saved policy.
 
-## Published stable release
+## Verified v0.2.1 security rebuild
+
+[`v0.2.1`](https://github.com/waddle-zoo/signal-weave/releases/tag/v0.2.1) was
+published from merged `main` commit `4fd7ee1bda87569d323b45259044f0daf6fcbb5f`.
+All three tag builds and publication passed in
+[40224554790](https://github.com/waddle-zoo/signal-weave/actions/runs/40224554790).
+Local and both CI Python suites passed **5,365 tests, 13 skipped**; container
+runtime and pip-vendored CA checks, Preset replay contracts and the real local
+Superset chart matrix passed. Independent review found and then cleared an
+additional system-store/cross-sign gap before merge.
+
+All three downloaded public archives passed checksums, clean tag/source identity,
+actual CA-file checks and GitHub build-provenance verification. Their production
+fingerprint is `b0fd21415085ba9d03926765197ab96b6c616e6560829d08d17a503b3c33279b`.
+All contain certifi 2026.10.23 and the same CA bundle
+`2ef52ad56b4803e264045c915e55c236cbfa045b84b81efefc218a19eb44bd2b`.
+That bundle rejects all fourteen public incident chains offline, including AAA
+cross-signs; the retained v0.2.0 bundle accepts seven. OpenSSL 3.6.3 used explicit
+CA files with system stores disabled; all fixed failures were issuer-trust
+errors, not expiry. Ordinary unauthenticated PyPI HTTPS returned 200. This is
+targeted incident verification, not general TLS assurance; see [security](../security.md).
+
+The actual public HTTPS installer passed hidden-key OpenAI setup, company-source
+connection, real isolated Codex registration, bundled skill and source health.
+One fresh native Decisions evaluation returned `notify` for exactly Finance,
+with delivery disabled; process restart replayed its receipt. Uninstall removed
+only the disposable install, preserved local configuration/cards/receipts, and
+public reinstall restored healthy use. No Jev credential or personal agent
+configuration was used. Raw records remain in ignored `published-v0.2.1-wizard-v1`,
+`published-v0.2.1-download` and `incident-chains-v1` artifacts.
+
+Only dependencies, build checks and version metadata changed from v0.2.0;
+`src/` and the canonical skill did not. This is release/integration proof, not
+a fresh novice-human panel or a rerun of the larger analytical cohorts below.
+All nine v0.2.0 release assets retain their IDs, hashes, sizes and timestamps.
+
+## Prior published stable release
 
 [`v0.2.0`](https://github.com/waddle-zoo/signal-weave/releases/tag/v0.2.0)
 was published from merged `main` commit `53a24e3fcb25d28229233dcb5b903f1e1223e73b`.
 All three actual tag builds passed in
 [run 40220404230](https://github.com/waddle-zoo/signal-weave/actions/runs/40220404230).
-GitHub marks it non-draft, non-prerelease and latest; no rc5 asset was changed.
+At publication it was non-draft, non-prerelease and latest; it is now superseded
+by v0.2.1 for the [CA trust exposure](../security.md). No rc5 asset was changed.
 
 The actual public HTTPS installer completed hidden-key OpenAI setup, company-MCP
 connection, real Codex CLI registration, bundled skill and source health in an

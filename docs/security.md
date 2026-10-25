@@ -5,7 +5,8 @@
 Native v0.2.0 and earlier bundles include a certifi CA bundle affected by
 [GHSA-6q48-6c7w-9gw2](https://github.com/certifi/python-certifi/security/advisories/GHSA-6q48-6c7w-9gw2).
 Do not use those bundles for live credentials. Replace the native installation
-with the corrected release after it is published; upgrading system Python does
+with [v0.2.1](https://github.com/waddle-zoo/signal-weave/releases/tag/v0.2.1);
+upgrading system Python does
 not update a frozen executable's embedded certificates. Local cards and settings
 can be preserved during replacement. This is a dependency exposure, not evidence
 that a SignalWeave user was intercepted.
@@ -30,10 +31,18 @@ Container CI checks the installed bundle too. The public-root negative fixture
 tests each root in isolation and mixed into a safe bundle. This is a targeted
 regression guard, not a substitute for dependency advisory review.
 
+Release verification rejected all 14 published incident chains offline with
+the fixed bundle; the retained v0.2.0 bundle accepted 7/14 as a positive control.
+Failures were issuer-trust errors, not expiry, and ordinary HTTPS succeeded.
+The identical checked bundle is present in all three downloaded public v0.2.1
+archives. See the [release evidence](evidence/decisions-semantic-2026-10-25.md#verified-v021-security-rebuild).
+
 Before publishing, review open dependency alerts, run `make verify`, require the
 three native platform jobs and container checks to pass, then inspect the
 downloaded public archive and complete the installer/setup/replay/uninstall
-journey. Never overwrite old release assets to repair a dependency.
+journey. Check the published release notes too; correct notes separately if
+GitHub uses the commit message instead of the annotated tag. Never overwrite old
+release assets to repair a dependency.
 
 ## Operating model
 

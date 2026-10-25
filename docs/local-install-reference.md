@@ -122,6 +122,11 @@ The README and workflow guides describe the repository's current capabilities.
 Published binaries are immutable snapshots; merging code does not publish a
 native release.
 
+**Use v0.2.1 or newer.** v0.2.0 and earlier native bundles contain a CA trust
+dependency affected by the [October security advisory](security.md#october-2026-certificate-trust-update).
+The entries below retain historical capabilities and test results, not install
+recommendations for those older builds.
+
 - **`v0.2.0rc1`:** published native preview with Jev-only setup and manual agent
   registration. It predates the bundled workflow skill, guided registration,
   OpenAI Decisions, and ChatGPT-plan sign-in.
@@ -175,13 +180,22 @@ native release.
   the actual HTTPS terminal journey described below. See
   [startup measurements](#startup-measurements).
 - **[`v0.2.0`](https://github.com/waddle-zoo/signal-weave/releases/tag/v0.2.0):**
-  stable release from merged `main` commit `53a24e3`, now pinned in the setup
-  guides. All three native build/install gates passed. The actual published
+  prior stable release from merged `main` commit `53a24e3`, superseded for the
+  CA trust exposure above. All three native build/install gates passed. The actual published
   Apple Silicon installer also passed hidden-key OpenAI setup, real isolated
   Codex registration, bundled skill, source health, a fresh Decisions judgment,
   restart replay, and uninstall/reinstall with local state preserved. This is
   scoped integration proof, not a novice-human panel or universal enterprise
   guarantee. See the [release and semantic-journey evidence](evidence/decisions-semantic-2026-10-25.md).
+- **[`v0.2.1`](https://github.com/waddle-zoo/signal-weave/releases/tag/v0.2.1):**
+  corrected stable release from `main` commit `4fd7ee1`, pinned in the setup
+  guides. certifi 2026.10.23, uv 0.13.5 and a checked container pip trust path;
+  analytics and card behavior are unchanged. All three tag builds passed.
+  All three public archives passed checksum, clean-source and actual CA checks;
+  their GitHub build-provenance attestations were verified. The public Apple
+  Silicon installer passed hidden-key OpenAI setup, isolated Codex registration,
+  a fresh Decisions result, restart replay, and state-preserving uninstall/reinstall.
+  See the [scoped release checks](evidence/decisions-semantic-2026-10-25.md#verified-v021-security-rebuild).
 
 Release maintainers must update the pinned install commands in `README.md` and
 `docs/local-install.md`, and this compatibility section, when a new native

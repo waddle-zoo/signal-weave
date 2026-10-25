@@ -21,7 +21,7 @@ its release checksum, installs to `~/.local/bin`, then starts setup. No Python,
 Docker, or `sudo` is required:
 
 ```sh
-set -o pipefail; curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' https://github.com/waddle-zoo/signal-weave/releases/download/v0.2.0/install.sh | sh -s -- --version v0.2.0 --setup && export PATH="$HOME/.local/bin:$PATH"
+set -o pipefail; curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' https://github.com/waddle-zoo/signal-weave/releases/download/v0.2.1/install.sh | sh -s -- --version v0.2.1 --setup && export PATH="$HOME/.local/bin:$PATH"
 ```
 
 If your organization does not permit curl-to-shell installation, download and
@@ -117,7 +117,7 @@ The installer selects macOS Apple Silicon/Intel or Linux x64, verifies the
 archive's SHA-256 checksum, and installs without `sudo`. A provider credential
 or ChatGPT-plan authorization is required for card decisions. Each evaluation
 sends the approved card and bounded source evidence to the selected provider;
-the full evidence receipt is kept locally. The command pins stable `v0.2.0`;
+the full evidence receipt is kept locally. The command pins stable `v0.2.1`;
 the installer's default `latest` lookup selects stable releases, never previews.
 
 For an interactive setup, SignalWeave offers to connect the selected agent at the
