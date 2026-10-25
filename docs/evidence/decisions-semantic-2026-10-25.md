@@ -5,6 +5,35 @@ This tests existing cards, reviewed context and source exports—not a new seman
 engine. The frontier agent discovers definitions and writes the analysis;
 OpenAI Decisions applies the saved policy.
 
+## Published stable release
+
+[`v0.2.0`](https://github.com/waddle-zoo/signal-weave/releases/tag/v0.2.0)
+was published from merged `main` commit `53a24e3fcb25d28229233dcb5b903f1e1223e73b`.
+All three actual tag builds passed in
+[run 40220404230](https://github.com/waddle-zoo/signal-weave/actions/runs/40220404230).
+GitHub marks it non-draft, non-prerelease and latest; no rc5 asset was changed.
+
+The actual public HTTPS installer completed hidden-key OpenAI setup, company-MCP
+connection, real Codex CLI registration, bundled skill and source health in an
+isolated home. Its native runtime SHA-256 is
+`feca5ce632ead44fa99c490087ff45115ab4bb45f256d48107e80e102613e22d`;
+the production fingerprint matches the local 0.2.0 study candidate below.
+Archive/installer checksums and GitHub build-provenance attestation passed.
+An initial manual checksum command used the wrong working directory and could
+not find the checksum file; checking in the download directory passed. The
+installer's own checksum verification had already passed.
+
+Using that installed command, a scripted integration card produced one fresh
+native `openai-decisions` result: `notify`, exactly Finance, delivery disabled.
+Restarting the process and reusing its run key replayed the same receipt.
+Uninstall removed only the disposable installation, preserved its exact local
+configuration/cards/receipts, and public reinstall restored healthy use of that
+configuration. No Jev credential, personal agent config or external notification
+was used. Raw output is in `published-stable-wizard-v1` under the ignored study
+artifacts. This checks the actual release; scripted card authoring is not a new
+agent-onboarding trial or a novice-human usability panel. The larger journeys
+below used the matching-source local candidate, not this later published file.
+
 ## Publication-aware follow-up
 
 The initial studies below exposed two different gaps: a changed closed-period
@@ -252,13 +281,14 @@ confirmations and was rejected. None of those attempts reached provider judgment
 The completed supplement is in `policy-supplement-v4`, separate from the
 unchanged original reports and their failures.
 
-Before completing this goal, distinguish and test the owner-approved paths for
+Those earlier results left a requirement to distinguish and test the owner-approved paths for
 a business signal, a data-quality problem and a definition disagreement. Prove
 that the calling agent follows up with the right person, not merely that the
 API returns a conservative enum. Do not remove evidence safety checks or force
 an action just to match a label. Also finish the publication-aware forward
 test and the remaining fresh-reader cases; these results do not complete those
-requirements.
+requirements. The separate publication-aware follow-up above addresses those
+stages; it does not retroactively complete these original stopped runs.
 
 Independent review covered all 20 retail canonical briefs and four contrasts,
 and all 20 marketplace canonical briefs plus two gross contrasts. It found no

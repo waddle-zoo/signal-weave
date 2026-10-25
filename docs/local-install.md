@@ -16,12 +16,12 @@ For available builds and command compatibility, see the
 
 ## 1. Install once, then use the guided setup
 
-Use the published native preview below. It downloads the binary, checks
+Use the published native release below. It downloads the binary, checks
 its release checksum, installs to `~/.local/bin`, then starts setup. No Python,
 Docker, or `sudo` is required:
 
 ```sh
-set -o pipefail; curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' https://github.com/waddle-zoo/signal-weave/releases/download/v0.2.0rc5/install.sh | sh -s -- --version v0.2.0rc5 --setup && export PATH="$HOME/.local/bin:$PATH"
+set -o pipefail; curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' https://github.com/waddle-zoo/signal-weave/releases/download/v0.2.0/install.sh | sh -s -- --version v0.2.0 --setup && export PATH="$HOME/.local/bin:$PATH"
 ```
 
 If your organization does not permit curl-to-shell installation, download and
@@ -117,9 +117,8 @@ The installer selects macOS Apple Silicon/Intel or Linux x64, verifies the
 archive's SHA-256 checksum, and installs without `sudo`. A provider credential
 or ChatGPT-plan authorization is required for card decisions. Each evaluation
 sends the approved card and bounded source evidence to the selected provider;
-the full evidence receipt is kept locally. The pinned version
-explicitly opts into this preview; previews are never selected by the
-installer's default `latest` lookup.
+the full evidence receipt is kept locally. The command pins stable `v0.2.0`;
+the installer's default `latest` lookup selects stable releases, never previews.
 
 For an interactive setup, SignalWeave offers to connect the selected agent at the
 end. Press Enter to accept. It invokes only the selected agent's official MCP
@@ -198,7 +197,7 @@ something different in another workspace.
 
 ## 2. Connect your agent
 
-The native preview can register with Codex during setup:
+The native executable can register with Codex during setup:
 
 ```sh
 signalweave setup --agent codex --register-agent

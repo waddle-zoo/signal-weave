@@ -167,13 +167,21 @@ native release.
   a download's checksum and embedded build identity when reproducing results;
   a version string alone is insufficient.
 - **[`v0.2.0rc5`](https://github.com/waddle-zoo/signal-weave/releases/tag/v0.2.0rc5):**
-  published from `main` commit `2eab41f`, and pinned in the installation guides.
+  published from `main` commit `2eab41f`.
   Adds visible download stages and terminal progress, quieter status output,
   and install-once runtime packaging with stable agent command paths and guarded
   runtime removal. All three native platforms passed installed setup, MCP,
   upgrade and uninstall checks. The published Apple Silicon download also passed
   the actual HTTPS terminal journey described below. See
   [startup measurements](#startup-measurements).
+- **[`v0.2.0`](https://github.com/waddle-zoo/signal-weave/releases/tag/v0.2.0):**
+  stable release from merged `main` commit `53a24e3`, now pinned in the setup
+  guides. All three native build/install gates passed. The actual published
+  Apple Silicon installer also passed hidden-key OpenAI setup, real isolated
+  Codex registration, bundled skill, source health, a fresh Decisions judgment,
+  restart replay, and uninstall/reinstall with local state preserved. This is
+  scoped integration proof, not a novice-human panel or universal enterprise
+  guarantee. See the [release and semantic-journey evidence](evidence/decisions-semantic-2026-10-25.md).
 
 Release maintainers must update the pinned install commands in `README.md` and
 `docs/local-install.md`, and this compatibility section, when a new native

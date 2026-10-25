@@ -27,14 +27,14 @@ agent; add a shared, repeatable brief for investigations, alerts, and reports.
 
 ## Get started
 
-On macOS or Linux, install the published native preview and start setup:
+On macOS or Linux, install the native release and start setup:
 
 ```sh
-set -o pipefail; curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' https://github.com/waddle-zoo/signal-weave/releases/download/v0.2.0rc5/install.sh | sh -s -- --version v0.2.0rc5 --setup && export PATH="$HOME/.local/bin:$PATH"
+set -o pipefail; curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' https://github.com/waddle-zoo/signal-weave/releases/download/v0.2.0/install.sh | sh -s -- --version v0.2.0 --setup && export PATH="$HOME/.local/bin:$PATH"
 ```
 
 Supports macOS 15+ (Apple Silicon/Intel) and Linux x64 with glibc 2.35+.
-The macOS preview is not notarized; managed devices may require an approved
+The macOS executable is not notarized; managed devices may require an approved
 install method.
 
 Already installed? Add `--replace` before `--setup` to upgrade while preserving
