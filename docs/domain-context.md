@@ -95,8 +95,8 @@ can still require those dependencies: disabling the extension is not approval
 to ignore them or to act on an old receipt.
 
 The connected guide includes `domain_context` only when the extension is enabled.
-This feature ships in the `v0.2.0rc4` native preview; upgrade older binaries
-before enabling it. It remains opt-in and under evaluation, not a
+This feature is available in `v0.2.1` (initial preview: `v0.2.0rc4`);
+upgrade older binaries before enabling it. It remains opt-in and under evaluation, not a
 hosted-service offer. See the [release reference](local-install-reference.md#release-compatibility).
 
 Ask your agent:

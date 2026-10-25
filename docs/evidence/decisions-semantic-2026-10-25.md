@@ -5,6 +5,72 @@ This tests existing cards, reviewed context and source exports—not a new seman
 engine. The frontier agent discovers definitions and writes the analysis;
 OpenAI Decisions applies the saved policy.
 
+## Verified v0.2.1 security rebuild
+
+[`v0.2.1`](https://github.com/waddle-zoo/signal-weave/releases/tag/v0.2.1) was
+published from merged `main` commit `4fd7ee1bda87569d323b45259044f0daf6fcbb5f`.
+All three tag builds and publication passed in
+[40224554790](https://github.com/waddle-zoo/signal-weave/actions/runs/40224554790).
+Local and both CI Python suites passed **5,365 tests, 13 skipped**; container
+runtime and pip-vendored CA checks, Preset replay contracts and the real local
+Superset chart matrix passed. Independent review found and then cleared an
+additional system-store/cross-sign gap before merge.
+
+All three downloaded public archives passed checksums, clean tag/source identity,
+actual CA-file checks and GitHub build-provenance verification. Their production
+fingerprint is `b0fd21415085ba9d03926765197ab96b6c616e6560829d08d17a503b3c33279b`.
+All contain certifi 2026.10.23 and the same CA bundle
+`2ef52ad56b4803e264045c915e55c236cbfa045b84b81efefc218a19eb44bd2b`.
+That bundle rejects all fourteen public incident chains offline, including AAA
+cross-signs; the retained v0.2.0 bundle accepts seven. OpenSSL 3.6.3 used explicit
+CA files with system stores disabled; all fixed failures were issuer-trust
+errors, not expiry. Ordinary unauthenticated PyPI HTTPS returned 200. This is
+targeted incident verification, not general TLS assurance; see [security](../security.md).
+
+The actual public HTTPS installer passed hidden-key OpenAI setup, company-source
+connection, real isolated Codex registration, bundled skill and source health.
+One fresh native Decisions evaluation returned `notify` for exactly Finance,
+with delivery disabled; process restart replayed its receipt. Uninstall removed
+only the disposable install, preserved local configuration/cards/receipts, and
+public reinstall restored healthy use. No Jev credential or personal agent
+configuration was used. Raw records remain in ignored `published-v0.2.1-wizard-v1`,
+`published-v0.2.1-download` and `incident-chains-v1` artifacts.
+
+Only dependencies, build checks and version metadata changed from v0.2.0;
+`src/` and the canonical skill did not. This is release/integration proof, not
+a fresh novice-human panel or a rerun of the larger analytical cohorts below.
+All nine v0.2.0 release assets retain their IDs, hashes, sizes and timestamps.
+
+## Prior published stable release
+
+[`v0.2.0`](https://github.com/waddle-zoo/signal-weave/releases/tag/v0.2.0)
+was published from merged `main` commit `53a24e3fcb25d28229233dcb5b903f1e1223e73b`.
+All three actual tag builds passed in
+[run 40220404230](https://github.com/waddle-zoo/signal-weave/actions/runs/40220404230).
+At publication it was non-draft, non-prerelease and latest; it is now superseded
+by v0.2.1 for the [CA trust exposure](../security.md). No rc5 asset was changed.
+
+The actual public HTTPS installer completed hidden-key OpenAI setup, company-MCP
+connection, real Codex CLI registration, bundled skill and source health in an
+isolated home. Its native runtime SHA-256 is
+`feca5ce632ead44fa99c490087ff45115ab4bb45f256d48107e80e102613e22d`;
+the production fingerprint matches the local 0.2.0 study candidate below.
+Archive/installer checksums and GitHub build-provenance attestation passed.
+An initial manual checksum command used the wrong working directory and could
+not find the checksum file; checking in the download directory passed. The
+installer's own checksum verification had already passed.
+
+Using that installed command, a scripted integration card produced one fresh
+native `openai-decisions` result: `notify`, exactly Finance, delivery disabled.
+Restarting the process and reusing its run key replayed the same receipt.
+Uninstall removed only the disposable installation, preserved its exact local
+configuration/cards/receipts, and public reinstall restored healthy use of that
+configuration. No Jev credential, personal agent config or external notification
+was used. Raw output is in `published-stable-wizard-v1` under the ignored study
+artifacts. This checks the actual release; scripted card authoring is not a new
+agent-onboarding trial or a novice-human usability panel. The larger journeys
+below used the matching-source local candidate, not this later published file.
+
 ## Publication-aware follow-up
 
 The initial studies below exposed two different gaps: a changed closed-period
@@ -252,13 +318,14 @@ confirmations and was rejected. None of those attempts reached provider judgment
 The completed supplement is in `policy-supplement-v4`, separate from the
 unchanged original reports and their failures.
 
-Before completing this goal, distinguish and test the owner-approved paths for
+Those earlier results left a requirement to distinguish and test the owner-approved paths for
 a business signal, a data-quality problem and a definition disagreement. Prove
 that the calling agent follows up with the right person, not merely that the
 API returns a conservative enum. Do not remove evidence safety checks or force
 an action just to match a label. Also finish the publication-aware forward
 test and the remaining fresh-reader cases; these results do not complete those
-requirements.
+requirements. The separate publication-aware follow-up above addresses those
+stages; it does not retroactively complete these original stopped runs.
 
 Independent review covered all 20 retail canonical briefs and four contrasts,
 and all 20 marketplace canonical briefs plus two gross contrasts. It found no
