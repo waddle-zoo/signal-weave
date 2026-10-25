@@ -172,9 +172,15 @@ async def run(args):
                                                   expected_sha256=report["build"]["tls_trust"]["bundle_sha256"])
                 report["registration"] = await asyncio.to_thread(_codex_inventory, args.codex, person, env, binary, (key,))
                 report["skill"] = await asyncio.to_thread(_skill_check, binary, person, env, (key,))
-                report["context_enable"] = await asyncio.to_thread(_run_json, binary, ("context", "enable"), person / ".signalweave", env, (key,))
+                enabled = await asyncio.to_thread(subprocess.run,
+                    [str(binary), "context", "enable", "--home", str(person / ".signalweave")],
+                    cwd=person, env=env, capture_output=True, text=True, timeout=30)
+                report["context_enable"] = {"returncode": enabled.returncode,
+                                            "stdout": audit.redact(enabled.stdout), "stderr": audit.redact(enabled.stderr)}
+                report["health"] = await asyncio.to_thread(_run_json, binary, ("health", "--live"), person / ".signalweave", env, (key,))
                 if (not report["registration"]["only_expected_signalweave_entry"]
-                        or not report["skill"]["matches_native_bundle"] or report["context_enable"]["returncode"]):
+                        or not report["skill"]["matches_native_bundle"] or report["context_enable"]["returncode"]
+                        or report["health"]["returncode"]):
                     raise ValueError("Agent registration/skill/context setup did not complete")
                 params = StdioServerParameters(command=str(binary), args=["serve", "--home", str(person / ".signalweave")], cwd=str(person), env=env)
                 with (root / "native-stderr.txt").open("w") as errors:
