@@ -19,6 +19,7 @@ from test_install import INSTALLER, ROOT, VERSION, installed, release, run
 from test_install import install_env as install_env
 
 from scripts.binary_provenance import build_metadata, verify_binary
+from scripts.package_release import TARGETS, package
 
 # Use the dependency environment running pytest, not an unrelated or partially
 # created checkout venv. Keep its path unresolved to preserve venv activation.
@@ -285,12 +286,7 @@ def test_certified_latest_binary_completes_pty_onboarding(install_env):
     assert identity["version"] == os.environ["SIGNALWEAVE_TEST_BINARY_VERSION"] == VERSION.removeprefix("v")
 
     system, architecture = platform.system(), platform.machine()
-    target = {
-        ("Darwin", "arm64"): "darwin-arm64",
-        ("Darwin", "x86_64"): "darwin-x86_64",
-        ("Linux", "x86_64"): "linux-x86_64",
-    }[(system, architecture)]
-    release(install_env, version=VERSION, target=target, executable=binary.read_bytes())
+    package(binary, Path(install_env["FIXTURES"]), VERSION, TARGETS[(system, architecture)])
     install_env.update(TEST_OS=system, TEST_ARCH=architecture)
     private_home = Path(install_env["HOME"]) / "certified private home"
     onboarding_env = {**install_env, "SIGNALWEAVE_HOME": str(private_home)}

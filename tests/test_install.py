@@ -354,6 +354,7 @@ def test_release_workflow_pins_actions_and_has_no_model_secrets():
     assert "SIGNALWEAVE_TEST_BINARY_SHA256=" in workflow
     assert "SIGNALWEAVE_TEST_BINARY_VERSION=" in workflow
     assert "Verify installed binary setup, MCP, reinstall, and uninstall" in workflow
+    assert "tests/test_fresh_install_journey.py::test_certified_latest_binary_completes_pty_onboarding" in workflow
 
 
 def test_intel_release_builds_cryptography_static_and_checks_linkage():

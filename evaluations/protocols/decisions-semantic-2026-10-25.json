@@ -1,0 +1,56 @@
+{
+  "protocol": "decisions-semantic-journey-v2",
+  "question": "Can a freshly installed SignalWeave MCP preserve an analyst-reviewed semantic metric and policy so independent Codex agents produce consistent, source-backed business updates?",
+  "product_boundary": "Existing cards, source bridge, optional reviewed domain context and native OpenAI Decisions. Frontier agents own discovery, analysis and prose. No new semantic engine, scheduler or mandatory workflow framework.",
+  "stages": [
+    "Verify published binary fingerprint and isolated native OpenAI setup, MCP, live decision and restart replay.",
+    "Create three test-owned SQL companies with overlapping metric names and source-owned definitions; independently verify SQL amounts against transaction-level Decimal calculations.",
+    "Have a Codex analyst discover sources and onboard a reviewed definition and recurring card through public MCP tools, with explicitly scripted fictional-owner delegation.",
+    "Stage gate: two independent reader prompts in each arm for the first company. Preserve any failure before repair; do not silently retry.",
+    "Run ten independently started readers per company and per arm over the same frozen measurement and definition revision, counterbalancing arm order.",
+    "Challenge saved policies with changed evidence: quiet, material decline, material data gap and conflicting definitions. Exercise changes through source/context contracts, not provider gold labels.",
+    "Review numerical correctness, definition choice, comparison basis, reasoning and human usefulness independently. Retain failures, then make only focused product or guidance repairs and label any new attempt separately."
+  ],
+  "companies": ["retail", "saas", "marketplace"],
+  "seed": 20261025,
+  "reader_prompts_per_company": 10,
+  "prompt_pairing": "The same ten indexed prompts run in both arms against the same snapshot. They measure fresh-agent/prompt robustness, not ten authenticated employees. Canary runs are separate from the primary cohort and never pooled after repairs.",
+  "semantic_sensitivity": "In addition to the ten same-basis questions, pair one explicit gross-billings question and one conflicting-definition question per company. A distinct question must not inherit the net-revenue alert policy; conflict must remain attributed/unresolved without an invented canonical answer.",
+  "measurement_refresh_stage": "Prospective v2 --refresh-after-onboarding: onboard on the original ledger, then publish an inspectable source-owner-approved export scaling correction with content-derived old/new data snapshot IDs, unchanged metric-definition revision, publication time and explicit supersession. Retain the old handoff in both arms. Two prompt pairs/company must report independently verified NEW figures and ignore/no-recipient policy for this resolved updated snapshot. The unexplained v1 mutation and its failed expected-ignore gate remain separate. Publication is source evidence, not an agent instruction or hidden oracle. No pooling repaired attempts or claiming the old v1 was a pass.",
+  "conflict_review": "The v2 owner explicitly requests Finance data/definition review for either investigate or insufficient_data; both must preserve the exact owner route and unresolved meaning, not a business-decline claim. Required incomplete comparison evidence must return insufficient_data under code safety gates; its configured notice still reaches Finance. Conflict labels may vary, but no missing owner route is accepted. Report exact labels separately from broader handoff correctness. Deferred inference is not a completed policy judgment.",
+  "review_handoff_stage": "Opt-in --review-handoffs adds one paired gap and one paired definition-conflict run/company. Both arms get the same send_finance_review tool only in these episodes, and explicit fictional-owner authorization for that isolated local inbox. Require one actual tool delivery to agent://finance, evidence attribution, submitted brief matching the delivered message, correct source figures when provided and an unresolved data/definition review rather than a business alert. Human usefulness/scope still requires independent prose review; delivery does not imply a real person read or acknowledged it. No external Slack/email or scheduling.",
+  "source_revision_interface": "The v2 submit_report tool constrains its revision field to the fixture catalog identifier format r[0-9]+, not a target revision value. Competing revisions belong in uncertainties. Invalid tool arguments may be corrected within the same bounded agent episode; prior v1 exact-field failures are preserved, not retroactively passed.",
+  "v2_onboarding_scope": "The prospective owner brief clarifies Finance as recipient for both business alerts and data/definition reviews, including insufficient_data. Require the agent-authored approved card to preserve notify/investigate/insufficient_data routes, not just the first passing notify example. This is a clarified owner instruction, not a silently inferred default or a new mandatory product schema. Unrouted repairs remain legitimate for other owner policies.",
+  "transport_scope": "Retail and SaaS may use native stdio; marketplace may use the same native service over authenticated loopback Streamable HTTP, including unauthorized-request rejection. This is a single-identity self-hosted sidecar, not managed hosting or employee SSO proof.",
+  "numeric_scoring": "Full reporting-currency units, not cents/thousands; absolute amount tolerance 0.005. YYYY-MM periods; source-owned metric IDs and revision strings. Provider probability and agent self-assessed resolution are not figure correctness. Assess material caveats and whether the answer resolves the requested basis separately in independent prose review. Conflicting-definition cases still require explicit unresolved status and no invented reconciliation.",
+  "stage_gate": "Stop before the larger cohort on incomplete onboarding/reader execution, wrong canonical metric, unit, period, revision or amount, wrong configured recipient, or a spurious definitive alert. Preserve failures. Do not pool a repaired canary into the full cohort.",
+  "human_report_rubric": ["correct definition/population", "correct periods and reporting unit", "supported amounts", "inspectable source citation", "supported business implication and useful next step", "material caveats beside affected claims", "no invented cause or unsupported delivery claim; a confirmed local-inbox receipt establishes only simulated delivery, not a human acknowledgement"],
+  "human_report_pass": "Independent review must find no material factual/action error and a useful concise answer. Report rubric judgments separately from structured figure checks; do not convert word matches or model labels into report-quality proof.",
+  "arms": {
+    "signalweave": "Fingerprint-matching native MCP, its bundled skill, shared reviewed card/context and all company tools. Record whether the binary is published or a local source candidate; do not conflate them.",
+    "ordinary_context": "Same Codex model, company tools, source-owned definitions and treatment-authored reviewed card/context in ordinary searchable notes. No SignalWeave MCP. This is an equal-information recurrence comparison, not independent onboarding superiority."
+  },
+  "frontier": {"model": "gpt-6-luna", "reasoning_effort": "xhigh"},
+  "provider": "openai-decisions",
+  "live_request_policy": "No automatic provider retries. Small stage gate before the full cohort. Record attempts, errors, deferred judgments, missing usage and interrupted invocations. Never count a local research limit as an upstream provider failure.",
+  "study_amendments": ["The first canary retained a genuine scalar-report coverage failure; a fresh candidate and canary are separate attempts.", "Before the full cohort, independent semantic review found GMV incorrectly including platform-fee tax. The fixture now models GMV as transaction consideration without adding tax again, with marketplace GMV restricted to seller-order records and a hand-computable regression.", "Conflicting definitions do not require hiding valid attributed source facts. A structured unresolved status and independent prose review must establish that no definitive reconciled company figure or business alert is invented.", "Canary-v3 stopped after four correct canonical readers and one correct gross baseline whose self-assessed resolution was unresolved: the task asked about reversal adjustments not established in the retail gross definition. Preserve that attempt without rescoring or pooling. Prospectively ask for gross on its source-declared basis, use actual fact checks rather than ordinary resolution self-labels, and retain independent material-caveat review. Conflicts are profile-specific and optional attributed amounts are checked against the independent oracle."],
+  "success_checks": [
+    "Native first-use path works without Jev credentials or editing personal Codex configuration.",
+    "Onboarding discovers and actually reads the selected semantic metric and saves the intended sources, definition, period and owner policy.",
+    "Readers identify the right metric/revision and agree with independent current/prior values, currency, population and measurement periods.",
+    "Human summaries preserve material caveats, do not invent causes or unsupported delivery, and explain the supported business implication. A local-inbox delivery claim requires its actual test-sink receipt; external delivery and human acknowledgement are not tested.",
+    "A quiet alert-only run produces no alert; a separate requested digest still produces a useful answer.",
+    "Missing or conflicting evidence is explained and does not become an invented figure or an all-clear.",
+    "A changed required definition cannot silently reuse the old actionable approval.",
+    "Replay is distinguished from fresh inference and hosted transport checks are distinguished from a managed-service trial."
+  ],
+  "metrics": ["completed_onboarding", "source_and_definition_selection", "figure_and_scope_correctness", "policy_outcome_and_recipient_agreement", "supported_reasoning", "human_message_usefulness", "clarification_and_tool_calls", "wall_time", "known_frontier_usage", "provider_attempts_and_usage_availability"],
+  "nonclaims": [
+    "Synthetic SQL semantic exports are not live dbt, Cube, Looker or Hex integration proof.",
+    "Scripted owner delegation is not a novice-human usability panel or customer approval.",
+    "Same figures require the same definition, data snapshot, scope, currency and period; differently scoped questions should not be forced to agree.",
+    "Native probability distributions and typed contracts do not guarantee deterministic, correct or calibrated model judgments.",
+    "Repeated readers sharing three companies are clustered observations, not sixty independent enterprises.",
+    "No superiority, cost saving, enterprise certification or automated delivery claim without the corresponding measured evidence."
+  ]
+}

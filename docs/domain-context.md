@@ -16,6 +16,58 @@ when that definition should next be reviewed. A sales-reporting agent and a
 campaign-investigation agent can retrieve the same reviewed entry without
 repeating that onboarding conversation. They still fetch current measurements.
 
+## Reuse your semantic layer, not a second metric definition
+
+When your company already defines metrics in dbt, Cube, LookML or another
+semantic layer, keep that system authoritative. Your agent should discover the
+approved metric and query it through the company's tools rather than invent a
+formula from similarly named charts.
+
+Save the reusable meaning with its source: canonical metric ID and revision,
+owner, population, reporting currency, grain, time basis and material filters.
+Keep the source responsible for execution and return those identifiers with
+its measurements. A card adds the business question, significance policy and
+intended recipients; it does not replace the metric's definition or query engine.
+
+For a recurring card, SignalWeave needs a configured source that can fetch the
+agreed result. Existing company tools remain available to your agent, but are
+not automatically inherited by the SignalWeave service. Use an existing BI
+source or the [normalized MCP bridge](mcp-source-bridge.md); this is not a claim
+that native dbt, Cube or LookML adapters ship today.
+
+Two readers should agree when their metric revision, data snapshot, population,
+currency and period agree. A request for gross rather than net revenue should
+produce a different answer, not silently reuse an unrelated card. Missing or
+conflicting meaning calls for a focused clarification. Reviewed notes preserve
+agreement; they do not make a source correct or guarantee model determinism.
+
+For example, after connecting the source and enabling context, ask your agent:
+
+> Find Finance's approved monthly net-revenue metric in our semantic layer.
+> Show me its owner, population, currency and comparison period; clarify any
+> competing definitions. Use its existing calculation, not a new formula.
+> Save the agreed definition for our other agents and draft a monthly card:
+> notify Finance on a comparable decline above 10%; investigate missing or
+> conflicting evidence. Show the definition and card before approval. Don't
+> send or schedule anything.
+
+Once reviewed, another agent can ask “How did September revenue compare with
+August on our agreed Finance basis?” It should retrieve the shared meaning,
+evaluate the matching card against current source measurements, and explain
+the figures, policy implication and material caveats. It should not reuse the
+net-revenue card to answer a gross-billings question. Ask for the source metric
+ID, revision and periods alongside the answer so readers can check its basis.
+
+A metric revision identifies the calculation, not the data snapshot. A SQL hash
+also identifies a query, not immutable results. Keep measurements in run evidence,
+not as timeless facts in the shared definition. Where your source publishes
+snapshot IDs, data-as-of times, close status or approved corrections, preserve
+them with the result. If two receipts disagree for a closed period, establish
+whether a source-owned correction supersedes the earlier snapshot; a later
+retrieval time alone does not explain the change. This is source/agent context,
+not a new mandatory SignalWeave schema or a reason to suppress valid current
+findings while a discrepancy is investigated.
+
 ## Enable the optional tools
 
 After local setup, enable shared context without editing configuration:

@@ -63,7 +63,9 @@ def _evidence_slots(card: InsightCard) -> list[EvidenceSlot]:
             source_refs=[source],
             required=source.required,
             completion_criteria=(
-                ("Return complete, reconciled analytical comparisons: " + ", ".join(source.required_comparison_keys))
+                ("Return the bound comparison evidence with complete, comparable coverage: "
+                 + ", ".join(source.required_comparison_keys)
+                 + ". Scalar source contracts do not require a decomposable analytical comparison.")
                 if source.required_comparison_keys else
                 (
                     "Return a bounded observation or evidence statement with its source and comparison window."

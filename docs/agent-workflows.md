@@ -91,6 +91,14 @@ rules. It can show supported current findings while noting what still needs
 clarification before unattended delivery. That does not approve a card, make
 an invalid comparison usable, or authorize a message.
 
+Also distinguish a business alert from a source/definition problem. A required
+source gap can return `insufficient_data` rather than a literal `investigate`
+label. If you want a person notified, agree on that review owner and let the
+agent preserve the corresponding route. An intentionally agent-owned repair
+can stay unrouted; a missing route is not proof that anyone was asked to help.
+The first shadow check should show the actual message and intended recipient
+for both the meaningful-change and cannot-trust-the-comparison paths.
+
 Keep the saved policy evidence compact and at the right grain. A check can use
 aggregate quantities and relevant exceptions while the agent fetches detailed
 records for its investigation. Missing coverage may limit a whole-population
@@ -144,6 +152,11 @@ Before unattended delivery, separately test the actual workflow against the
 owner's examples, including partial periods and missing context, and authorize
 the caller's delivery tools. Do not treat an approved card or a high-confidence
 judgment as that proof.
+In caller delivery tools, expose the actual destination IDs (or a lookup tool),
+not just audience labels. Keep data-review recipients distinct from business-alert
+recipients, and record whichever audience the owner requested. Check the send
+result before finalizing the workflow; do not run a terminal completion tool in
+parallel with delivery or treat an intended destination as proof of a send.
 `onboarding_warnings` on an approved card retain the setup review's caveats
 without its large catalog audit. They are historical review findings, not fresh
 measurements; check each run's `source_contracts` and evidence as well.
