@@ -1,0 +1,25 @@
+{
+  "protocol": "published-cube-native-v1",
+  "objective": "Close the remaining actual-semantic-layer and continuous published-install gaps in the existing Decisions/card workflow, without replacing the metric engine or owning the agent.",
+  "source": "Digest-pinned real Cube Core over read-only Postgres; synthetic raw ledger, real /meta, /sql and /load. No Python/SQLite aggregate substitution in the gateway.",
+  "prerequisites": [
+    "Independently recompute all six named metric results from raw ledger rows using Decimal and retain a hand-computable control.",
+    "Retain actual Cube metadata, query/response and generated SQL plus model, query, data, runtime and helper identities separately.",
+    "Complete a fresh public v0.2.1 terminal install, isolated Codex registration, then agent-authored source/context/card onboarding in that same home; explicitly retain operator manifest setup."
+  ],
+  "gates_before_cohort": [
+    "One canonical monthly net-revenue pilot pair.",
+    "One explicitly gross-revenue pilot pair that does not inherit the net policy.",
+    "One actual source-model-revision pilot pair, unchanged raw ledger; refresh declared bridge lineage by its documented operator path, preserve old approvals and require review before action."
+  ],
+  "cohort": "After explicit review/reapproval and source-owned data correction, ten equivalent prompt pairs on the same new model/data snapshot; five baseline-first, five treatment-first. Pilots remain separate.",
+  "fairness": "Both arms retain all company source tools and identical reviewed context/card/old notes. Only treatment adds the actual public native MCP and bundled skill. Fresh agent histories, no oracle or desired label in agent prompts.",
+  "grading": "Correct metric, source-derived definition revision, data snapshot, scope, periods, currency, amounts against independent oracle BEFORE agreement. Actual new-key non-replay receipts for applicable treatment evaluations. Independently review every brief for supported implications, useful next step, citations and no invented cause/send.",
+  "stop_rule": "Stop on material source/onboarding/pilot error, preserve the attempt, fix the demonstrated defect, then start a separately named attempt. Never rescore or pool repaired episodes as original passes.",
+  "nonclaims": [
+    "One real vendor on synthetic data is not every semantic layer or an actual customer.",
+    "Ten prompt pairs are clustered readers, not twenty independent enterprises.",
+    "Native probability distributions do not imply calibration or identical frontier prose.",
+    "No speed, cost, superiority, human acknowledgement or autonomous external-delivery claim without corresponding evidence."
+  ]
+}

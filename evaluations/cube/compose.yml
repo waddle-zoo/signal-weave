@@ -1,0 +1,36 @@
+# Synthetic research fixture, not a production Cube deployment.
+services:
+  postgres:
+    image: postgres@sha256:d81f7b51697014367236d07ec58b54153fc28f828b72bf247fe5c7487520bcb0
+    environment:
+      POSTGRES_DB: semantic_trial
+      POSTGRES_USER: fixture_admin
+      POSTGRES_PASSWORD: ${SW_CUBE_DB_ADMIN_PASSWORD:?test-owned password required}
+    volumes:
+      - ${SW_CUBE_FIXTURE_DIR:?absolute fixture directory required}/seed.sql:/docker-entrypoint-initdb.d/seed.sql:ro
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U fixture_admin -d semantic_trial]
+      interval: 2s
+      timeout: 2s
+      retries: 40
+  cube:
+    image: cubejs/cube@sha256:5a728f42924051b9499016fb1ac9d1695ab544084d57221c0dd173e4c730730a
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - 127.0.0.1:${SW_CUBE_PORT:-4406}:4000
+    environment:
+      CUBEJS_DEV_MODE: 'false'
+      CUBEJS_API_SECRET: ${SW_CUBE_API_SECRET:?test-owned secret required}
+      CUBEJS_DB_TYPE: postgres
+      CUBEJS_DB_HOST: postgres
+      CUBEJS_DB_NAME: semantic_trial
+      CUBEJS_DB_USER: cube_reader
+      CUBEJS_DB_PASS: ${SW_CUBE_DB_READER_PASSWORD:?test-owned password required}
+      CUBEJS_CACHE_AND_QUEUE_DRIVER: memory
+      CUBEJS_REFRESH_WORKER: 'false'
+      CUBEJS_TELEMETRY: 'false'
+    volumes:
+      - ${SW_CUBE_FIXTURE_DIR:?absolute fixture directory required}/model:/cube/conf/model:ro
+      - ${SW_CUBE_FIXTURE_DIR:?absolute fixture directory required}/cube.js:/cube/conf/cube.js:ro
