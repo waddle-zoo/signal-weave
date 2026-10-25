@@ -112,6 +112,18 @@ each company. All 24 passed the pre-existing outcome/route/provider/shadow
 checks, with no receipt replays. All three required-definition edits produced a
 new draft, deferred policy with no outcome/routes and retained source evidence.
 
+**Those broad gates are not exact policy or investigation-delivery proof.** Final
+adversarial review found them too permissive to establish that operational
+claim: all six gap cases returned `insufficient_data`, while the cards say to
+investigate incomplete coverage. Only three of six conflict cases returned
+`investigate`; the others returned `insufficient_data`, including marketplace
+with no Finance route. Against literal `investigate` wording, final exact-label
+agreement is 15/24, not 24/24. Evidence/comparability safety gates also affect
+these final results, so that is not raw provider accuracy. The missing-owner
+handoff is a substantive onboarding/workflow gap, not something to hide behind
+the broad review-outcome category. No downstream agent or recipient was tested
+in this direct-call supplement.
+
 Quiet cases were all `ignore`; qualifying declines all `notify` Finance.
 Missing data and definition conflicts remained review handoffs. SaaS conflict
 repeats varied between `investigate` and `insufficient_data`; this is **not**
@@ -126,6 +138,14 @@ source identity; one approval attempt used descriptive rather than exact scope
 confirmations and was rejected. None of those attempts reached provider judgment.
 The completed supplement is in `policy-supplement-v4`, separate from the
 unchanged original reports and their failures.
+
+Before completing this goal, distinguish and test the owner-approved paths for
+a business signal, a data-quality problem and a definition disagreement. Prove
+that the calling agent follows up with the right person, not merely that the
+API returns a conservative enum. Do not remove evidence safety checks or force
+an action just to match a label. Also finish the publication-aware forward
+test and the remaining fresh-reader cases; these results do not complete those
+requirements.
 
 Independent review covered all 20 retail canonical briefs and four contrasts,
 and all 20 marketplace canonical briefs plus two gross contrasts. It found no
