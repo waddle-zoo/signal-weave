@@ -26,6 +26,10 @@ async def test_sql_snapshot_matches_independent_decimal_ledger_calculation(tmp_p
     assert observation.current == pytest.approx(float(expected["current"]), rel=0, abs=0.005)
     assert observation.previous == pytest.approx(float(expected["previous"]), rel=0, abs=0.005)
     assert observation.change_pct == pytest.approx(float(expected["change_pct"]), rel=0, abs=0.005)
+    assert observation.change_pct == pytest.approx(
+        float((expected["current"] - expected["previous"]) / expected["previous"] * 100),
+        rel=0, abs=1e-10,
+    )  # preserve decision inputs; only the human presentation rounds the rate
     evidence = snapshot.evidence[0]
     assert evidence.values["delta"] == pytest.approx(float(expected["delta"]), rel=0, abs=0.005)
     assert "SUM(" in evidence.values["query_sql"]

@@ -233,7 +233,7 @@ class SemanticCompany:
                 "SELECT period,required_rows,available_rows FROM period_coverage WHERE period IN (?,?)", (_CURRENT, _PREVIOUS))}
         current, previous = _money(values.get(_CURRENT, 0)), _money(values.get(_PREVIOUS, 0))
         delta = _money(current - previous)
-        change = _money(delta / previous * 100) if previous else None
+        change = delta / previous * 100 if previous else None
         partial = any(item["available_rows"] < item["required_rows"] for item in coverage.values())
         state = "partial" if partial else "complete"
         detail = "; ".join(
@@ -322,6 +322,6 @@ class SemanticCompany:
                 totals[row["period"]] += converted
         current, previous = _money(totals[_CURRENT]), _money(totals[_PREVIOUS])
         delta = _money(current - previous)
-        change = _money(delta / previous * 100) if previous else None
+        change = delta / previous * 100 if previous else None
         return {"resource": resource, "metric_id": metric_id, "current": current, "previous": previous,
                 "delta": delta, "change_pct": change, "current_period": _CURRENT, "previous_period": _PREVIOUS, "unit": self.unit}
