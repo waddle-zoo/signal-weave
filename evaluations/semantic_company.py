@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import random
 import sqlite3
 from datetime import datetime, timezone
@@ -24,9 +25,15 @@ _CONVERSION_SCALE = Decimal(1_000_000_000_000)
 _CURRENT = "2026-09"
 _PREVIOUS = "2026-08"
 _POLICY = (
-    "Notify Finance when canonical monthly net revenue falls more than 10% versus a comparable "
-    "month; ignore smaller movement; investigate materially incomplete coverage or conflicting "
-    "definitions. No sending is permitted by this fixture."
+    "Route a decline in canonical monthly net revenue greater than 10% versus a comparable month "
+    "to Finance at agent://finance as a business alert. Ignore smaller movement only when coverage is complete and "
+    "meaning is consistent. For materially incomplete coverage or conflicting definitions that "
+    "prevent a business conclusion, return investigate or insufficient_data and route Finance at "
+    "agent://finance for data/definition review, never as a business alert. Never issue a business "
+    "all-clear from missing or contradictory evidence. External sending is prohibited. A review "
+    "handoff may be submitted to a simulated local Finance inbox only when the owner explicitly "
+    "requests it and the trial exposes the local submission tool; ordinary setup and reader runs "
+    "have neither send tools nor authorization."
 )
 _PROFILES = {
     "retail": dict(company_name="Juniper Outfitters", domain="commerce", currency="USD", owner="Retail Controller", low=1200, high=30000, metric_id="retail.net_revenue", definition="Posted merchandise sales less refunds and sales tax; excludes shipping and gift cards.", population="Eligible merchandise; excludes shipping, gift cards, and tax.", time_semantics="Completed calendar transaction month; September versus August 2026.", category="merchandise", status="posted", currencies=(("USD", 1_000_000), ("CAD", 740_000), ("EUR", 1_080_000))),
@@ -114,6 +121,7 @@ class SemanticCompany:
             db.execute("CREATE TABLE semantic_metrics (resource TEXT PRIMARY KEY, metric_id TEXT, title TEXT, definition TEXT, owner TEXT, grain TEXT, currency TEXT, population TEXT, time_semantics TEXT, revision TEXT, status TEXT, measure TEXT, filter_sql TEXT)")
             db.execute("CREATE TABLE period_coverage (period TEXT PRIMARY KEY, required_rows INTEGER, available_rows INTEGER)")
             db.execute("CREATE TABLE definition_conflicts (metric_id TEXT, owner TEXT, revision TEXT, definition TEXT, population TEXT, time_semantics TEXT)")
+            db.execute("CREATE TABLE measurement_publications (publication_id TEXT PRIMARY KEY, metric_id TEXT NOT NULL, metric_definition_revision TEXT NOT NULL, supersedes_data_snapshot_id TEXT NOT NULL, data_snapshot_id TEXT NOT NULL UNIQUE, source_owner TEXT NOT NULL, owner_signoff TEXT NOT NULL, correction TEXT NOT NULL, published_at_utc TEXT NOT NULL)")
             net = {"retail": "gross_cents-refund_cents-tax_cents", "saas": "recognized_cents-refund_cents-credit_cents", "marketplace": "platform_fee_cents-fee_refund_cents-tax_cents"}[self.company]
             annual = {"retail": "gross_cents", "saas": "recognized_cents", "marketplace": "platform_fee_cents"}[self.company]
             db.execute(f"CREATE VIEW semantic_transactions AS SELECT t.*, {net} AS net_amount_cents, {annual}*12 AS arr_cents, gross_cents-refund_cents-tax_cents+credit_cents AS draft_net_cents, gross_cents-refund_cents AS deprecated_net_cents FROM transactions AS t")
@@ -186,6 +194,101 @@ class SemanticCompany:
                 db.execute("INSERT INTO definition_conflicts VALUES (?,?,?,?,?,?)", (
                     self.metric_id, "Consolidation Accounting", "r4", definition, population, time_basis))
 
+    def _data_snapshot_id(self, db: sqlite3.Connection) -> str:
+        """Identify the measured ledger state, independently of its definition or query."""
+        transactions = [tuple(row) for row in db.execute(
+            "SELECT id,period,revenue_class,status,eligible,available,currency,fx_micros,activity_bp,"
+            "gross_cents,refund_cents,tax_cents,credit_cents,recognized_cents,platform_fee_cents,"
+            "fee_refund_cents,gmv_cents FROM transactions ORDER BY id")]
+        coverage = [tuple(row) for row in db.execute(
+            "SELECT period,required_rows,available_rows FROM period_coverage ORDER BY period")]
+        canonical = json.dumps(
+            {"format": "semantic-ledger-v1", "tenant_id": self.tenant_id,
+             "transactions": transactions, "period_coverage": coverage},
+            separators=(",", ":"), ensure_ascii=True,
+        )
+        digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+        return f"ledger-v1-sha256:{digest}"
+
+    def publish_measurement_refresh(self) -> dict[str, str]:
+        """Publish a signed source-side scaling correction over the current ledger state."""
+        with self._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            has_publication_table = db.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='measurement_publications'"
+            ).fetchone()
+            if not has_publication_table:
+                raise RuntimeError("measurement publication requires a newly created semantic fixture")
+            if db.execute("SELECT 1 FROM measurement_publications LIMIT 1").fetchone():
+                raise ValueError("this fixture already contains a measurement publication")
+
+            scales = {row[0]: (row[1], row[2]) for row in db.execute(
+                "SELECT period,MIN(activity_bp),MAX(activity_bp) FROM transactions GROUP BY period")}
+            if scales.get(_CURRENT) != (8200, 8200) or scales.get(_PREVIOUS) != (10000, 10000):
+                raise ValueError("measurement refresh requires the source export's prior scaling state")
+            coverage = {row[0]: (row[1], row[2]) for row in db.execute(
+                "SELECT period,required_rows,available_rows FROM period_coverage WHERE period IN (?,?)",
+                (_CURRENT, _PREVIOUS))}
+            if set(coverage) != {_CURRENT, _PREVIOUS} or any(
+                required <= 0 or available != required for required, available in coverage.values()
+            ):
+                raise ValueError("measurement refresh requires complete period coverage")
+
+            superseded_id = self._data_snapshot_id(db)
+            definition = db.execute(
+                "SELECT revision FROM semantic_metrics WHERE resource=?", (self.canonical_resource,)
+            ).fetchone()
+            if definition is None:
+                raise ValueError("canonical metric definition is missing")
+
+            # Correct the source-side export scale attached to current-period rows.
+            db.execute("UPDATE transactions SET activity_bp=10000 WHERE period=?", (_CURRENT,))
+            data_snapshot_id = self._data_snapshot_id(db)
+            now = datetime.now(timezone.utc).isoformat()
+            correction = (
+                f"The source owner corrected the {_CURRENT} export scaling from 0.82 to 1.00. "
+                "This is a source-side export scaling correction; no business cause is asserted."
+            )
+            source_owner = self.profile["owner"]
+            owner_signoff = f"{source_owner} approved the source-side export scaling correction."
+            publication_seed = "|".join((self.tenant_id, self.metric_id, superseded_id, data_snapshot_id))
+            publication_id = "measurement-publication:" + hashlib.sha256(
+                publication_seed.encode("utf-8")
+            ).hexdigest()
+            publication = {
+                "publication_id": publication_id,
+                "metric_id": self.metric_id,
+                "metric_definition_revision": definition["revision"],
+                "supersedes_data_snapshot_id": superseded_id,
+                "data_snapshot_id": data_snapshot_id,
+                "source_owner": source_owner,
+                "owner_signoff": owner_signoff,
+                "correction": correction,
+                "published_at_utc": now,
+            }
+            db.execute(
+                "INSERT INTO measurement_publications VALUES (?,?,?,?,?,?,?,?,?)",
+                tuple(publication.values()),
+            )
+        return publication
+
+    @staticmethod
+    def _publication_for_snapshot(
+        db: sqlite3.Connection, data_snapshot_id: str, metric_id: str, metric_revision: str
+    ) -> dict[str, str] | None:
+        table = db.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='measurement_publications'"
+        ).fetchone()
+        if not table:
+            return None
+        row = db.execute(
+            "SELECT publication_id,metric_id,metric_definition_revision,supersedes_data_snapshot_id,"
+            "data_snapshot_id,source_owner,owner_signoff,correction,published_at_utc "
+            "FROM measurement_publications WHERE data_snapshot_id=? AND metric_id=? "
+            "AND metric_definition_revision=?", (data_snapshot_id, metric_id, metric_revision)
+        ).fetchone()
+        return dict(row) if row else None
+
     def _definition_rows(self) -> list[sqlite3.Row]:
         with self._connect() as db:
             return list(db.execute("SELECT * FROM semantic_metrics ORDER BY resource"))
@@ -248,6 +351,10 @@ class SemanticCompany:
             values = {item["period"]: item["amount"] for item in db.execute(query, (_CURRENT, _PREVIOUS))}
             coverage = {item["period"]: dict(item) for item in db.execute(
                 "SELECT period,required_rows,available_rows FROM period_coverage WHERE period IN (?,?)", (_CURRENT, _PREVIOUS))}
+            data_snapshot_id = self._data_snapshot_id(db)
+            publication = self._publication_for_snapshot(
+                db, data_snapshot_id, row["metric_id"], row["revision"]
+            )
         current, previous = _money(values.get(_CURRENT, 0)), _money(values.get(_PREVIOUS, 0))
         delta = _money(current - previous)
         change = delta / previous * 100 if previous else None
@@ -260,7 +367,8 @@ class SemanticCompany:
         contract = self._contract(row, state, detail)
         now = datetime.now(timezone.utc)
         sql_hash = hashlib.sha256(query.encode()).hexdigest()
-        provenance = [f"sqlite:{self.tenant_id}:semantic_transactions", f"sql-sha256:{sql_hash}", f"semantic-metric:{row['metric_id']}:{row['revision']}"]
+        provenance = [f"sqlite:{self.tenant_id}:semantic_transactions", f"sql-sha256:{sql_hash}",
+                      f"semantic-metric:{row['metric_id']}:{row['revision']}", f"data-snapshot:{data_snapshot_id}"]
         observation = Observation(source_key=source.key, subject_id=row["metric_id"], subject_label="Revenue", subject_type="metric",
             metric=row["metric_id"], unit=row["currency"], current=float(current), baseline=float(previous), previous=float(previous),
             change_pct=float(change) if change is not None else None, comparison_baselines={"previous_period": float(previous)},
@@ -272,7 +380,8 @@ class SemanticCompany:
             statement=f"Source aggregate for {_CURRENT}: {current} {row['currency']}; {_PREVIOUS}: {previous} {row['currency']}." + (f" Coverage: {detail}." if detail else ""),
             values={"current_period": _CURRENT, "current": float(current), "previous_period": _PREVIOUS, "previous": float(previous),
                     "delta": float(delta), "change_pct": float(change) if change is not None else None, "unit": row["currency"],
-                    "semantic_metric_id": row["metric_id"], "metric_revision": row["revision"], "query_sql": query, "query_sha256": sql_hash}, provenance=provenance)]
+                    "semantic_metric_id": row["metric_id"], "metric_revision": row["revision"],
+                    "data_snapshot_id": data_snapshot_id, "query_sql": query, "query_sha256": sql_hash}, provenance=provenance)]
         availability = "; ".join(
             f"{period}: {item['available_rows']} of {item['required_rows']} ledger records available"
             for period, item in sorted(coverage.items())
@@ -285,15 +394,24 @@ class SemanticCompany:
             evidence.append(Evidence(source_key=source.key, subject_id=row["metric_id"], subject_label="Revenue definition record",
                 statement=f"A source definition from {conflict['owner']} is recorded at revision {conflict['revision']}.",
                 values={k: conflict[k] for k in ("owner", "revision", "definition", "population", "time_semantics")}, provenance=provenance))
+        if publication:
+            evidence.append(Evidence(
+                source_key=source.key, subject_id="measurement-publication", subject_label="Source measurement publication",
+                statement=f"Source owner {publication['source_owner']} signed off on this measurement publication. {publication['correction']}",
+                values=publication, provenance=provenance + [f"measurement-publication:{publication['publication_id']}"],
+            ))
+        metadata = {"source_identity": {"tenant_id": self.tenant_id, "adapter": source.adapter, "resource": source.resource,
+                "semantic_metric_id": row["metric_id"]}, "source_sql": query, "metric_revision": row["revision"],
+                "query_sha256": sql_hash, "data_snapshot_id": data_snapshot_id, "retrieved_at_utc": now.isoformat(),
+                "measurement_periods": {"current": "2026-09-01/2026-09-30", "previous": "2026-08-01/2026-08-31"},
+                "measurement_coverage": coverage, "historical_measurements": True,
+                "archival_mode_required": True, "live_connector": False}
+        if publication:
+            metadata["measurement_publication"] = publication
         return ResourceSnapshot(source_key=source.key, adapter=source.adapter, resource=source.resource, title=row["title"],
             description=f"Synthetic SQLite semantic metric for {self.profile['company_name']}; historical months, not a live dbt/Cube connector.",
             observations=[observation], evidence=evidence,
-            metadata={"source_identity": {"tenant_id": self.tenant_id, "adapter": source.adapter, "resource": source.resource,
-                "semantic_metric_id": row["metric_id"]}, "source_sql": query, "metric_revision": row["revision"],
-                "query_sha256": sql_hash, "retrieved_at_utc": now.isoformat(),
-                "measurement_periods": {"current": "2026-09-01/2026-09-30", "previous": "2026-08-01/2026-08-31"},
-                "measurement_coverage": coverage, "historical_measurements": True,
-                "archival_mode_required": True, "live_connector": False},
+            metadata=metadata,
             captured_at=now, source_captured_at=now, contract=contract)
 
     def expected(self, resource: str | None = None) -> dict[str, Decimal | str | None]:

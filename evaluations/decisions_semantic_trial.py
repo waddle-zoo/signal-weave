@@ -72,7 +72,7 @@ def reader_instructions(treatment):
         "For a distinct metric or question, do not force an unrelated card; use the company source tools. "
         "Retrieve needed shared definition/evidence, not the entire history. Never mutate cards or definitions during a reader run. "
         "You own the explanation; a policy label is not the analysis. If judgment is deferred, use available evidence without inventing an outcome. "
-        "Return a concise human brief, at most 140 words. Do not claim anything was sent or scheduled. "
+        "Return a concise human brief, at most 140 words. Do not claim a delivery without a confirming tool receipt; never claim scheduling or human acknowledgement. "
         "Complete with submit_report: source-owned metric identity/revision, amounts in full currency units (not thousands), "
         "YYYY-MM periods and inspectable source refs. Recipients are empty when no alert is warranted; otherwise use the exact owner-defined destination."
         " Set resolution_status to resolved only when the requested basis is established, otherwise unresolved. "
@@ -133,12 +133,14 @@ class Episode:
     phase = "monitoring"
     setup_complete = True
 
-    def __init__(self, company, native_server, *, onboarding=False, notes=None):
+    def __init__(self, company, native_server, *, onboarding=False, notes=None, review_delivery=False):
         self.company, self.native = company, native_server
         self.onboarding, self.notes = onboarding, notes
         self.treatment = native_server is not None
         self.submission = None
         self.calls = []
+        self.review_delivery = review_delivery
+        self.inbox = []
 
     async def specs(self):
         tools = [
@@ -151,6 +153,11 @@ class Episode:
         if self.native:
             tools += [{"name": tool.name, "description": tool.description, "parameters": tool.inputSchema}
                       for tool in await self.native.list_tools()]
+        if self.review_delivery:
+            tools += [spec("send_finance_review", "Deliver one concise review request to the simulated Finance inbox. This is a local test sink, not Slack/email or a human acknowledgement.", {
+                "destination": {"type": "string"}, "message": {"type": "string"},
+                "source_refs": {"type": "array", "items": {"type": "string"}},
+            }, ["destination", "message", "source_refs"])]
         if self.onboarding:
             tools += [spec("finish_onboarding", "Finish only after saving, reviewing and approving the agreed card and shared definition. Never send or schedule.",
                            {"card_id": {"type": "string"}, "context_id": {"type": "string"},
@@ -158,7 +165,8 @@ class Episode:
         else:
             tools += [spec("submit_report", "Return the business brief and its inspectable facts; does not send a message.", {
                 "metric_id": {"type": "string"}, "definition_revision": {
-                    "type": "string", "description": "Exact source metric revision only, e.g. r3; not a sentence, metric ID or SignalWeave context revision."},
+                    "type": "string", "pattern": "^r[0-9]+$",
+                    "description": "Exact revision ID from this fixture's source catalog, e.g. r3; put competing revisions in uncertainties, not here. Not the SignalWeave context revision."},
                 "resolution_status": {"type": "string", "enum": ["resolved", "unresolved"],
                                       "description": "Whether this supports a definitive answer on the requested basis; attributed source amounts may be supplied even while competing definitions remain unresolved."},
                 "current": {"type": ["number", "null"]}, "previous": {"type": ["number", "null"]},
@@ -186,6 +194,13 @@ class Episode:
             return {"source_notes": self.company.notes(), "owner_policy": self.company.business_policy,
                     "destinations": [{"key": "finance", "label": "Finance", "destination": "agent://finance"}],
                     "reviewed_brief": self.notes}
+        if name == "send_finance_review" and self.review_delivery:
+            if arguments["destination"] != "agent://finance" or not arguments["message"].strip() or not arguments["source_refs"]:
+                raise ValueError("Use the owner-supplied Finance destination and an evidence-backed review request")
+            if self.inbox:
+                raise ValueError("The local review request has already been delivered")
+            self.inbox.append(copy.deepcopy(arguments))
+            return {"delivered": True, "sink": "simulated-local-finance-inbox", "human_acknowledged": False}
         if name == "finish_onboarding" and self.onboarding:
             _, card = await self.native.call_tool("get_insight_card", {
                 "card_id": arguments["card_id"], "response_mode": "full"})
@@ -193,6 +208,10 @@ class Episode:
                 "entry_ids": [arguments["context_id"]]})
             if card["status"] != "approved" or not context["entries"]:
                 raise ValueError("Onboarding is not complete")
+            if not all(any(method["outcome"] == outcome and method["destination"] == "agent://finance"
+                           for method in card["delivery_methods"])
+                       for outcome in ("notify", "investigate", "insufficient_data")):
+                raise ValueError("The Finance owner's business-alert and data/definition-review destinations are not all preserved. Re-read the owner policy and review the revised card before finishing.")
             self.submission = {**arguments, "card": card, "context": context}
             return {"accepted": True, "sent": False, "scheduled": False}
         if name == "submit_report" and not self.onboarding:
@@ -240,16 +259,31 @@ def grade(submission, company, *, resource=None):
 def grade_policy(condition, packet):
     result = packet["result"]
     allowed = {"quiet": {"ignore"}, "decline": {"notify"},
-               "gap": {"insufficient_data", "investigate"},
+               "gap": {"insufficient_data"},
                "definition_conflict": {"insufficient_data", "investigate"}}[condition]
     routes = [route["destination"] for route in result.get("delivery_methods", [])]
     return {
         "outcome": result.get("outcome") in allowed,
-        "recipient": (routes == [] if condition == "quiet" else routes == ["agent://finance"]
-                      if condition == "decline" else routes in ([], ["agent://finance"])),
+        "recipient": routes == ([] if condition == "quiet" else ["agent://finance"]),
         "provider": result.get("evaluator") == "openai-decisions",
         "shadow": packet["receipt"]["delivery_enabled"] is False,
     }
+
+
+def grade_review(episode, company, condition):
+    """Human message quality still needs independent review, not word matching."""
+    submission = episode.submission or {}
+    checks = grade_conflict(submission, company)
+    checks["review_owner"] = submission.get("recipients") == ["agent://finance"]
+    checks["review_outcome"] = submission.get("outcome") in (
+        {"insufficient_data"} if condition == "gap" else {"investigate", "insufficient_data"})
+    checks["delivered_once"] = len(episode.inbox) == 1
+    if episode.inbox:
+        delivery = episode.inbox[0]
+        checks["delivery_owner"] = delivery["destination"] == "agent://finance"
+        checks["delivery_matches_brief"] = delivery["message"] == submission.get("message")
+        checks["delivery_source"] = f"{company.name}|{company.canonical_resource}" in delivery["source_refs"]
+    return checks
 
 
 def grade_conflict(submission, company=None):
@@ -257,7 +291,8 @@ def grade_conflict(submission, company=None):
         "submitted": bool(submission),
         "unresolved": submission.get("outcome") in {"deferred", "investigate", "insufficient_data"},
         "no_definitive_resolution": submission.get("resolution_status") == "unresolved",
-        "only_authorized_review_audience": submission.get("recipients") in ([], ["agent://finance"]),
+        "only_authorized_review_audience": (submission.get("recipients") == ["agent://finance"]
+                                            if company is not None else submission.get("recipients") in ([], ["agent://finance"])),
         "uncertainty_explicit": bool(submission.get("uncertainties")),
     }
     if company is not None:
@@ -294,6 +329,7 @@ async def run(args):
                                                                 ROOT / "evaluations/installed_trial_transport.py"]},
                                  "requested_readers": args.readers, "requested_companies": args.companies,
                                  "refresh_after_onboarding": args.refresh_after_onboarding,
+                                 "review_handoffs": args.review_handoffs,
                                  "transport": args.transport, "semantic_sensitivity": args.sensitivity})
     secret = args.key_file.read_text().strip()
     if not secret:
@@ -341,6 +377,10 @@ async def run(args):
                     "approved": card["status"] == "approved",
                     "canonical_source": any(source["adapter"] == company.name and source["resource"] == company.canonical_resource
                                             for source in card["sources"]),
+                    "owner_review_routes": all(any(
+                        method["outcome"] == outcome and method["destination"] == "agent://finance"
+                        for method in card["delivery_methods"])
+                        for outcome in ("notify", "investigate", "insufficient_data")),
                     "required_reviewed_context": any(pin["required_for_action"] and any(
                         entry["id"] == pin["entry_id"] and entry["revision"] == pin["revision"]
                         and entry["status"] == "reviewed" for entry in context_entries)
@@ -353,9 +393,10 @@ async def run(args):
                     # A new ledger snapshot, not a new policy or a gold label in
                     # a tool response. Keep the old handoff in BOTH arms' notes:
                     # readers must refresh measurements rather than repeat it.
-                    company.set_condition("quiet")
+                    publication = company.publish_measurement_refresh()
                     company_result["measurement_refresh"] = {
                         "scope": "Post-onboarding ledger update; unchanged definition, card and notes",
+                        "publication": publication,
                         "independent_values": company.expected(),
                     }
                 for index, prompt in enumerate(PROMPTS[:args.readers]):
@@ -383,6 +424,28 @@ async def run(args):
                         if not all(record["checks"].values()):
                             result["stopped"] = "Reader failed the preregistered semantic/amount/action gate; preserve before repair"
                             return result
+                company_result["review_handoffs"] = []
+                if args.review_handoffs:
+                    for condition in ("gap", "definition_conflict"):
+                        company.set_condition(condition)
+                        for arm in ("ordinary_context", "signalweave"):
+                            reader = Episode(company, installed if arm == "signalweave" else None,
+                                             notes=shared, review_delivery=True)
+                            review_audit = Audit(path=directory / f"review-{condition}-{arm}.jsonl", secrets=(secret,))
+                            response = await actor(reader, review_audit, args.codex, reader_instructions(arm == "signalweave"), {
+                                "question": "Run the agreed Finance revenue review against current evidence. If a data or definition problem prevents a reliable business conclusion, explain what is known and what Finance needs to resolve. The fictional owner authorizes sending this review request ONLY to the exposed simulated local Finance inbox. Use send_finance_review, then submit_report with that same message; no external messages or schedule. Keep a data review distinct from a business-decline alert.",
+                                "as_of": "2026-10-25", "run_key": f"review-handoff:{company_name}:{condition}:{arm}",
+                            })
+                            checks = grade_review(reader, company, condition)
+                            company_result["review_handoffs"].append({
+                                "condition": condition, "arm": arm, "agent": response,
+                                "submission": reader.submission, "inbox": reader.inbox,
+                                "calls": reader.calls, "checks": checks, "human_review": "pending independent review",
+                            })
+                            save(root / "report.json", result)
+                            if response["status"] != "complete" or not all(checks.values()):
+                                result["stopped"] = "Review handoff failed; preserve before repair"
+                                return result
                 company_result["semantic_contrasts"] = []
                 if args.sensitivity:
                     for contrast in ("explicit_gross", "conflicting_definition"):
@@ -482,7 +545,9 @@ def main():
     parser.add_argument("--transport", choices=["stdio", "streamable-http"], default="stdio")
     parser.add_argument("--sensitivity", action="store_true", help="Also test a distinct metric and conflicting definitions")
     parser.add_argument("--refresh-after-onboarding", action="store_true",
-                        help="Separately test updated measurements against unchanged onboarding notes and policy")
+                        help="Test source-published superseding measurements against unchanged onboarding notes and policy")
+    parser.add_argument("--review-handoffs", action="store_true",
+                        help="Test paired data/definition review delivery to an isolated local inbox")
     parser.add_argument("--readers", type=int, choices=range(1, 11), default=2)
     parser.add_argument("--companies", nargs="+", choices=["retail", "saas", "marketplace"], default=["retail"])
     args = parser.parse_args()

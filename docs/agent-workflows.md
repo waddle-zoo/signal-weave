@@ -91,6 +91,14 @@ rules. It can show supported current findings while noting what still needs
 clarification before unattended delivery. That does not approve a card, make
 an invalid comparison usable, or authorize a message.
 
+Also distinguish a business alert from a source/definition problem. A required
+source gap can return `insufficient_data` rather than a literal `investigate`
+label. If you want a person notified, agree on that review owner and let the
+agent preserve the corresponding route. An intentionally agent-owned repair
+can stay unrouted; a missing route is not proof that anyone was asked to help.
+The first shadow check should show the actual message and intended recipient
+for both the meaningful-change and cannot-trust-the-comparison paths.
+
 Keep the saved policy evidence compact and at the right grain. A check can use
 aggregate quantities and relevant exceptions while the agent fetches detailed
 records for its investigation. Missing coverage may limit a whole-population

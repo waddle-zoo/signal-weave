@@ -2,7 +2,13 @@ from decimal import Decimal
 
 import pytest
 
-from evaluations.decisions_semantic_trial import Episode, grade, grade_conflict, grade_policy
+from evaluations.decisions_semantic_trial import (
+    Episode,
+    grade,
+    grade_conflict,
+    grade_policy,
+    grade_review,
+)
 
 
 class Company:
@@ -111,7 +117,7 @@ async def test_live_agent_uses_actual_native_tool_schemas_without_replacing_comp
 
 @pytest.mark.parametrize("condition,outcome,routes", [
     ("quiet", "ignore", []), ("decline", "notify", ["agent://finance"]),
-    ("gap", "insufficient_data", []), ("definition_conflict", "investigate", ["agent://finance"]),
+    ("gap", "insufficient_data", ["agent://finance"]), ("definition_conflict", "investigate", ["agent://finance"]),
 ])
 def test_policy_gate_checks_decision_recipient_provider_and_no_send(condition, outcome, routes):
     packet = {"result": {"outcome": outcome, "evaluator": "openai-decisions",
@@ -127,6 +133,39 @@ def test_policy_gate_checks_decision_recipient_provider_and_no_send(condition, o
     assert not grade_policy(condition, packet)["provider"]
     packet["receipt"]["delivery_enabled"] = True
     assert not grade_policy(condition, packet)["shadow"]
+
+
+@pytest.mark.parametrize("condition", ["gap", "definition_conflict"])
+def test_conservative_enum_without_owner_route_does_not_pass_review_policy(condition):
+    packet = {"result": {"outcome": "insufficient_data", "evaluator": "openai-decisions", "delivery_methods": []},
+              "receipt": {"delivery_enabled": False}}
+    assert not grade_policy(condition, packet)["recipient"]
+
+
+@pytest.mark.asyncio
+async def test_review_delivery_is_explicit_local_once_and_requires_actual_matching_brief():
+    ordinary = Episode(Company(), None)
+    with pytest.raises(ValueError, match="Unknown"):
+        await ordinary.call("send_finance_review", {})
+    episode = Episode(Company(), None, review_delivery=True)
+    assert "send_finance_review" in {tool["name"] for tool in await episode.specs()}
+    message = "Finance: source coverage is incomplete; investigate the gap before drawing a revenue conclusion."
+    actual = {**submission(), "outcome": "insufficient_data", "resolution_status": "unresolved",
+              "message": message, "uncertainties": ["Missing coverage"]}
+    episode.submission = actual
+    assert not grade_review(episode, Company(), "gap")["delivered_once"]
+    with pytest.raises(ValueError, match="owner-supplied"):
+        await episode.call("send_finance_review", {"destination": "agent://leadership", "message": message,
+                                                   "source_refs": actual["source_refs"]})
+    result = await episode.call("send_finance_review", {"destination": "agent://finance", "message": message,
+                                                      "source_refs": actual["source_refs"]})
+    assert result["delivered"] and not result["human_acknowledged"]
+    assert all(grade_review(episode, Company(), "gap").values())
+    episode.submission = {**actual, "message": "A different report was submitted"}
+    assert not grade_review(episode, Company(), "gap")["delivery_matches_brief"]
+    with pytest.raises(ValueError, match="already"):
+        await episode.call("send_finance_review", {"destination": "agent://finance", "message": message,
+                                                  "source_refs": actual["source_refs"]})
 
 
 def test_conflict_gate_keeps_attributed_facts_without_claiming_a_reconciled_answer():
