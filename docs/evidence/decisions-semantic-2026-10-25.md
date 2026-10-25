@@ -73,8 +73,26 @@ A prospective research-only correction makes review audiences explicit, declares
 the test sink's sole valid address in its schema, and explains that report
 finalization closes delivery. Both arms get the same corrected contract; no
 argument is auto-corrected and no grader is relaxed. Original failures remain.
-Separate review/policy supplementation and final independent review are pending.
-This is not yet a completed whole-protocol or published stable-download claim.
+The separate `review-supplement-v1-{retail,saas,marketplace}` runs reused clones
+of those actual successful onboardings, not new prebuilt cards or rerun reader
+cohorts. A scripted fictional source operator revalidated the new isolated
+endpoints through public bind/review/approve tools without changing the policy.
+All three supplements completed: **12/12 actual local-inbox review deliveries**,
+**24/24 fresh native policy contrasts** and **3/3 required-definition-edit
+deferrals** passed the strict checks. Every report matches its delivered text;
+every native result checks top-level non-replay and its new idempotency key.
+The existing source publication is retained, not regenerated to justify a new
+result. Independent final message review passed the scoped human/content/delivery
+checks for all three companies, with citation/presentation caveats. Reviewers
+checked all twelve submitted briefs, delivered bodies and final replies, phase
+backups, actual ordering and fresh native receipts; none found a release blocker
+within this scope. In the SaaS treatment gap message, the agent drops a character from a
+snapshot hash; a marketplace baseline conflict report retains a duplicated
+publication prefix from the older shared material. Canonical source references,
+original evidence and phase backups remain inspectable, but those particular
+references are malformed. These are separate results,
+not a retrospective pass for the stopped original journeys or a published
+stable-download claim.
 
 Independent prose review covered all 60 canonical reports and seven completed
 review episodes. The canonical figures and supported implications were sound in
@@ -89,7 +107,7 @@ references still need checking; a typed decision is not citation validation.
 The 0.2.0 candidate passed all three native platform gates in
 [run 40216114409](https://github.com/waddle-zoo/signal-weave/actions/runs/40216114409),
 including real archive install and PTY setup. The local full suite passed
-5,312 tests, with 13 skipped, when granted its required terminal/loopback access.
+5,340 tests, with 13 skipped, when granted its required terminal/loopback access.
 An earlier sandboxed run retained three permission-related failures; it is not
 reported as a product pass. The packaged interactive wizard also registered
 with the actual Codex CLI and checked source health in a disposable home.
@@ -290,6 +308,10 @@ For the separate updated-ledger test, choose another directory and add
 `--refresh-after-onboarding --readers 2`. For marketplace HTTP, add
 `--transport streamable-http`. Both modes also run eight direct policy contrasts
 and a required-definition-edit check; `--sensitivity` adds four agent episodes.
+`--review-handoffs` adds paired actual local-inbox gap/conflict deliveries. The
+separate [review supplement](../../evaluations/semantic_review_supplement.py)
+requires a closed matching `stable-v2-COMPANY` run with twenty successful readers
+and valid onboarding; `--help` lists its explicit paid opt-in and exclusive output.
 These commands incur real Codex and OpenAI API usage. No automatic retry turns
 failures into successes. Raw traces remain in ignored
 `artifacts/decisions-semantic-2026-10-25/`, not committed bulk evidence.

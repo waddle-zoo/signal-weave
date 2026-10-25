@@ -152,6 +152,11 @@ Before unattended delivery, separately test the actual workflow against the
 owner's examples, including partial periods and missing context, and authorize
 the caller's delivery tools. Do not treat an approved card or a high-confidence
 judgment as that proof.
+In caller delivery tools, expose the actual destination IDs (or a lookup tool),
+not just audience labels. Keep data-review recipients distinct from business-alert
+recipients, and record whichever audience the owner requested. Check the send
+result before finalizing the workflow; do not run a terminal completion tool in
+parallel with delivery or treat an intended destination as proof of a send.
 `onboarding_warnings` on an approved card retain the setup review's caveats
 without its large catalog audit. They are historical review findings, not fresh
 measurements; check each run's `source_contracts` and evidence as well.
