@@ -72,7 +72,9 @@ def test_source_lock_container_and_workflow_require_patched_trust():
     assert docker.index("pip-26.2.2") < docker.index("pip install --no-cache-dir .")
     for name in ("ci.yml", "release.yml"):
         workflow = (ROOT / ".github/workflows" / name).read_text()
-        assert "version: '0.13.4'" in workflow
+        uv_steps = workflow.split("uses: astral-sh/setup-uv@")[1:]
+        assert uv_steps
+        assert all("version: '0.13.4'" in step.split("\n      - ", 1)[0] for step in uv_steps)
     assert "Check installed container certificate trust bundle" in (ROOT / ".github/workflows/ci.yml").read_text()
 
 
