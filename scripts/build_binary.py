@@ -10,8 +10,10 @@ from pathlib import Path
 
 if __package__:
     from .binary_provenance import build_metadata, source_fingerprint
+    from .check_ca_bundle import check_bundle, check_installed_certifi
 else:
     from binary_provenance import build_metadata, source_fingerprint
+    from check_ca_bundle import check_bundle, check_installed_certifi
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -21,6 +23,7 @@ def main() -> None:
 
     metadata = build_metadata()
     metadata["bundle_layout"] = "directory-v1"
+    metadata["tls_trust"] = check_installed_certifi()
     if version("signal-weave") != metadata["version"]:
         raise RuntimeError("Installed package metadata is stale; sync the environment before building")
     skill_file = ROOT / "skills" / "signalweave" / "SKILL.md"
@@ -41,6 +44,8 @@ def main() -> None:
         "--add-data", str(skill_file) + os.pathsep + "signalweave_skill",
         str(ROOT / "scripts" / "frozen_entrypoint.py"),
     ], cwd=ROOT, env={**os.environ, "PYINSTALLER_CONFIG_DIR": str(ROOT / "build" / "pyinstaller-cache")}, check=True)
+    check_bundle(ROOT / "dist/signalweave/_internal/certifi/cacert.pem",
+                 expected_sha256=metadata["tls_trust"]["bundle_sha256"])
     if source_fingerprint() != metadata["source_sha256"]:
         raise RuntimeError("Source changed during the build; rebuild before testing or packaging")
 

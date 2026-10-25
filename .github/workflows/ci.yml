@@ -17,12 +17,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build the actual server package
-        run: docker build --tag signalweave-server-proof .
+        run: docker build --pull --no-cache --tag signalweave-server-proof .
       - name: Verify installed CLI and canonical skill as non-root
         run: |
           docker run --rm --entrypoint signalweave signalweave-server-proof --help
           docker run --rm --entrypoint signalweave signalweave-server-proof skills show
           test "$(docker run --rm --entrypoint id signalweave-server-proof -u)" != 0
+      - name: Check installed container certificate trust bundle
+        run: >-
+          docker run --rm --entrypoint python
+          --volume "$PWD/scripts/check_ca_bundle.py:/tmp/check_ca_bundle.py:ro"
+          signalweave-server-proof /tmp/check_ca_bundle.py
+      - name: Check pip's vendored certificate trust bundle
+        run: >-
+          docker run --rm --entrypoint python
+          --volume "$PWD/scripts/check_ca_bundle.py:/tmp/check_ca_bundle.py:ro"
+          signalweave-server-proof -c
+          "import pip._vendor.certifi as c, runpy, sys; sys.argv=['/tmp/check_ca_bundle.py', c.where()]; runpy.run_path(sys.argv[0], run_name='__main__')"
 
   test:
     name: test (${{ matrix.python-version }})
@@ -44,6 +55,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
+          version: '0.13.5'
           enable-cache: true
 
       - name: Install dependencies
@@ -71,6 +83,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
+          version: '0.13.5'
           enable-cache: true
 
       - name: Install dependencies
@@ -140,6 +153,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
+          version: '0.13.5'
           enable-cache: true
 
       - name: Install dependencies
@@ -209,6 +223,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
+          version: '0.13.5'
           enable-cache: true
 
       - name: Install dependencies
@@ -289,6 +304,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
+          version: '0.13.5'
           enable-cache: true
 
       - name: Install dependencies
@@ -332,6 +348,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
+          version: '0.13.5'
           enable-cache: true
 
       - name: Install dependencies
