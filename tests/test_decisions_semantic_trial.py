@@ -8,6 +8,7 @@ from evaluations.decisions_semantic_trial import (
     grade_conflict,
     grade_policy,
     grade_review,
+    has_owner_routes,
 )
 
 
@@ -152,20 +153,32 @@ async def test_review_delivery_is_explicit_local_once_and_requires_actual_matchi
     message = "Finance: source coverage is incomplete; investigate the gap before drawing a revenue conclusion."
     actual = {**submission(), "outcome": "insufficient_data", "resolution_status": "unresolved",
               "message": message, "uncertainties": ["Missing coverage"]}
-    episode.submission = actual
-    assert not grade_review(episode, Company(), "gap")["delivered_once"]
+    assert not grade_review(episode, Company())["delivered_once"]
     with pytest.raises(ValueError, match="owner-supplied"):
         await episode.call("send_finance_review", {"destination": "agent://leadership", "message": message,
                                                    "source_refs": actual["source_refs"]})
     result = await episode.call("send_finance_review", {"destination": "agent://finance", "message": message,
                                                       "source_refs": actual["source_refs"]})
     assert result["delivered"] and not result["human_acknowledged"]
-    assert all(grade_review(episode, Company(), "gap").values())
+    episode.submission = actual
+    assert all(grade_review(episode, Company()).values())
+    episode.submission = {**actual, "outcome": "investigate"}
+    assert all(grade_review(episode, Company()).values())
     episode.submission = {**actual, "message": "A different report was submitted"}
-    assert not grade_review(episode, Company(), "gap")["delivery_matches_brief"]
+    assert not grade_review(episode, Company())["delivery_matches_brief"]
     with pytest.raises(ValueError, match="already"):
         await episode.call("send_finance_review", {"destination": "agent://finance", "message": message,
                                                   "source_refs": actual["source_refs"]})
+
+
+def test_onboarding_preserves_all_owner_routes_without_extra_destinations_or_duplicates():
+    card = {"delivery_methods": [{"outcome": outcome, "destination": "agent://finance"}
+                                  for outcome in ("notify", "investigate", "insufficient_data")]}
+    assert has_owner_routes(card)
+    assert not has_owner_routes({"delivery_methods": card["delivery_methods"][:-1]})
+    for extra in ({"outcome": "notify", "destination": "agent://leadership"},
+                  {"outcome": "notify", "destination": "agent://finance"}):
+        assert not has_owner_routes({"delivery_methods": [*card["delivery_methods"], extra]})
 
 
 def test_conflict_gate_keeps_attributed_facts_without_claiming_a_reconciled_answer():
