@@ -1,5 +1,37 @@
 # SignalWeave security and operations review
 
+## October 2026 certificate trust update
+
+Native v0.2.0 and earlier bundles include a certifi CA bundle affected by
+[GHSA-6q48-6c7w-9gw2](https://github.com/certifi/python-certifi/security/advisories/GHSA-6q48-6c7w-9gw2).
+Do not use those bundles for live credentials. Replace the native installation
+with the corrected release after it is published; upgrading system Python does
+not update a frozen executable's embedded certificates. Local cards and settings
+can be preserved during replacement. This is a dependency exposure, not evidence
+that a SignalWeave user was intercepted.
+
+The v0.2.1 build requires certifi >=2026.10.19 (locked to 2026.10.23), uses uv
+0.13.4, and bootstraps container pip 26.2.2 from the hash published by the
+[Python security announcement](https://discuss.python.org/t/information-for-python-users-regarding-emudhra-emsign-ca-certificate-security-incident/109576).
+Rebuild existing container images with `docker build --pull --no-cache .`;
+reusing an old image or layer does not repair its trust store. Source builders
+must also update their own pip/uv using that upstream guidance before fetching
+dependencies.
+
+`scripts/check_ca_bundle.py` rejects the affected public root by DER fingerprint.
+The native build checks both its dependency and the actual packaged CA file,
+records the bundle hash in `--build-info`, and requires the files to match.
+Container CI checks the installed bundle too. The public-root negative fixture
+tests detection in isolation and mixed into a safe bundle. This is a targeted
+regression guard, not a substitute for dependency advisory review.
+
+Before publishing, review open dependency alerts, run `make verify`, require the
+three native platform jobs and container checks to pass, then inspect the
+downloaded public archive and complete the installer/setup/replay/uninstall
+journey. Never overwrite old release assets to repair a dependency.
+
+## Operating model
+
 SignalWeave is a read-and-decide layer. It should not become an unreviewed code
 execution or notification surface.
 

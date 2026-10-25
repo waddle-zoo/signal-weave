@@ -1,12 +1,13 @@
 [project]
 name = "signal-weave"
-version = "0.2.0"
+version = "0.2.1"
 description = "A semantic decision layer that turns author guidance and existing data signals into typed, explainable actions."
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies = [
+  "certifi>=2026.10.19",
   "fastapi>=0.115,<1",
   "httpx>=0.27,<1",
   "PyJWT[crypto]>=2.15,<3",
