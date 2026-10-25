@@ -42,15 +42,44 @@ revision. Both the source results and their distinct identities were retained.
 Independent review cleared these bounded pilot, source-control, maintenance and discovery
 checks. It does not certify the entire study or enterprise adoption.
 
-## Continuation in progress
+## Paired reader cohort
 
-Following those closed phases, ten fresh paired readers run,
-five baseline-first and five treatment-first. Every treatment judgment must
-match the actual card/version, current context, corrected source snapshot,
-independent amounts, outcome and routes—not merely a plausible final brief.
-Every human brief and the maintenance semantics require independent review.
-The final evaluation-code revision passed `make verify`: **5,397 passed,
-13 skipped**. Tests are regression evidence, not substitutes for the live cohort.
+Following those phases, ten fresh paired readers completed: five baseline-first
+and five treatment-first. **Both arms passed 10/10 structured checks** for the
+source-owned r4 figures, exact snapshot, metric, scope, periods, currency and
+policy. All ten treatment evaluations also matched the actual card/version,
+current context, corrected source evidence, outcome and routes; every receipt
+used its new run key and was not a replay.
+
+Independent review checked every submitted message and final reply against the
+source. All figures and current-case actions were supported; no invented cause
+or delivery was found. All ten treatment briefs passed. One baseline submission
+(case 8) incorrectly described Finance as routing *only* declines, omitting its
+data/definition-review routes; its final reply correctly limited that statement
+to business alerts. Preserve that defect, alongside minor precision/scope
+wording caveats, rather than claiming flawless prose or an accuracy advantage.
+
+Baseline mean episode time was **32.16 seconds**, treatment **33.57 seconds**
+(4.4% slower); tool calls totalled 31 and 42 respectively. These are descriptive
+measurements of this small clustered cohort, not independent-company statistics.
+Provider billing was not instrumented, so no total-cost claim is supported.
+The value established so far is functioning reusable meaning, revision-aware
+policy and inspectable evidence—not superior analytical accuracy or speed over
+an equally informed agent.
+
+Frozen study code is [`7e836fc`](https://github.com/waddle-zoo/signal-weave/commit/7e836fc).
+That revision passed `make verify`: **5,397 passed, 13 skipped**. Tests are
+regression evidence, not substitutes for live source and agent checks.
+
+Post-close engineering review found three latent harness gaps: unbound Docker
+mutation targets, correction notes that could attach to a different result, and
+raised actor/receipt failures omitted from attempt accounting. Later safeguards
+verify exact containers/mounts/port/network/reader configuration before source
+writes, bind publications to result and definition identities, and persist
+started/failed reader admissions. The closed run was **not** rerun or rescored:
+independent audit verified its actual target, all publication/result identities,
+all 20 completed actors, and ten durable native receipts. It remains valid
+bounded evidence, not proof of failure paths it did not exercise.
 
 Both arms retain the same company tools and reviewed card/context notes.
 Treatment adds the public native MCP and bundled skill. Comparative episodes
@@ -80,6 +109,9 @@ Use a disposable project and new exclusive output directories. These stages
 mutate only their synthetic source and private installed state; never point the
 mutation scripts at a real company. They require Docker, a normally logged-in
 Codex CLI, and separately authorized paid OpenAI calls where `--live` is required.
+These research drivers use macOS Docker Desktop's `desktop-linux` context.
+The company-specific semantic source also needs a reviewed normalization gateway;
+this is not zero-configuration native Cube onboarding.
 
 1. Generate with [`cube_fixture`](../../evaluations/cube_fixture.py), start its
    pinned [Compose services](../../evaluations/cube/compose.yml), and run

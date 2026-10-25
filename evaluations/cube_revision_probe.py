@@ -23,6 +23,7 @@ from mcp.client.stdio import stdio_client
 from evaluations.bootstrap_agent_trial import Audit
 from evaluations.cube_fixture_control import capture
 from evaluations.cube_source import CubeCompany
+from evaluations.cube_target import verify_target
 from evaluations.decisions_semantic_trial import save
 from evaluations.installed_trial_transport import (
     InstalledServer,
@@ -130,6 +131,7 @@ async def run(args):
                 report["before_dependencies"] = await connect(binary, person, env, audit, inspect)
                 if not report["before_dependencies"]["required_current"]:
                     raise ValueError("Same-source reconnect spuriously invalidated the reviewed binding")
+                verify_target(args.docker, args.fixture, args.project)
                 canonical["meta"]["revision"] = "r4"
                 canonical["meta"]["definition"] = "Posted merchandise sales less refunds, sales tax and credits; excludes shipping and gift cards."
                 canonical["description"] = canonical["meta"]["definition"]

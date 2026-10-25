@@ -16,6 +16,7 @@ import httpx
 import jwt
 
 from evaluations.cube_source import CubeCompany
+from evaluations.cube_target import verify_target
 from evaluations.semantic_company import SemanticCompany
 from signalweave.models import SourceRef
 
@@ -23,6 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def postgres(args, sql, *, user="fixture_admin", check=True):
+    verify_target(args.docker, args.fixture, args.project)
     command = [str(args.docker), "--context", "desktop-linux", "compose", "--env-file", str(args.fixture / "private.env"),
                "-f", str(ROOT / "evaluations/cube/compose.yml"), "-p", args.project,
                "exec", "-T", "postgres", "psql", "--no-psqlrc", "--set", "ON_ERROR_STOP=1",
@@ -31,12 +33,13 @@ def postgres(args, sql, *, user="fixture_admin", check=True):
 
 
 def capture(args, oracle):
+    target = verify_target(args.docker, args.fixture, args.project)
     with oracle._connect() as db:
         columns = [(row[1], row[2]) for row in db.execute("PRAGMA table_info(transactions)")]
     output = postgres(args, "COPY (SELECT * FROM transactions ORDER BY id) TO STDOUT WITH (FORMAT CSV);").stdout
     rows = [[int(value) if kind == "INTEGER" else value for value, (_, kind) in zip(row, columns, strict=True)]
             for row in csv.reader(io.StringIO(output))]
-    return {"raw_rows": rows, "raw_rows_sha256": hashlib.sha256(json.dumps(rows).encode()).hexdigest(),
+    return {"verified_target": target, "raw_rows": rows, "raw_rows_sha256": hashlib.sha256(json.dumps(rows).encode()).hexdigest(),
             "semantic_view_sql": postgres(args, "SELECT pg_get_viewdef('semantic_transactions',true);").stdout,
             "model_sha256": hashlib.sha256((args.fixture / "model/revenue.yml").read_bytes()).hexdigest()}
 

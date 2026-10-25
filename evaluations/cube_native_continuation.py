@@ -43,11 +43,31 @@ class PublishedCubeCompany(CubeCompany):
 
     async def inspect(self, source):
         snapshot = await super().inspect(source)
-        if self.publication and source.resource == self.canonical_resource:
+        identity = self.publication.get("identities", {}) if self.publication else {}
+        if (self.publication and source.resource == self.canonical_resource
+                and identity.get("current_result") == snapshot.metadata["data_snapshot_id"]
+                and identity.get("definition_revision") == snapshot.metadata["metric_revision"]):
             snapshot.evidence.append(Evidence(
                 source_key=source.key, statement=self.publication["body"],
                 values=self.publication["identities"], provenance=self.publication["provenance"]))
         return snapshot
+
+
+async def tracked_reader(action, report, path, identity, audit):
+    """Persist admission before any actor/receipt work, including raised failures."""
+    attempt = {**identity, "status": "started"}
+    report.setdefault("attempts", []).append(attempt)
+    save(path, report)
+    try:
+        result = await action()
+    except BaseException as error:
+        attempt.update(status="failed", error_type=type(error).__name__, error=audit.redact(str(error)))
+        raise
+    else:
+        attempt["status"] = "completed"
+        return result
+    finally:
+        save(path, report)
 
 
 def revision_checks(submission, frozen, expected, *, treatment):
@@ -131,7 +151,7 @@ async def run(args):
         raise ValueError("Source phase differs from the closed revision probe")
     helpers = [path for path in (ROOT / "evaluations").glob("*.py") if path.name in {
         "cube_native_continuation.py", "cube_native_trial.py", "cube_revision_probe.py", "cube_source.py",
-        "cube_fixture_control.py", "semantic_company.py", "decisions_semantic_trial.py",
+        "cube_fixture_control.py", "cube_fixture.py", "cube_target.py", "semantic_company.py", "decisions_semantic_trial.py",
         "installed_trial_transport.py", "codex_trial_transport.py", "codex_workspace.py", "bootstrap_agent_trial.py"}]
     helpers += [ROOT / "skills/signalweave/SKILL.md", ROOT / "evaluations/protocols/cube-native-2026-10-25.json"]
     save(root / "protocol.json", {
@@ -159,7 +179,7 @@ async def run(args):
                 frozen = (await company.inspect(ref)).model_dump(mode="json")
                 expected = expected_from_phase(before, oracle)
 
-                async def reader(arm, question, index, notes, target, *, revision=False):
+                async def execute_reader(arm, question, index, notes, target, *, revision=False):
                     episode = CubeEpisode(company, server if arm == "signalweave" else None, notes=notes)
                     run_key = f"{root.name}:{'revision' if revision else 'reader'}:{index}:{arm}"
                     result = await actor(episode, Audit(path=root / f"{'revision' if revision else 'reader'}-{index}-{arm}.jsonl", secrets=(key,)),
@@ -193,6 +213,11 @@ async def run(args):
                     print(json.dumps({"stage": "revision" if revision else "cohort", "case": index, "arm": arm, "passed": all(checks.values())}), flush=True)
                     if not all(checks.values()):
                         raise ValueError("Reader structured gate failed; preserve this attempt without rescore")
+
+                async def reader(arm, question, index, notes, target, *, revision=False):
+                    identity = {"arm": arm, "case": index, "stage": "revision" if revision else "cohort"}
+                    await tracked_reader(lambda: execute_reader(arm, question, index, notes, target, revision=revision),
+                                         report, root / "report.json", identity, audit)
 
                 for arm in ("ordinary_context", "signalweave"):
                     await reader(arm, "Prepare Finance's September versus August revenue review on our previously agreed reporting basis. Check whether that basis still holds before giving a business conclusion.",

@@ -1,3 +1,4 @@
+import json
 from types import SimpleNamespace
 
 import httpx
@@ -7,6 +8,7 @@ from evaluations.cube_native_continuation import (
     PublishedCubeCompany,
     native_checks,
     revision_checks,
+    tracked_reader,
 )
 from signalweave.models import SourceRef
 from tests.test_cube_source import fixture
@@ -72,12 +74,54 @@ async def test_declared_owner_publication_is_common_context_not_cube_native_hist
                               {"sql": ["SQL", []]} if request.url.path == "/sql" else result)
     async with httpx.AsyncClient(base_url="http://test/", transport=httpx.MockTransport(handler)) as client:
         source = PublishedCubeCompany(client, SimpleNamespace(company="retail", profile={"domain": "commerce"}))
-        source.publication = {"body": "Fictional owner correction, not Cube history", "identities": {"current_result": "id"},
+        initial = await source.inspect(SourceRef(key="net", adapter="company", resource="metric:net-revenue", label="Revenue"))
+        source.publication = {"body": "Fictional owner correction, not Cube history", "identities": {
+                              "current_result": initial.metadata["data_snapshot_id"], "definition_revision": "r7"},
                               "provenance": ["fictional-owner:correction"]}
         await source.refresh_catalog()
         snapshot = await source.inspect(SourceRef(key="net", adapter="company", resource="metric:net-revenue", label="Revenue"))
         assert source.notes()[-1] == source.publication
     assert snapshot.evidence[-1].statement == source.publication["body"]
     assert snapshot.evidence[-1].provenance == ["fictional-owner:correction"]
-    assert snapshot.evidence[-1].values == {"current_result": "id"}
+    assert snapshot.evidence[-1].values == source.publication["identities"]
     assert snapshot.observations[0].current == 88.8
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("wrong_field", ["current_result", "definition_revision"])
+async def test_correction_cannot_authorize_a_different_result_or_meaning(wrong_field):
+    catalog, result = fixture()
+    def handler(request):
+        return httpx.Response(200, json=catalog if request.url.path == "/meta" else
+                              {"sql": ["SQL", []]} if request.url.path == "/sql" else result)
+    async with httpx.AsyncClient(base_url="http://test/", transport=httpx.MockTransport(handler)) as client:
+        source = PublishedCubeCompany(client, SimpleNamespace(company="retail", profile={"domain": "commerce"}))
+        ref = SourceRef(key="net", adapter="company", resource="metric:net-revenue", label="Revenue")
+        initial = await source.inspect(ref)
+        source.publication = {"body": "Historical correction only", "identities": {
+            "current_result": initial.metadata["data_snapshot_id"], "definition_revision": "r7"}, "provenance": ["owner:old"]}
+        source.publication["identities"][wrong_field] = "other"
+        snapshot = await source.inspect(ref)
+        assert len(snapshot.evidence) == 1
+        assert snapshot.observations[0].current == 88.8
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("fails", [False, True])
+async def test_reader_admission_and_raised_failure_are_persisted(tmp_path, fails):
+    report, path = {}, tmp_path / "report.json"
+    async def action():
+        assert json.loads(path.read_text())["attempts"][0]["status"] == "started"
+        if fails:
+            raise RuntimeError("private-key")
+        return "finished"
+    audit = SimpleNamespace(redact=lambda value: value.replace("private-key", "[redacted]"))
+    if fails:
+        with pytest.raises(RuntimeError):
+            await tracked_reader(action, report, path, {"arm": "ordinary_context", "case": 0}, audit)
+    else:
+        assert await tracked_reader(action, report, path, {"arm": "ordinary_context", "case": 0}, audit) == "finished"
+    attempt = json.loads(path.read_text())["attempts"][0]
+    assert attempt["status"] == ("failed" if fails else "completed")
+    if fails:
+        assert attempt["error"] == "[redacted]" and attempt["error_type"] == "RuntimeError"

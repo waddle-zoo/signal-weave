@@ -130,7 +130,7 @@ async def run(args):
               "pending": ["actual upstream model revision pilot", "owner reapproval and source correction", "ten fresh reader pairs", "independent prose review"],
               "provider_usage_instrumented": False}
     helpers = [Path(__file__), PROTOCOL, ROOT / "evaluations/cube_source.py", ROOT / "evaluations/cube_fixture.py",
-               ROOT / "evaluations/cube_fixture_control.py", ROOT / "evaluations/cube_reconcile.py",
+               ROOT / "evaluations/cube_fixture_control.py", ROOT / "evaluations/cube_target.py", ROOT / "evaluations/cube_reconcile.py",
                ROOT / "evaluations/semantic_company.py", ROOT / "evaluations/cube/compose.yml",
                ROOT / "evaluations/codex_trial_transport.py", ROOT / "evaluations/decisions_semantic_trial.py",
                ROOT / "evaluations/installed_trial_transport.py", ROOT / "evaluations/bootstrap_agent_trial.py",
