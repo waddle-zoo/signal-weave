@@ -43,6 +43,23 @@ def test_self_assessed_resolution_is_not_a_numeric_correctness_oracle():
     assert not grade_conflict(submission())["no_definitive_resolution"]
 
 
+def test_old_onboarding_amounts_and_policy_fail_after_source_measurements_change(tmp_path):
+    from evaluations.semantic_company import SemanticCompany
+
+    company = SemanticCompany(tmp_path, "retail")
+    company.set_condition("decline")
+    old = company.expected()
+    actual = {**submission(), "current": float(old["current"]), "previous": float(old["previous"])}
+    assert all(grade(actual, company).values())
+    company.set_condition("quiet")
+    assert not grade(actual, company)["current"]
+    assert not grade(actual, company)["outcome"]
+    new = company.expected()
+    actual.update(current=float(new["current"]), previous=float(new["previous"]),
+                  outcome="ignore", recipients=[])
+    assert all(grade(actual, company).values())
+
+
 @pytest.mark.parametrize("field,value", [
     ("metric_id", "retail.gross_revenue"), ("unit", "EUR"),
     ("source_refs", ["company|metric:revenue-deprecated"]),

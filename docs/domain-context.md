@@ -58,6 +58,16 @@ the figures, policy implication and material caveats. It should not reuse the
 net-revenue card to answer a gross-billings question. Ask for the source metric
 ID, revision and periods alongside the answer so readers can check its basis.
 
+A metric revision identifies the calculation, not the data snapshot. A SQL hash
+also identifies a query, not immutable results. Keep measurements in run evidence,
+not as timeless facts in the shared definition. Where your source publishes
+snapshot IDs, data-as-of times, close status or approved corrections, preserve
+them with the result. If two receipts disagree for a closed period, establish
+whether a source-owned correction supersedes the earlier snapshot; a later
+retrieval time alone does not explain the change. This is source/agent context,
+not a new mandatory SignalWeave schema or a reason to suppress valid current
+findings while a discrepancy is investigated.
+
 ## Enable the optional tools
 
 After local setup, enable shared context without editing configuration:

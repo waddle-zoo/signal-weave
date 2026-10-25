@@ -157,7 +157,8 @@ class Episode:
                             "handoff": {"type": "string"}}, ["card_id", "context_id", "handoff"])]
         else:
             tools += [spec("submit_report", "Return the business brief and its inspectable facts; does not send a message.", {
-                "metric_id": {"type": "string"}, "definition_revision": {"type": "string"},
+                "metric_id": {"type": "string"}, "definition_revision": {
+                    "type": "string", "description": "Exact source metric revision only, e.g. r3; not a sentence, metric ID or SignalWeave context revision."},
                 "resolution_status": {"type": "string", "enum": ["resolved", "unresolved"],
                                       "description": "Whether this supports a definitive answer on the requested basis; attributed source amounts may be supplied even while competing definitions remain unresolved."},
                 "current": {"type": ["number", "null"]}, "previous": {"type": ["number", "null"]},
@@ -292,6 +293,7 @@ async def run(args):
                                                                 ROOT / "evaluations/codex_trial_transport.py",
                                                                 ROOT / "evaluations/installed_trial_transport.py"]},
                                  "requested_readers": args.readers, "requested_companies": args.companies,
+                                 "refresh_after_onboarding": args.refresh_after_onboarding,
                                  "transport": args.transport, "semantic_sensitivity": args.sensitivity})
     secret = args.key_file.read_text().strip()
     if not secret:
@@ -347,6 +349,15 @@ async def run(args):
                 if not all(company_result["onboarding_checks"].values()):
                     result["stopped"] = "Onboarding did not preserve the agreed semantic source and reviewed meaning"
                     return result
+                if args.refresh_after_onboarding:
+                    # A new ledger snapshot, not a new policy or a gold label in
+                    # a tool response. Keep the old handoff in BOTH arms' notes:
+                    # readers must refresh measurements rather than repeat it.
+                    company.set_condition("quiet")
+                    company_result["measurement_refresh"] = {
+                        "scope": "Post-onboarding ledger update; unchanged definition, card and notes",
+                        "independent_values": company.expected(),
+                    }
                 for index, prompt in enumerate(PROMPTS[:args.readers]):
                     for arm in (["ordinary_context", "signalweave"] if index % 2 == 0
                                 else ["signalweave", "ordinary_context"]):
@@ -470,6 +481,8 @@ def main():
     parser.add_argument("--live", action="store_true", help="Explicitly permit paid Decisions and Codex invocations")
     parser.add_argument("--transport", choices=["stdio", "streamable-http"], default="stdio")
     parser.add_argument("--sensitivity", action="store_true", help="Also test a distinct metric and conflicting definitions")
+    parser.add_argument("--refresh-after-onboarding", action="store_true",
+                        help="Separately test updated measurements against unchanged onboarding notes and policy")
     parser.add_argument("--readers", type=int, choices=range(1, 11), default=2)
     parser.add_argument("--companies", nargs="+", choices=["retail", "saas", "marketplace"], default=["retail"])
     args = parser.parse_args()
