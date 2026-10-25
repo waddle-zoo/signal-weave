@@ -108,7 +108,9 @@ async def run(args):
                                 headers={"Authorization": token}, trust_env=False) as client:
         company = CubeCompany(client, oracle)
         await company.refresh_catalog()
-        async with _source_server(_SourceSession(company, audit, company.tenant_id)) as url:
+        original_manifest = json.loads((args.pilot / "sources.json").read_text())
+        original_endpoint = original_manifest["connections"][0]["transport"]["url"]
+        async with _source_server(_SourceSession(company, audit, company.tenant_id), stable_url=original_endpoint) as url:
             def bind_manifest(stage):
                 manifest = _manifest({"scenario_id": company.tenant_id, "catalog": company.descriptors()}, url)
                 manifest["connections"][0]["context_namespace"] = "cube-semantic/" + info["company"]

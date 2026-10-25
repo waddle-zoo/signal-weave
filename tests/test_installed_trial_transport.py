@@ -20,6 +20,26 @@ from signalweave.mcp_source import MCPConnection
 
 
 @pytest.mark.asyncio
+async def test_source_revision_trials_can_reuse_exact_test_endpoint():
+    source = SimpleNamespace(read_snapshot=AsyncMock())
+    async with transport._source_server(source) as first:
+        endpoint = first
+    async with transport._source_server(source, stable_url=endpoint) as second:
+        assert second == endpoint
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("endpoint", ["https://127.0.0.1:41234/abcdefghijklmnop", "http://example.com:41234/abcdefghijklmnop",
+                                     "http://127.0.0.1:80/abcdefghijklmnop", "http://127.0.0.1:41234/short",
+                                     "http://user:pass@127.0.0.1:41234/abcdefghijklmnop",
+                                     "http://127.0.0.1:41234/abcdefghijklmnop?token=value"])
+async def test_stable_test_endpoint_rejects_external_privileged_or_credential_routes(endpoint):
+    with pytest.raises(ValueError, match="loopback"):
+        async with transport._source_server(SimpleNamespace(), stable_url=endpoint):
+            pytest.fail("Invalid endpoint started")
+
+
+@pytest.mark.asyncio
 async def test_facade_reads_only_through_the_initialized_source_session():
     reply = SimpleNamespace(contents=[{"text": "source-owned definition"}])
     session = SimpleNamespace(read_resource=AsyncMock(return_value=reply))

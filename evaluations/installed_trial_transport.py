@@ -19,6 +19,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, nullcontext
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 import uvicorn
@@ -165,7 +166,20 @@ class _SourceSession:
 
 
 @asynccontextmanager
-async def _source_server(session: _SourceSession) -> AsyncIterator[str]:
+async def _source_server(session: _SourceSession, *, stable_url: str | None = None) -> AsyncIterator[str]:
+    port = 0
+    route = "/" + secrets.token_urlsafe(24)
+    if stable_url is not None:
+        parts = urlsplit(stable_url)
+        try:
+            port = parts.port
+        except ValueError as error:
+            raise ValueError("Stable test endpoint must be a bounded loopback HTTP URL") from error
+        if (parts.scheme != "http" or parts.hostname != "127.0.0.1" or not isinstance(port, int)
+                or not 1024 <= port <= 65535 or parts.username or parts.password or parts.query or parts.fragment
+                or not re.fullmatch(r"/[A-Za-z0-9_-]{16,128}", parts.path)):
+            raise ValueError("Stable test endpoint must be a bounded loopback HTTP URL")
+        route = parts.path
     server = Server("company-mcp")
 
     @server.list_tools()
@@ -203,7 +217,6 @@ async def _source_server(session: _SourceSession) -> AsyncIterator[str]:
         )
 
     manager = StreamableHTTPSessionManager(server, stateless=True, json_response=True)
-    route = "/" + secrets.token_urlsafe(24)
 
     class Handler:
         async def __call__(self, scope, receive, send):
@@ -216,7 +229,8 @@ async def _source_server(session: _SourceSession) -> AsyncIterator[str]:
 
     app = Starlette(routes=[Route(route, endpoint=Handler())], lifespan=lifespan)
     sock = socket.socket()
-    sock.bind(("127.0.0.1", 0))
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind(("127.0.0.1", port))
     sock.listen(128)
     port = sock.getsockname()[1]
     uvicorn_server = uvicorn.Server(uvicorn.Config(app, log_level="critical", access_log=False))
