@@ -846,9 +846,55 @@ def build_investigation_report(
         (item.source_key, item.comparison_key) for item in recomputed_by_key.values()
     }
     for source_key, comparison_key in sorted(required_keys - present_pairs):
+        source = authorized_sources[source_key]
+        resource = resources_by_key.get(source_key)
+        # A scalar comparison has no segment table to decompose. The engine
+        # accepts its adapter-owned coverage contract; the report must honor
+        # that same shape without manufacturing an AnalysisReport or claim.
+        # Never let it stand in for a returned but unvalidated decomposition.
+        scalar_matches = [
+            item for item in resource.contract.comparison_contracts
+            if item.key == comparison_key
+        ] if resource is not None else []
+        analytical_matches = [
+            item for item in resource.analytical_comparisons
+            if item.key == comparison_key
+        ] if resource is not None else []
+        if scalar_matches and not analytical_matches:
+            valid = (
+                len(scalar_matches) == 1
+                and source_key not in duplicate_resource_keys
+                and resource is not None
+                and (resource.adapter, resource.resource) == (source.adapter, source.resource)
+                and resource.contract.authorized
+                and resource.contract.source_status == "healthy"
+                and not resource.error
+                and bool(resource.observations or resource.evidence)
+                and scalar_matches[0].coverage == "complete"
+                and scalar_matches[0].comparable
+                and scalar_matches[0].comparison_window in card.comparison_windows
+            )
+            detail = (
+                "Adapter-declared scalar coverage and comparability satisfied; "
+                "this does not independently validate measurement values or their semantic binding."
+                if valid else
+                "Required scalar comparison lacks unique, authorized, healthy source evidence "
+                "with complete coverage and a comparable selected window."
+            )
+            coverage.append(CoverageRecord(
+                key=_analysis_label((source_key, comparison_key)), kind="analysis",
+                required=True, status="satisfied" if valid else "insufficient_data",
+                source_keys=[source_key], detail=detail,
+            ))
+            if not valid:
+                blockers.append(_issue(
+                    "required_scalar_comparison_invalid", detail,
+                    reference=_analysis_label((source_key, comparison_key)), source_keys=[source_key],
+                ))
+            continue
         blockers.append(_issue(
             "required_analysis_missing",
-            f"Required analytical comparison {comparison_key} was not returned for source {source_key}.",
+            f"Required comparison evidence {comparison_key} was not returned for source {source_key}.",
             reference=_analysis_label((source_key, comparison_key)),
             source_keys=[source_key],
         ))
