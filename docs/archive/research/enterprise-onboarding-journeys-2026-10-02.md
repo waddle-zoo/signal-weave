@@ -121,7 +121,7 @@ The operational trace already exposes failures invisible to curated-card replays
 3. Harbor's native review returned a confirmation fingerprint which the next
    approval call rejected. Review reruns discovery during approval; the precise
    fingerprint instability is reproduced offline in
-   [`test_onboarding_review_stability_regression.py`](../tests/test_onboarding_review_stability_regression.py).
+   [`test_onboarding_review_stability_regression.py`](../../../tests/test_onboarding_review_stability_regression.py).
    Lumen also reached owner approval and then received repeated native stale-token
    rejections. The characterization test asserts the current defect; it is not
    evidence that the lifecycle is fixed.

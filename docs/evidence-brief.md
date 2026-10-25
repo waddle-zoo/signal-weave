@@ -12,7 +12,7 @@ allowlists, confidence, and side effects.
 
 ## The measured case
 
-Current adoption caveat: the [owner-reviewed bootstrap comparison](bootstrap-owner-reviewed-v4-01.md)
+Current adoption caveat: the [owner-reviewed bootstrap comparison](archive/research/bootstrap-owner-reviewed-v4-01.md)
 does **not** establish an end-to-end advantage over Luna with the same sources and
 owner answers. Its final routing is 5/6 versus baseline 6/6, with higher setup
 effort and illustrative token cost. The older curated-card measurements below

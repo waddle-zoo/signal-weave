@@ -16,7 +16,7 @@ month contains six recurring situations:
 That produces 48 workflows. The same card remains active across every month.
 The expected dispositions, month assignments, and feedback notes are external
 owner rubrics in
-[`examples/northstar-longitudinal-panel.json`](../examples/northstar-longitudinal-panel.json)
+[`examples/northstar-longitudinal-panel.json`](../../../examples/northstar-longitudinal-panel.json)
 and are never sent to Jev.
 
 ## Panel roles

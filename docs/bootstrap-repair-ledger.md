@@ -1,7 +1,7 @@
 # Bootstrap repair ledger — October 1, 2026
 
 These are development regressions, not fresh holdout results or proof of an
-enterprise advantage. The failed [v2 trial](codex-bootstrap-trial-2026-10-01.md)
+enterprise advantage. The failed [v2 trial](archive/research/codex-bootstrap-trial-2026-10-01.md)
 is preserved. Each live attempt starts from empty notes/cards, uses the same
 public context for both arms, and retains failures and usage. Synthetic owner
 approval is not actual human usability testing.
@@ -109,7 +109,7 @@ neither is folded into a future fresh holdout or omitted from development effort
 
 ## Fresh six-company holdout and subsequent repairs
 
-The [frozen six-company v3-01 run](bootstrap-codex-holdout-v3-01.md) completed
+The [frozen six-company v3-01 run](archive/research/bootstrap-codex-holdout-v3-01.md) completed
 at `8dde234`. Both arms onboarded 6/6 companies. Final exact answers were 15/18
 for Luna/source tools versus 11/18 for Luna/SignalWeave/live Jev; final routing
 was 18/18 versus 16/18. Native SignalWeave had both the right outcome and route
@@ -216,7 +216,7 @@ Frozen exact results were baseline 5/6, treatment 4/6. Treatment monitoring took
 150.19 versus 163.16 seconds but used 523,974 versus 331,419 agent tokens;
 including setup, treatment used 1,470,835 versus 476,999. No cost/value win.
 
-[Full result and failure analysis](bootstrap-codex-regression-v3-03.md) retains
+[Full result and failure analysis](archive/research/bootstrap-codex-regression-v3-03.md) retains
 the independent blind review's disagreement with strict scoring. Missing public
 requirements are a benchmark defect, not permission to rewrite old results.
 Persisted card prose/route disagreement, recurring setup questions, and mandatory
@@ -327,7 +327,7 @@ rerun after that wording correction. This is guidance, not a guarantee that an
 agent will preserve owner policy correctly.
 
 The frozen run completed all 16 episodes using 29 live Jev requests, observed
-`jev-1.13.0`, without failed requests or budget censoring. [v3-04 results](bootstrap-codex-regression-v3-04.md)
+`jev-1.13.0`, without failed requests or budget censoring. [v3-04 results](archive/research/bootstrap-codex-regression-v3-04.md)
 remain negative: baseline final routing 6/6, treatment 5/6, treatment native
 outcome AND recipients 4/6. Helpdesk is native 3/3; the database card still rewrites
 investigate into notify and omits its investigation route. Independent blind
@@ -433,7 +433,7 @@ prompts, fixtures or scoring while active.
 
 ### Owner-reviewed v4-01 result: goal not met
 
-The [frozen run](bootstrap-owner-reviewed-v4-01.md) completed all 16 episodes and
+The [frozen run](archive/research/bootstrap-owner-reviewed-v4-01.md) completed all 16 episodes and
 six model-owner reviews with 46 live Jev requests. Native joint outcome/recipient
 keys remain 4/6; final treatment 5/6 versus baseline 6/6. One unnecessary evidence
 requirement was corrected, but answerability/coverage uncertainty and agent

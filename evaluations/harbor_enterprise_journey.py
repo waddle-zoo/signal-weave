@@ -35,6 +35,7 @@ from evaluations.installed_trial_transport import (
     _private_dir,
     _private_file,
 )
+from evaluations.native_runtime_identity import inventory_native_runtime, verify_native_runtime
 from evaluations.northstar_source_authoring import public_paths
 from evaluations.pine_courier_onboarding import pinned_codex
 from evaluations.raw_superset_onboarding import usage_snapshot
@@ -45,12 +46,13 @@ from signalweave.knowledge_mcp import KNOWLEDGE_TOOLS
 from signalweave.mcp_server import AGENT_PROFILE_TOOLS
 from signalweave.mcp_source import MCPResource
 
-PROTOCOL = "harbor-whole-enterprise-journey-v1"
+PROTOCOL = "harbor-whole-enterprise-journey-v2"
 ARMS = ("baseline", "signalweave")
 SOURCE_TOOLS = frozenset({"list_assets", "inspect_asset", "query_readonly", "export_query"})
 INITIAL_RESOURCE = "table:support-tier-sla"
 METHOD_FILES = (
     "evaluations/harbor_enterprise_journey.py", "evaluations/harbor_enterprise_fixture.py",
+    "evaluations/native_runtime_identity.py",
     "evaluations/enterprise_native_setup.py", "evaluations/enterprise_full_journey.py",
     "evaluations/company_people.py", "evaluations/harbor_history.py",
     "evaluations/harbor_history_mcp.py", "evaluations/available_history.py",
@@ -191,6 +193,7 @@ async def prepare(root: Path, archive: Path, codex: str, key_file: Path, fixture
         raise ValueError("Fresh setup failed; retain setup.json before any paid actor")
     binary = root / "signalweave/person/.local/bin/signalweave"
     study["binary_path"], study["binary"] = str(binary), verify_binary(binary, ROOT)
+    study["native_runtime"] = inventory_native_runtime(binary, study["binary"])
     home = root / "signalweave/person/.signalweave"
     for command, cwd in ((["context", "enable", "--home", str(home)], root),
         (["skills", "install", "--agent", "codex", "--scope", "project"], root / "signalweave/workspace")):
@@ -235,6 +238,8 @@ def verify(study: dict, root: Path) -> None:
     execution_order(study)
     if not isinstance(study.get("key_file"), str) or not Path(study["key_file"]).is_absolute():
         raise ValueError("Prepared study is incomplete: rerun fresh preparation with an explicit private key-file path")
+    verify_native_runtime(Path(study["binary_path"]), study.get("binary", {}),
+                          study.get("native_runtime"))
     if verify_binary(Path(study["binary_path"]), ROOT) != study["binary"]:
         raise ValueError("Native artifact changed")
     if sha(Path(study["codex"]["path"])) != study["codex"]["sha256"]:

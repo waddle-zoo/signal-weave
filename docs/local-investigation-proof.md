@@ -6,7 +6,7 @@ benchmark, or a claim of superiority to a frontier agent.
 
 **October 1 update:** the paired bootstrap trial has now run using Codex's saved
 login and live Jev; a separate OpenAI API key is not needed for that transport.
-The [fresh six-company result](bootstrap-codex-holdout-v3-01.md) repaired setup
+The [fresh six-company result](archive/research/bootstrap-codex-holdout-v3-01.md) repaired setup
 completion but did **not** meet the comparative quality/resource gates. The
 release and six-case execution evidence below remain historical, bounded checks,
 not proof of successful novice onboarding or an enterprise advantage.

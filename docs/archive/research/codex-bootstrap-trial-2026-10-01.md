@@ -52,10 +52,10 @@ No repair or additional paid retry was folded into this holdout.
 
 ### Evidence
 
-- [Frozen configuration, usage and all 48 case results](evidence/bootstrap-codex-holdout-v2-01/results.json)
-- [Public evidence and arm-metadata-blinded narratives](evidence/bootstrap-codex-holdout-v2-01/blind-review.json)
-- [Review ID mapping](evidence/bootstrap-codex-holdout-v2-01/review-key.json)
-- [Internal process, narrative and scoring reviews](evidence/bootstrap-codex-holdout-v2-01/reviews.md)
+- [Frozen configuration, usage and all 48 case results](../../evidence/bootstrap-codex-holdout-v2-01/results.json)
+- [Public evidence and arm-metadata-blinded narratives](../../evidence/bootstrap-codex-holdout-v2-01/blind-review.json)
+- [Review ID mapping](../../evidence/bootstrap-codex-holdout-v2-01/review-key.json)
+- [Internal process, narrative and scoring reviews](../../evidence/bootstrap-codex-holdout-v2-01/reviews.md)
 
 Dataset SHA-256: `5cced07c836ccb320a75c8f438079b480665b65ca8c7291c655edc4b803daacf`.
 Full local report SHA-256: `5985ff36fc1c85bda7c531f46a96009b2c335e4c9c571fcdaeea6a39b2d32b92`.
@@ -86,7 +86,7 @@ not explain or remove SignalWeave's six setup failures.
 ## Design
 
 The measured run is frozen at `8eb70f3de81a1085cad596cf57692a8e80488c47`.
-See the [preregistered protocol](bootstrap-benchmark-protocol.md).
+See the [preregistered protocol](../../bootstrap-benchmark-protocol.md).
 
 - Six synthetic companies: retail, SaaS, support, database operations,
   marketplace, and freight finance. Four assets per company.

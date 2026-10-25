@@ -99,7 +99,7 @@ This is strong evidence that onboarding/context quality is a dominant failure
 mode in these two classes. It is not a universal guarantee: the clarification
 was a counterfactual human edit constructed from the fixture's owner intent.
 The trial lives in
-[`evaluations/everything_tracking_card_clarity_trial.py`](../evaluations/everything_tracking_card_clarity_trial.py).
+[`evaluations/everything_tracking_card_clarity_trial.py`](../../../evaluations/everything_tracking_card_clarity_trial.py).
 
 The clarification changes only human-authored watch and question boundaries;
 latency remains flat. This is evidence for the onboarding contract: ask for the

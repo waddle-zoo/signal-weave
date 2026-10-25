@@ -168,7 +168,7 @@ Reporting now exposes literal source boundaries, and onboarding guidance calls
 for explicit preview-behavior and recurring-source-coverage review. Those changes
 pass offline contracts; their end-to-end benefit still requires a new frozen run.
 
-Earlier [agent-onboarding regression](enterprise-onboarding-journeys-2026-10-02.md):
+Earlier [agent-onboarding regression](archive/research/enterprise-onboarding-journeys-2026-10-02.md):
 six synthetic businesses, messy 24-asset catalogs and 48 planned setup/monitoring
 episodes. Treatment completed **1/6 setups and 3/18 later reports**, versus Luna's
 6/6 and 18/18. All six treatment agents read the guide and obtained a preview;
@@ -256,7 +256,7 @@ that focused suite then passed eight tests with one native-only skip. Ruff and
 from this shell; the existing virtualenv's Ruff and pytest were run directly.
 
 That next proof step was run in the
-[six-company onboarding regression](enterprise-onboarding-journeys-2026-10-02.md)
+[six-company onboarding regression](archive/research/enterprise-onboarding-journeys-2026-10-02.md)
 and failed. It let the user's agent read the guide, discover supported assets,
 and draft from public owner policy without private labels or expert card edits.
 Those failures motivated the subsequent source-selection/approval handoff,

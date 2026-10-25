@@ -48,7 +48,7 @@ for the required complete export.
 ## Partial outcomes
 
 The nine retained episode records are summarized in
-[`partial-audit.json`](evidence/enterprise-onboarding-repair-v3-full-01/partial-audit.json).
+[`partial-audit.json`](../../evidence/enterprise-onboarding-repair-v3-full-01/partial-audit.json).
 
 Juniper Trail Retail has one completed baseline onboarding, one failed treatment
 onboarding (`no_structured_submission`), and three completed baseline monitoring
@@ -70,12 +70,12 @@ Finance have no observed records in this aborted run. No outcomes are assigned.
 ## Archive
 
 Raw trace data is preserved compressed at
-[`trace.jsonl.gz`](evidence/enterprise-onboarding-repair-v3-full-01/trace.jsonl.gz).
+[`trace.jsonl.gz`](../../evidence/enterprise-onboarding-repair-v3-full-01/trace.jsonl.gz).
 The nine raw episode records are preserved individually under
-[`episodes/`](evidence/enterprise-onboarding-repair-v3-full-01/episodes/), with
+[`episodes/`](../../evidence/enterprise-onboarding-repair-v3-full-01/episodes), with
 the run configuration and protocol sidecar retained alongside them. The archive
 manifest and recorded hashes are in
-[`partial-audit.json`](evidence/enterprise-onboarding-repair-v3-full-01/partial-audit.json).
+[`partial-audit.json`](../../evidence/enterprise-onboarding-repair-v3-full-01/partial-audit.json).
 
 No scoring, completion inference, comparative claim, reliability claim, or
 narrative success claim is made from this aborted run.

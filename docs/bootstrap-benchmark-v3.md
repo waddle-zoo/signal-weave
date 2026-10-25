@@ -17,7 +17,7 @@ combined-agent answer must not be presented as proof of autonomous Jev routing.
 
 ## Preserve the failed v2 result
 
-The [October 1 report](codex-bootstrap-trial-2026-10-01.md),
+The [October 1 report](archive/research/codex-bootstrap-trial-2026-10-01.md),
 [v2 protocol](bootstrap-benchmark-protocol.md), checked-in evidence under
 `docs/evidence/bootstrap-codex-holdout-v2-01/`, and original local artifacts under
 `artifacts/bootstrap-codex-holdout-v2-01/` remain unchanged. V2 remains baseline

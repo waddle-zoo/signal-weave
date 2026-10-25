@@ -32,6 +32,10 @@ The default test suite is local and deterministic. It does not call external
 TypeSafe services. Live Jev and Superset checks are opt-in and require credentials;
 never commit API keys, tokens, copied production data, or generated secrets.
 
+Older evaluation-fixture tests are archived outside the default suite. Run
+`make historical-eval-tests` when changing those harnesses; see the
+[test and proof guide](docs/evaluation.md) for current versus historical coverage.
+
 For the live integration path, copy `.env.example`, set the required variables,
 and run the commands documented in [`docs/demo.md`](docs/demo.md). A pull request
 should explain any live-only behavior it relies on and include a local test double

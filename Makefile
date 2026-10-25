@@ -1,10 +1,13 @@
-.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial northstar-growth-history-trial northstar-growth-history-review preset-trial preset-boundary-trial preset-generalization-trial preset-jev-contract-trial preset-runtime-shadow-trial preset-runtime-shadow-review preset-enterprise-proof local-superset-runtime-shadow-trial local-superset-runtime-shadow-review preset-config-check preset-bootstrap-check preset-readiness preset-provider-smoke preset-dashboard-readiness preset-live-trial preset-live-trial-approve preset-live-trial-review preset-live-semantic-review preset-compose-check preset-compose-bearer-check superset-chart-matrix verify docker-up docker-down
+.PHONY: install test historical-eval-tests lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial northstar-growth-history-trial northstar-growth-history-review preset-trial preset-boundary-trial preset-generalization-trial preset-jev-contract-trial preset-runtime-shadow-trial preset-runtime-shadow-review preset-enterprise-proof local-superset-runtime-shadow-trial local-superset-runtime-shadow-review preset-config-check preset-bootstrap-check preset-readiness preset-provider-smoke preset-dashboard-readiness preset-live-trial preset-live-trial-approve preset-live-trial-review preset-live-semantic-review preset-compose-check preset-compose-bearer-check superset-chart-matrix verify docker-up docker-down
 
 install:
 	uv sync --extra dev
 
 test:
 	uv run python -m pytest
+
+historical-eval-tests:
+	uv run python -m pytest evaluations/tests/historical -q
 
 lint:
 	uv run ruff check .
