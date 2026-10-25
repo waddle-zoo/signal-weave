@@ -1,0 +1,49 @@
+{
+  "protocol": "decisions-semantic-journey-v1",
+  "question": "Can a freshly installed SignalWeave MCP preserve an analyst-reviewed semantic metric and policy so independent Codex agents produce consistent, source-backed business updates?",
+  "product_boundary": "Existing cards, source bridge, optional reviewed domain context and native OpenAI Decisions. Frontier agents own discovery, analysis and prose. No new semantic engine, scheduler or mandatory workflow framework.",
+  "stages": [
+    "Verify published binary fingerprint and isolated native OpenAI setup, MCP, live decision and restart replay.",
+    "Create three test-owned SQL companies with overlapping metric names and source-owned definitions; independently verify SQL amounts against transaction-level Decimal calculations.",
+    "Have a Codex analyst discover sources and onboard a reviewed definition and recurring card through public MCP tools, with explicitly scripted fictional-owner delegation.",
+    "Stage gate: two independent reader prompts in each arm for the first company. Preserve any failure before repair; do not silently retry.",
+    "Run ten independently started readers per company and per arm over the same frozen measurement and definition revision, counterbalancing arm order.",
+    "Challenge saved policies with changed evidence: quiet, material decline, material data gap and conflicting definitions. Exercise changes through source/context contracts, not provider gold labels.",
+    "Review numerical correctness, definition choice, comparison basis, reasoning and human usefulness independently. Retain failures, then make only focused product or guidance repairs and label any new attempt separately."
+  ],
+  "companies": ["retail", "saas", "marketplace"],
+  "seed": 20261025,
+  "reader_prompts_per_company": 10,
+  "prompt_pairing": "The same ten indexed prompts run in both arms against the same snapshot. They measure fresh-agent/prompt robustness, not ten authenticated employees. Canary runs are separate from the primary cohort and never pooled after repairs.",
+  "semantic_sensitivity": "In addition to the ten same-basis questions, pair one explicit gross-billings question and one conflicting-definition question per company. A distinct question must not inherit the net-revenue alert policy; conflict must remain attributed/unresolved without an invented canonical answer.",
+  "numeric_scoring": "Full reporting-currency units, not cents/thousands; absolute amount tolerance 0.005. YYYY-MM periods; source-owned metric IDs and revision strings. Provider policy probability is not figure correctness.",
+  "stage_gate": "Stop before the larger cohort on incomplete onboarding/reader execution, wrong canonical metric, unit, period, revision or amount, wrong configured recipient, or a spurious definitive alert. Preserve failures. Do not pool a repaired canary into the full cohort.",
+  "human_report_rubric": ["correct definition/population", "correct periods and reporting unit", "supported amounts", "inspectable source citation", "supported business implication and useful next step", "material caveats beside affected claims", "no invented cause or claimed send"],
+  "human_report_pass": "Independent review must find no material factual/action error and a useful concise answer. Report rubric judgments separately from structured figure checks; do not convert word matches or model labels into report-quality proof.",
+  "arms": {
+    "signalweave": "Published fingerprint-matching native MCP, its bundled skill, shared reviewed card/context and all company tools.",
+    "ordinary_context": "Same Codex model, company tools, source-owned definitions and treatment-authored reviewed card/context in ordinary searchable notes. No SignalWeave MCP. This is an equal-information recurrence comparison, not independent onboarding superiority."
+  },
+  "frontier": {"model": "gpt-6-luna", "reasoning_effort": "xhigh"},
+  "provider": "openai-decisions",
+  "live_request_policy": "No automatic provider retries. Small stage gate before the full cohort. Record attempts, errors, deferred judgments, missing usage and interrupted invocations. Never count a local research limit as an upstream provider failure.",
+  "success_checks": [
+    "Native first-use path works without Jev credentials or editing personal Codex configuration.",
+    "Onboarding discovers and actually reads the selected semantic metric and saves the intended sources, definition, period and owner policy.",
+    "Readers identify the right metric/revision and agree with independent current/prior values, currency, population and measurement periods.",
+    "Human summaries preserve material caveats, do not invent causes or claim delivery, and explain the supported business implication.",
+    "A quiet alert-only run produces no alert; a separate requested digest still produces a useful answer.",
+    "Missing or conflicting evidence is explained and does not become an invented figure or an all-clear.",
+    "A changed required definition cannot silently reuse the old actionable approval.",
+    "Replay is distinguished from fresh inference and hosted transport checks are distinguished from a managed-service trial."
+  ],
+  "metrics": ["completed_onboarding", "source_and_definition_selection", "figure_and_scope_correctness", "policy_outcome_and_recipient_agreement", "supported_reasoning", "human_message_usefulness", "clarification_and_tool_calls", "wall_time", "known_frontier_usage", "provider_attempts_and_usage_availability"],
+  "nonclaims": [
+    "Synthetic SQL semantic exports are not live dbt, Cube, Looker or Hex integration proof.",
+    "Scripted owner delegation is not a novice-human usability panel or customer approval.",
+    "Same figures require the same definition, data snapshot, scope, currency and period; differently scoped questions should not be forced to agree.",
+    "Native probability distributions and typed contracts do not guarantee deterministic, correct or calibrated model judgments.",
+    "Repeated readers sharing three companies are clustered observations, not sixty independent enterprises.",
+    "No superiority, cost saving, enterprise certification or automated delivery claim without the corresponding measured evidence."
+  ]
+}
