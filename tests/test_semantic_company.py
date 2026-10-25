@@ -48,24 +48,26 @@ async def test_sql_snapshot_matches_independent_decimal_ledger_calculation(tmp_p
 
 
 @pytest.mark.asyncio
-async def test_catalog_has_same_title_decoys_with_distinct_semantics_and_typed_contracts(tmp_path):
-    company = SemanticCompany(tmp_path, "retail")
+@pytest.mark.parametrize("profile", ["retail", "saas", "marketplace"])
+async def test_catalog_has_same_title_decoys_with_distinct_semantics_and_typed_contracts(tmp_path, profile):
+    company = SemanticCompany(tmp_path, profile)
     descriptors = [ResourceDescriptor.model_validate(item) for item in company.descriptors()]
     assert {item.resource for item in descriptors} == {
         "metric:net-revenue", "metric:gross-revenue", "metric:gmv", "metric:arr",
         "metric:revenue-draft", "metric:revenue-deprecated",
     }
     assert {item.title for item in descriptors} == {"Revenue"}
-    assert len({item.contract.metric_definitions[0].description for item in descriptors}) == len(descriptors)
+    assert len({item.description for item in descriptors}) == len(descriptors)
     canonical = next(item for item in descriptors if item.resource == company.canonical_resource)
     contract = canonical.contract
-    assert contract.tenant_id == "semantic-retail"
+    assert contract.tenant_id == company.tenant_id
     assert contract.metric_names == [company.metric_id]
-    definition = contract.metric_definitions[0]
-    assert definition.key == company.metric_id
-    assert definition.grain == "month"
-    assert "Retail Controller" in definition.description
-    assert "USD" in definition.description
+    definition = contract.comparison_contracts[0]
+    assert definition.metric == company.metric_id
+    assert contract.grain == "month"
+    assert company.profile["owner"] in contract.scope
+    assert definition.unit == company.unit
+    assert contract.metric_definitions == []  # fixed exports, not raw query-compiler bindings
     assert contract.population and "calendar" in contract.scope
     assert "not a live dbt/Cube connector" in contract.scope
     assert next(item for item in descriptors if item.resource.endswith("draft")).metadata["semantic_status"] == "draft"
@@ -76,6 +78,7 @@ async def test_catalog_has_same_title_decoys_with_distinct_semantics_and_typed_c
     for descriptor in descriptors:
         gold = company.expected(descriptor.resource)
         snapshot = await company.inspect(source(company, descriptor.resource))
+        assert snapshot.observations[0].unit == gold["unit"] == company.unit
         assert snapshot.observations[0].current == pytest.approx(float(gold["current"]), rel=0, abs=0.005)
         assert snapshot.observations[0].previous == pytest.approx(float(gold["previous"]), rel=0, abs=0.005)
         gold_by_resource[descriptor.resource] = gold["current"]
@@ -100,6 +103,24 @@ async def test_currency_scale_has_an_independent_hand_computable_control(tmp_pat
     snapshot = await company.inspect(source(company))
     assert snapshot.observations[0].current == 88.80
     assert snapshot.observations[0].previous == 120.00
+
+
+@pytest.mark.asyncio
+async def test_marketplace_gmv_excludes_platform_fee_tax_and_fee_ledger_records(tmp_path):
+    company = SemanticCompany(tmp_path, "marketplace")
+    with company._connect() as db:
+        db.execute("UPDATE transactions SET available=0")
+        for period in ("2026-08", "2026-09"):
+            ids = [row[0] for row in db.execute("SELECT id FROM transactions WHERE period=? ORDER BY id LIMIT 2", (period,))]
+            for row_id, category in zip(ids, ("seller_order", "platform_fee"), strict=True):
+                db.execute("UPDATE transactions SET available=1,eligible=1,status='settled',revenue_class=?, "
+                           "gross_cents=10000,tax_cents=9999,fx_micros=1000000,activity_bp=10000,gmv_cents=10000 WHERE id=?",
+                           (category, row_id))
+        db.execute("UPDATE period_coverage SET required_rows=2,available_rows=2")
+    # One seller order worth EUR 100. Neither a fee row nor its tax is buyer GMV.
+    assert company.expected("metric:gmv")["current"] == Decimal("100.00")
+    snapshot = await company.inspect(source(company, "metric:gmv"))
+    assert snapshot.observations[0].current == 100.00
 
 
 def test_seed_company_and_condition_controls_change_source_facts(tmp_path):

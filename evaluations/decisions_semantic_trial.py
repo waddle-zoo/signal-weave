@@ -25,6 +25,7 @@ from evaluations.codex_trial_transport import codex_episode
 from evaluations.installed_trial_transport import (
     InstalledServer,
     _initialize_mcp_session,
+    _installed_http_server,
     _manifest,
     _source_server,
     _SourceSession,
@@ -74,6 +75,8 @@ def reader_instructions(treatment):
         "Return a concise human brief, at most 140 words. Do not claim anything was sent or scheduled. "
         "Complete with submit_report: source-owned metric identity/revision, amounts in full currency units (not thousands), "
         "YYYY-MM periods and inspectable source refs. Recipients are empty when no alert is warranted; otherwise use the exact owner-defined destination."
+        " Set resolution_status to resolved only when the requested basis is established, otherwise unresolved. "
+        "Unresolved answers may preserve attributed source figures, but must not present a definitive reconciled company amount."
     )
     if treatment:
         instructions = (ROOT / "skills/signalweave/SKILL.md").read_text() + "\n" + instructions
@@ -81,7 +84,7 @@ def reader_instructions(treatment):
 
 
 @asynccontextmanager
-async def native(binary, company, key_file, root, audit, runtime):
+async def native(binary, company, key_file, root, audit, runtime, *, transport="stdio"):
     """Actual native setup and normal-profile MCP; no preseeded cards or approvals."""
     build = verify_binary(binary)
     verify_native_runtime(binary, build, runtime)
@@ -114,12 +117,16 @@ async def native(binary, company, key_file, root, audit, runtime):
                        stdout=stdout.decode(), stderr=stderr.decode())
             if process.returncode:
                 raise RuntimeError("Native setup/context/health failed; retained redacted audit")
-        params = StdioServerParameters(command=str(binary), args=["serve", "--home", str(home)],
-                                       cwd=str(root), env=env)
-        with (root / "native-stderr.txt").open("w") as errors:
-            async with stdio_client(params, errlog=errors) as streams, ClientSession(*streams) as session:
-                initialized = await _initialize_mcp_session(session)
-                yield InstalledServer(session, initialized.instructions, audit)
+        if transport == "streamable-http":
+            async with _installed_http_server(binary, home, root, env, audit) as session:
+                yield session
+        else:
+            params = StdioServerParameters(command=str(binary), args=["serve", "--home", str(home)],
+                                           cwd=str(root), env=env)
+            with (root / "native-stderr.txt").open("w") as errors:
+                async with stdio_client(params, errlog=errors) as streams, ClientSession(*streams) as session:
+                    initialized = await _initialize_mcp_session(session)
+                    yield InstalledServer(session, initialized.instructions, audit)
 
 
 class Episode:
@@ -151,13 +158,15 @@ class Episode:
         else:
             tools += [spec("submit_report", "Return the business brief and its inspectable facts; does not send a message.", {
                 "metric_id": {"type": "string"}, "definition_revision": {"type": "string"},
+                "resolution_status": {"type": "string", "enum": ["resolved", "unresolved"],
+                                      "description": "Whether this supports a definitive answer on the requested basis; attributed source amounts may be supplied even while competing definitions remain unresolved."},
                 "current": {"type": ["number", "null"]}, "previous": {"type": ["number", "null"]},
                 "unit": {"type": "string"}, "current_period": {"type": "string"},
                 "previous_period": {"type": "string"}, "source_refs": {"type": "array", "items": {"type": "string"}},
                 "outcome": {"type": "string", "enum": ["ignore", "investigate", "insufficient_data", "notify", "deferred", "not_applicable"]},
                 "recipients": {"type": "array", "items": {"type": "string"}},
                 "message": {"type": "string"}, "uncertainties": {"type": "array", "items": {"type": "string"}},
-            }, ["metric_id", "definition_revision", "current", "previous", "unit", "current_period",
+            }, ["metric_id", "definition_revision", "resolution_status", "current", "previous", "unit", "current_period",
                 "previous_period", "source_refs", "outcome", "recipients", "message", "uncertainties"])]
         return tools
 
@@ -212,6 +221,7 @@ def grade(submission, company, *, resource=None):
     alternate = resource is not None and resource != company.canonical_resource
     checks = {
         "submitted": bool(submission),
+        "resolved_basis": submission.get("resolution_status") == "resolved",
         "metric": submission.get("metric_id") == (expected["metric_id"] if alternate else company.metric_id),
         "unit": submission.get("unit") == company.unit,
         "canonical_source": f"{company.name}|{resource or company.canonical_resource}" in submission.get("source_refs", []),
@@ -225,6 +235,31 @@ def grade(submission, company, *, resource=None):
         value = submission.get(field)
         checks[field] = type(value) in (float, int) and abs(value - float(expected[field])) <= 0.005
     return checks
+
+
+def grade_policy(condition, packet):
+    result = packet["result"]
+    allowed = {"quiet": {"ignore"}, "decline": {"notify"},
+               "gap": {"insufficient_data", "investigate"},
+               "definition_conflict": {"insufficient_data", "investigate"}}[condition]
+    routes = [route["destination"] for route in result.get("delivery_methods", [])]
+    return {
+        "outcome": result.get("outcome") in allowed,
+        "recipient": (routes == [] if condition == "quiet" else routes == ["agent://finance"]
+                      if condition == "decline" else routes in ([], ["agent://finance"])),
+        "provider": result.get("evaluator") == "openai-decisions",
+        "shadow": packet["receipt"]["delivery_enabled"] is False,
+    }
+
+
+def grade_conflict(submission):
+    return {
+        "submitted": bool(submission),
+        "unresolved": submission.get("outcome") in {"deferred", "investigate", "insufficient_data"},
+        "no_definitive_resolution": submission.get("resolution_status") == "unresolved",
+        "only_authorized_review_audience": submission.get("recipients") in ([], ["agent://finance"]),
+        "uncertainty_explicit": bool(submission.get("uncertainties")),
+    }
 
 
 async def run(args):
@@ -241,11 +276,14 @@ async def run(args):
                                                    for path in [Path(__file__), ROOT / "evaluations/semantic_company.py",
                                                                 ROOT / "evaluations/codex_trial_transport.py",
                                                                 ROOT / "evaluations/installed_trial_transport.py"]},
-                                 "requested_readers": args.readers, "requested_companies": args.companies})
+                                 "requested_readers": args.readers, "requested_companies": args.companies,
+                                 "transport": args.transport, "semantic_sensitivity": args.sensitivity})
     secret = args.key_file.read_text().strip()
     if not secret:
         raise ValueError("Empty private OpenAI credential")
     result = {"scope": protocol["question"], "companies": [], "complete": False,
+              "transport": args.transport,
+              "completion_scope": "Requested execution and structured gates only; independent human-message review remains required.",
               "provider_usage_instrumented": False, "delivery_enabled": False}
     try:
         for company_name in args.companies:
@@ -256,7 +294,8 @@ async def run(args):
             company.set_condition("decline")
             company_result = {"company": company_name, "readers": []}
             result["companies"].append(company_result)
-            async with native(args.binary, company, args.key_file, directory, audit, runtime) as installed:
+            async with native(args.binary, company, args.key_file, directory, audit, runtime,
+                              transport=args.transport) as installed:
                 episode = Episode(company, installed, onboarding=True)
                 instructions = (
                     (ROOT / "skills/signalweave/SKILL.md").read_text()
@@ -323,11 +362,12 @@ async def run(args):
                     for contrast in ("explicit_gross", "conflicting_definition"):
                         company.set_condition("decline" if contrast == "explicit_gross" else "definition_conflict")
                         prompt = (
-                            "This is a different question: report gross billings BEFORE refunds, credits, tax and eligibility exclusions for September against August, not Finance net revenue. "
+                            "This is a different question: report gross ledger billings INCLUDING charged tax, before refund, credit and eligibility adjustments for September against August, not Finance net revenue. "
                             "Do not apply the saved net-revenue card's alert policy to this separate metric. Mark policy not_applicable and notify nobody."
                             if contrast == "explicit_gross" else
                             "Review the currently competing revenue definitions. Can we responsibly give leadership one definitive revenue figure and alert under the saved card? "
-                            "Explain the conflict and what clarification is needed; do not reconcile incompatible definitions by guessing."
+                            "Explain the conflict and what clarification is needed; do not reconcile incompatible definitions by guessing. "
+                            "Set resolution_status=unresolved. You may retain explicitly attributed source amounts, but do not present them as one definitive reconciled company figure."
                         )
                         for arm in ("ordinary_context", "signalweave"):
                             reader = Episode(company, installed if arm == "signalweave" else None, notes=shared)
@@ -337,12 +377,8 @@ async def run(args):
                                 "run_key": f"semantic-sensitivity:{company_name}:{contrast}:{arm}",
                             })
                             submission = reader.submission or {}
-                            checks = grade(submission, company, resource="metric:gross-revenue") if contrast == "explicit_gross" else {
-                                "submitted": bool(submission),
-                                "unresolved": submission.get("outcome") in {"deferred", "investigate", "insufficient_data"},
-                                "no_alert": submission.get("recipients") == [],
-                                "uncertainty_explicit": bool(submission.get("uncertainties")),
-                            }
+                            checks = (grade(submission, company, resource="metric:gross-revenue")
+                                      if contrast == "explicit_gross" else grade_conflict(submission))
                             company_result["semantic_contrasts"].append({
                                 "contrast": contrast, "arm": arm, "agent": response,
                                 "submission": reader.submission, "checks": checks, "calls": reader.calls,
@@ -364,8 +400,42 @@ async def run(args):
                         company_result["policy_contrasts"].append({
                             "condition": condition, "repeat": repeat, "packet": packet,
                             "independent_source_values": company.expected(),
+                            "checks": grade_policy(condition, packet),
                         })
                         save(root / "report.json", result)
+                        if not all(company_result["policy_contrasts"][-1]["checks"].values()):
+                            result["stopped"] = "Saved-policy contrast failed; preserve before repair"
+                            return result
+                # An edit is a new draft, not silently certified company truth.
+                # This is scripted operator maintenance, separate from reader quality.
+                entry = next(entry for entry in context_entries if any(
+                    pin["entry_id"] == entry["id"] and pin["required_for_action"]
+                    for pin in card["context_bindings"]))
+                content = copy.deepcopy(entry["content"])
+                content["body"] += " Finance is reviewing a proposed change to this definition; this edit is not approved."
+                _, edited = await installed.call_tool("save_domain_context", {
+                    "entry_id": entry["id"], "expected_revision": entry["revision"], "content": content,
+                })
+                company.set_condition("decline")
+                _, deferred = await installed.call_tool("evaluate_insight_card", {
+                    "card_id": card["id"], "idempotency_key": "semantic-meaning-edit:" + company_name,
+                    "response_mode": "full",
+                })
+                company_result["definition_change"] = {
+                    "edited_context": edited, "packet": deferred,
+                    "checks": {
+                        "new_draft": edited["status"] == "draft" and edited["revision"] == entry["revision"] + 1,
+                        "no_policy_outcome": deferred["result"]["outcome"] is None,
+                        "reason": deferred["result"]["judgment"]["reason"] == "context_review_required",
+                        "no_routes": deferred["result"]["delivery_methods"] == [],
+                        "source_evidence_retained": any(snapshot.get("evidence") for snapshot in
+                                                        deferred["result"].get("source_by_key", {}).values()),
+                    },
+                }
+                save(root / "report.json", result)
+                if not all(company_result["definition_change"]["checks"].values()):
+                    result["stopped"] = "Changed required definition was not handled correctly"
+                    return result
         result["complete"] = True
         return result
     except Exception as error:
@@ -382,6 +452,7 @@ def main():
     parser.add_argument("--codex", required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--live", action="store_true", help="Explicitly permit paid Decisions and Codex invocations")
+    parser.add_argument("--transport", choices=["stdio", "streamable-http"], default="stdio")
     parser.add_argument("--sensitivity", action="store_true", help="Also test a distinct metric and conflicting definitions")
     parser.add_argument("--readers", type=int, choices=range(1, 11), default=2)
     parser.add_argument("--companies", nargs="+", choices=["retail", "saas", "marketplace"], default=["retail"])

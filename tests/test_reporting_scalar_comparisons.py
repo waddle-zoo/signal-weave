@@ -25,6 +25,11 @@ def scalar_snapshot():
 
 
 def test_complete_scalar_contract_preserves_policy_without_fabricated_numeric_analysis():
+    from signalweave.compiler import base_plan
+
+    plan = base_plan(card())
+    assert "Scalar source contracts do not require" in plan.evidence_slots[0].completion_criteria
+    assert plan.evidence_slots[0].status == "pending"  # template, not a run result
     report = build_investigation_report(card(), result(), [scalar_snapshot()])
     assert report.status == "partial"  # source measurements, not engine decomposition
     assert not report.blockers
@@ -139,4 +144,7 @@ async def test_normal_mcp_scalar_onboarding_returns_a_usable_report(tmp_path, re
     assert packet["result"]["outcome"] == ("insufficient_data" if over_age else "notify")
     assert packet["result"]["report"]["status"] == ("blocked" if over_age else "partial")
     assert bool(packet["result"]["report"]["blockers"]) is over_age
+    if not over_age:
+        assert packet["result"]["evidence_plan"]["status"] == "complete"
+        assert packet["result"]["evidence_plan"]["slots"][0]["status"] == "fulfilled"
     assert packet["receipt"]["delivery_enabled"] is False

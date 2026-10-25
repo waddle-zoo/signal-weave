@@ -16,17 +16,20 @@
   "reader_prompts_per_company": 10,
   "prompt_pairing": "The same ten indexed prompts run in both arms against the same snapshot. They measure fresh-agent/prompt robustness, not ten authenticated employees. Canary runs are separate from the primary cohort and never pooled after repairs.",
   "semantic_sensitivity": "In addition to the ten same-basis questions, pair one explicit gross-billings question and one conflicting-definition question per company. A distinct question must not inherit the net-revenue alert policy; conflict must remain attributed/unresolved without an invented canonical answer.",
+  "conflict_review": "investigate, insufficient_data and deferred are review outcomes, not interchangeable proofs of routing agreement. A clarification may address Finance or have no recipient; a definitive notify/ignore or an invented reconciliation fails. Report observed label and route variation rather than declaring deterministic policy behavior.",
+  "transport_scope": "Retail and SaaS may use native stdio; marketplace may use the same native service over authenticated loopback Streamable HTTP, including unauthorized-request rejection. This is a single-identity self-hosted sidecar, not managed hosting or employee SSO proof.",
   "numeric_scoring": "Full reporting-currency units, not cents/thousands; absolute amount tolerance 0.005. YYYY-MM periods; source-owned metric IDs and revision strings. Provider policy probability is not figure correctness.",
   "stage_gate": "Stop before the larger cohort on incomplete onboarding/reader execution, wrong canonical metric, unit, period, revision or amount, wrong configured recipient, or a spurious definitive alert. Preserve failures. Do not pool a repaired canary into the full cohort.",
   "human_report_rubric": ["correct definition/population", "correct periods and reporting unit", "supported amounts", "inspectable source citation", "supported business implication and useful next step", "material caveats beside affected claims", "no invented cause or claimed send"],
   "human_report_pass": "Independent review must find no material factual/action error and a useful concise answer. Report rubric judgments separately from structured figure checks; do not convert word matches or model labels into report-quality proof.",
   "arms": {
-    "signalweave": "Published fingerprint-matching native MCP, its bundled skill, shared reviewed card/context and all company tools.",
+    "signalweave": "Fingerprint-matching native MCP, its bundled skill, shared reviewed card/context and all company tools. Record whether the binary is published or a local source candidate; do not conflate them.",
     "ordinary_context": "Same Codex model, company tools, source-owned definitions and treatment-authored reviewed card/context in ordinary searchable notes. No SignalWeave MCP. This is an equal-information recurrence comparison, not independent onboarding superiority."
   },
   "frontier": {"model": "gpt-6-luna", "reasoning_effort": "xhigh"},
   "provider": "openai-decisions",
   "live_request_policy": "No automatic provider retries. Small stage gate before the full cohort. Record attempts, errors, deferred judgments, missing usage and interrupted invocations. Never count a local research limit as an upstream provider failure.",
+  "study_amendments": ["The first canary retained a genuine scalar-report coverage failure; a fresh candidate and canary are separate attempts.", "Before the full cohort, independent semantic review found GMV incorrectly including platform-fee tax. The fixture now models GMV as transaction consideration without adding tax again, with marketplace GMV restricted to seller-order records and a hand-computable regression.", "Conflicting definitions do not require hiding valid attributed source facts. A structured unresolved status and independent prose review must establish that no definitive reconciled company figure or business alert is invented."],
   "success_checks": [
     "Native first-use path works without Jev credentials or editing personal Codex configuration.",
     "Onboarding discovers and actually reads the selected semantic metric and saves the intended sources, definition, period and owner policy.",

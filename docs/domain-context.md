@@ -16,6 +16,31 @@ when that definition should next be reviewed. A sales-reporting agent and a
 campaign-investigation agent can retrieve the same reviewed entry without
 repeating that onboarding conversation. They still fetch current measurements.
 
+## Reuse your semantic layer, not a second metric definition
+
+When your company already defines metrics in dbt, Cube, LookML or another
+semantic layer, keep that system authoritative. Your agent should discover the
+approved metric and query it through the company's tools rather than invent a
+formula from similarly named charts.
+
+Save the reusable meaning with its source: canonical metric ID and revision,
+owner, population, reporting currency, grain, time basis and material filters.
+Keep the source responsible for execution and return those identifiers with
+its measurements. A card adds the business question, significance policy and
+intended recipients; it does not replace the metric's definition or query engine.
+
+For a recurring card, SignalWeave needs a configured source that can fetch the
+agreed result. Existing company tools remain available to your agent, but are
+not automatically inherited by the SignalWeave service. Use an existing BI
+source or the [normalized MCP bridge](mcp-source-bridge.md); this is not a claim
+that native dbt, Cube or LookML adapters ship today.
+
+Two readers should agree when their metric revision, data snapshot, population,
+currency and period agree. A request for gross rather than net revenue should
+produce a different answer, not silently reuse an unrelated card. Missing or
+conflicting meaning calls for a focused clarification. Reviewed notes preserve
+agreement; they do not make a source correct or guarantee model determinism.
+
 ## Enable the optional tools
 
 After local setup, enable shared context without editing configuration:

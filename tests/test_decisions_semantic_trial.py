@@ -2,7 +2,7 @@ from decimal import Decimal
 
 import pytest
 
-from evaluations.decisions_semantic_trial import Episode, grade
+from evaluations.decisions_semantic_trial import Episode, grade, grade_conflict, grade_policy
 
 
 class Company:
@@ -27,7 +27,7 @@ def submission():
             "source_refs": ["company|metric:net-revenue"], "current": 800.01,
             "previous": 1000, "definition_revision": "r3",
             "current_period": "2026-09", "previous_period": "2026-08",
-            "outcome": "notify", "recipients": ["agent://finance"]}
+            "outcome": "notify", "recipients": ["agent://finance"], "resolution_status": "resolved"}
 
 
 def test_independent_checks_accept_the_frozen_measurement_not_its_prose():
@@ -82,3 +82,35 @@ async def test_live_agent_uses_actual_native_tool_schemas_without_replacing_comp
     tools = {tool["name"]: tool for tool in await reader.specs()}
     assert tools["evaluate_insight_card"]["description"] == "Native contract"
     assert {"search_company_assets", "read_company_asset", "read_finance_notes", "submit_report"} <= tools.keys()
+
+
+@pytest.mark.parametrize("condition,outcome,routes", [
+    ("quiet", "ignore", []), ("decline", "notify", ["agent://finance"]),
+    ("gap", "insufficient_data", []), ("definition_conflict", "investigate", ["agent://finance"]),
+])
+def test_policy_gate_checks_decision_recipient_provider_and_no_send(condition, outcome, routes):
+    packet = {"result": {"outcome": outcome, "evaluator": "openai-decisions",
+                          "delivery_methods": [{"destination": route} for route in routes]},
+              "receipt": {"delivery_enabled": False}}
+    assert all(grade_policy(condition, packet).values())
+    packet["result"]["outcome"] = "notify" if condition != "decline" else "ignore"
+    assert not grade_policy(condition, packet)["outcome"]
+    packet["result"]["outcome"] = outcome
+    packet["result"]["delivery_methods"] = [{"destination": "agent://unrelated-team"}]
+    assert not grade_policy(condition, packet)["recipient"]
+    packet["result"]["evaluator"] = "offline-heuristic"
+    assert not grade_policy(condition, packet)["provider"]
+    packet["receipt"]["delivery_enabled"] = True
+    assert not grade_policy(condition, packet)["shadow"]
+
+
+def test_conflict_gate_keeps_attributed_facts_without_claiming_a_reconciled_answer():
+    actual = {**submission(), "resolution_status": "unresolved", "outcome": "investigate",
+              "uncertainties": ["Finance r3 and the competing invoice-month definition differ; ask the owners to reconcile."]}
+    assert all(grade_conflict(actual).values())
+    # Known r3 amounts need not disappear; their interpretation remains unresolved.
+    assert actual["current"] == 800.01
+    assert not grade_conflict({**actual, "resolution_status": "resolved"})["no_definitive_resolution"]
+    assert not grade_conflict({**actual, "outcome": "notify"})["unresolved"]
+    assert not grade_conflict({**actual, "recipients": ["agent://leadership"]})["only_authorized_review_audience"]
+    assert not grade_conflict({**actual, "uncertainties": []})["uncertainty_explicit"]

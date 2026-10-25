@@ -12,7 +12,6 @@ from typing import Any
 
 from signalweave.models import (
     Evidence,
-    MetricDefinition,
     Observation,
     ResourceContract,
     ResourceDescriptor,
@@ -75,17 +74,21 @@ class SemanticCompany:
         rows = [
             (_RESOURCES[0], p["metric_id"], p["definition"], p["population"], "r3", "active",
              "net_amount_cents", f"revenue_class='{p['category']}' AND status='{p['status']}' AND eligible=1"),
-            (_RESOURCES[1], f"{self.company}.gross_revenue", "Posted gross billings before refunds, credits, tax, and eligibility exclusions.", "Posted or settled transaction billings across the ledger.", "r2", "active", "gross_cents", "status IN ('posted','settled')"),
+            (_RESOURCES[1], f"{self.company}.gross_revenue", "Gross ledger billings including charged tax, before refund, credit, and eligibility adjustments.", "Posted or settled transaction billings across the ledger.", "r2", "active", "gross_cents", "status IN ('posted','settled')"),
             (_RESOURCES[2], f"{self.company}.gmv", self._gmv_definition(), "Posted or settled transaction face value before refunds.", "r5", "active", "gmv_cents", "status IN ('posted','settled')"),
             (_RESOURCES[3], f"{self.company}.arr_run_rate", self._arr_definition(), "Eligible recurring or run-rate basis in the completed month.", "r4", "active", "arr_cents", "eligible=1 AND status IN ('posted','settled')"),
             (_RESOURCES[4], f"{self.company}.revenue_draft", "Draft proposal: gross billings less refunds and tax, with credits added back.", "Eligible posted or settled billings under an unapproved proposal.", "r0", "draft", "draft_net_cents", "eligible=1 AND status IN ('posted','settled')"),
             (_RESOURCES[5], f"{self.company}.revenue_legacy", "Retired chart convention: gross billings less refunds, with tax left in the amount.", "Posted or settled transaction billings under a retired convention.", "r1", "deprecated", "deprecated_net_cents", "status IN ('posted','settled')"),
         ]
         keys = ("resource", "metric_id", "definition", "population", "revision", "status", "measure", "where")
-        return [{**common, **dict(zip(keys, values, strict=True))} for values in rows]
+        specs = [{**common, **dict(zip(keys, values, strict=True))} for values in rows]
+        if self.company == "marketplace":
+            specs[2].update(population="Settled seller-order merchandise consideration; excludes fee and adjustment records and buyer tax.",
+                            where="revenue_class='seller_order' AND status='settled'")
+        return specs
 
     def _gmv_definition(self) -> str:
-        return {"retail": "Basket checkout value with tax before refunds.", "saas": "Contract invoice face value with tax before recognition.", "marketplace": "Buyer merchandise value before refunds; distinct from platform revenue."}[self.company]
+        return {"retail": "Basket checkout billings including charged tax, before refunds.", "saas": "Contract invoice face value including charged tax, before recognition.", "marketplace": "Settled buyer merchandise consideration before refunds and excluding buyer tax; platform-fee tax is not GMV."}[self.company]
 
     def _arr_definition(self) -> str:
         return {"retail": "Gross merchandise run rate multiplied by twelve.", "saas": "Subscription recognition multiplied by twelve.", "marketplace": "Gross platform commissions multiplied by twelve before reversals and tax."}[self.company]
@@ -146,7 +149,7 @@ class SemanticCompany:
                 rows.append((period, category, status, eligible, 1, currency, fx_micros, 10_000,
                              _scaled(gross, trend), _scaled(refund, trend), _scaled(tax, trend),
                              _scaled(credit, trend), _scaled(recognized, trend), _scaled(fee, trend),
-                             _scaled(fee_refund, trend), _scaled(gross, trend) + _scaled(tax, trend)))
+                             _scaled(fee_refund, trend), _scaled(gross, trend)))
         db.executemany("INSERT INTO transactions(period,revenue_class,status,eligible,available,currency,fx_micros,activity_bp,gross_cents,refund_cents,tax_cents,credit_cents,recognized_cents,platform_fee_cents,fee_refund_cents,gmv_cents) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", rows)
         db.executemany("INSERT INTO period_coverage VALUES (?,?,?)", [(_PREVIOUS, 48, 48), (_CURRENT, 48, 48)])
 
@@ -176,11 +179,6 @@ class SemanticCompany:
 
     def _contract(self, row: sqlite3.Row, coverage: str = "complete", detail: str = "") -> ResourceContract:
         conflict = self._conflict() if row["resource"] == self.canonical_resource else None
-        metric = MetricDefinition(
-            key=row["metric_id"], label="Revenue", description=f"{row['definition']} Owner: {row['owner']}. Currency: {row['currency']}. Time: {row['time_semantics']}",
-            relation="semantic_transactions", dialect="ansi", aggregation="sum", measure_column=row["measure"],
-            time_column="period", supported_grains=["month"], population=row["population"], grain=row["grain"], lineage=[f"semantic-metric:{row['metric_id']}:{row['revision']}"],
-        )
         scope = f"Owner: {row['owner']}; currency: {row['currency']}; time: {row['time_semantics']}; revision: {row['revision']} ({row['status']}). Synthetic SQLite semantic fixture; not a live dbt/Cube connector."
         lineage = [f"semantic-metric:{row['metric_id']}:{row['revision']}", "sqlite-view:semantic_transactions"]
         if conflict:
@@ -193,7 +191,10 @@ class SemanticCompany:
             query_refs=[f"semantic-metric:{row['metric_id']}:{row['revision']}"],
         )
         return ResourceContract(tenant_id=self.tenant_id, domain=self.profile["domain"], scope=scope,
-            metric_names=[row["metric_id"]], metric_definitions=[metric], comparison_contracts=[comp],
+            # The MCP reader executes the complete source-owned export (filters,
+            # FX and minor-unit conversion). Raw ledger columns are not valid
+            # MetricQueryPlan definitions and must not be advertised as such.
+            metric_names=[row["metric_id"]], comparison_contracts=[comp],
             available_comparison_windows=["previous_period"], required_comparison_keys=[comp.key],
             population=row["population"], grain=row["grain"], lineage=lineage,
             roles=["primary_metric" if row["resource"] == self.canonical_resource else "metric_context"], authorized=True)
@@ -255,9 +256,13 @@ class SemanticCompany:
             values={"current_period": _CURRENT, "current": float(current), "previous_period": _PREVIOUS, "previous": float(previous),
                     "delta": float(delta), "change_pct": float(change) if change is not None else None, "unit": row["currency"],
                     "semantic_metric_id": row["metric_id"], "metric_revision": row["revision"], "query_sql": query, "query_sha256": sql_hash}, provenance=provenance)]
-        if detail:
-            evidence.append(Evidence(source_key=source.key, subject_id="period-coverage", subject_label="Period coverage",
-                                     statement=detail + ".", values={"period_coverage": coverage}, provenance=provenance))
+        availability = "; ".join(
+            f"{period}: {item['available_rows']} of {item['required_rows']} ledger records available"
+            for period, item in sorted(coverage.items())
+        )
+        evidence.append(Evidence(source_key=source.key, subject_id="period-coverage", subject_label="Export availability",
+                                 statement=availability + ". These counts precede metric-population filters; they are not contributing-record counts.",
+                                 values={"period_coverage": coverage, "basis": "ledger availability before metric filters"}, provenance=provenance))
         conflict = self._conflict() if row["resource"] == self.canonical_resource else None
         if conflict:
             evidence.append(Evidence(source_key=source.key, subject_id=row["metric_id"], subject_label="Revenue definition record",
@@ -295,13 +300,15 @@ class SemanticCompany:
                     resource in _RESOURCES[3:5] and (not row["eligible"] or not settled)
                 ):
                     continue
+                if resource == _RESOURCES[2] and self.company == "marketplace" and row["revenue_class"] != "seller_order":
+                    continue
                 amounts = {
                     self.canonical_resource: {
                         "retail": row["gross_cents"] - row["refund_cents"] - row["tax_cents"],
                         "saas": row["recognized_cents"] - row["refund_cents"] - row["credit_cents"],
                         "marketplace": row["platform_fee_cents"] - row["fee_refund_cents"] - row["tax_cents"],
                     }[self.company],
-                    _RESOURCES[1]: row["gross_cents"], _RESOURCES[2]: row["gross_cents"] + row["tax_cents"],
+                    _RESOURCES[1]: row["gross_cents"], _RESOURCES[2]: row["gross_cents"],
                     _RESOURCES[3]: {"retail": row["gross_cents"], "saas": row["recognized_cents"], "marketplace": row["platform_fee_cents"]}[self.company] * 12,
                     _RESOURCES[4]: row["gross_cents"] - row["refund_cents"] - row["tax_cents"] + row["credit_cents"],
                     _RESOURCES[5]: row["gross_cents"] - row["refund_cents"],
