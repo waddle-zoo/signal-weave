@@ -41,6 +41,23 @@ produce a different answer, not silently reuse an unrelated card. Missing or
 conflicting meaning calls for a focused clarification. Reviewed notes preserve
 agreement; they do not make a source correct or guarantee model determinism.
 
+For example, after connecting the source and enabling context, ask your agent:
+
+> Find Finance's approved monthly net-revenue metric in our semantic layer.
+> Show me its owner, population, currency and comparison period; clarify any
+> competing definitions. Use its existing calculation, not a new formula.
+> Save the agreed definition for our other agents and draft a monthly card:
+> notify Finance on a comparable decline above 10%; investigate missing or
+> conflicting evidence. Show the definition and card before approval. Don't
+> send or schedule anything.
+
+Once reviewed, another agent can ask “How did September revenue compare with
+August on our agreed Finance basis?” It should retrieve the shared meaning,
+evaluate the matching card against current source measurements, and explain
+the figures, policy implication and material caveats. It should not reuse the
+net-revenue card to answer a gross-billings question. Ask for the source metric
+ID, revision and periods alongside the answer so readers can check its basis.
+
 ## Enable the optional tools
 
 After local setup, enable shared context without editing configuration:

@@ -221,7 +221,6 @@ def grade(submission, company, *, resource=None):
     alternate = resource is not None and resource != company.canonical_resource
     checks = {
         "submitted": bool(submission),
-        "resolved_basis": submission.get("resolution_status") == "resolved",
         "metric": submission.get("metric_id") == (expected["metric_id"] if alternate else company.metric_id),
         "unit": submission.get("unit") == company.unit,
         "canonical_source": f"{company.name}|{resource or company.canonical_resource}" in submission.get("source_refs", []),
@@ -252,14 +251,30 @@ def grade_policy(condition, packet):
     }
 
 
-def grade_conflict(submission):
-    return {
+def grade_conflict(submission, company=None):
+    checks = {
         "submitted": bool(submission),
         "unresolved": submission.get("outcome") in {"deferred", "investigate", "insufficient_data"},
         "no_definitive_resolution": submission.get("resolution_status") == "unresolved",
         "only_authorized_review_audience": submission.get("recipients") in ([], ["agent://finance"]),
         "uncertainty_explicit": bool(submission.get("uncertainties")),
     }
+    if company is not None:
+        checks["source_attribution"] = f"{company.name}|{company.canonical_resource}" in submission.get("source_refs", [])
+        if any(submission.get(field) is not None for field in ("current", "previous")):
+            expected = company.expected()
+            checks["attributed_basis"] = (
+                submission.get("metric_id") == company.metric_id
+                and submission.get("definition_revision") == "r3"
+                and submission.get("unit") == company.unit
+                and submission.get("current_period") == company.current_period
+                and submission.get("previous_period") == company.previous_period
+            )
+            for field in ("current", "previous"):
+                value = submission.get(field)
+                checks["attributed_" + field] = value is None or (
+                    type(value) in (float, int) and abs(value - float(expected[field])) <= 0.005)
+    return checks
 
 
 async def run(args):
@@ -362,7 +377,8 @@ async def run(args):
                     for contrast in ("explicit_gross", "conflicting_definition"):
                         company.set_condition("decline" if contrast == "explicit_gross" else "definition_conflict")
                         prompt = (
-                            "This is a different question: report gross ledger billings INCLUDING charged tax, before refund, credit and eligibility adjustments for September against August, not Finance net revenue. "
+                            "This is a different question: report the active source-owned GROSS revenue/billings metric on its declared definition for September against August, not Finance NET revenue. "
+                            "Use the source's declared population and tax basis; in a marketplace, platform commissions are not buyer merchandise GMV. "
                             "Do not apply the saved net-revenue card's alert policy to this separate metric. Mark policy not_applicable and notify nobody."
                             if contrast == "explicit_gross" else
                             "Review the currently competing revenue definitions. Can we responsibly give leadership one definitive revenue figure and alert under the saved card? "
@@ -378,7 +394,7 @@ async def run(args):
                             })
                             submission = reader.submission or {}
                             checks = (grade(submission, company, resource="metric:gross-revenue")
-                                      if contrast == "explicit_gross" else grade_conflict(submission))
+                                      if contrast == "explicit_gross" else grade_conflict(submission, company))
                             company_result["semantic_contrasts"].append({
                                 "contrast": contrast, "arm": arm, "agent": response,
                                 "submission": reader.submission, "checks": checks, "calls": reader.calls,

@@ -83,6 +83,9 @@ class SemanticCompany:
         keys = ("resource", "metric_id", "definition", "population", "revision", "status", "measure", "where")
         specs = [{**common, **dict(zip(keys, values, strict=True))} for values in rows]
         if self.company == "marketplace":
+            specs[1].update(definition="Gross settled platform commissions including tax on fees, before reversals and eligibility exclusions. The stored platform_fee_cents amount is tax-inclusive; tax_cents is its tax component, not an additional charge.",
+                            population="Settled platform-fee records, before reversals and eligibility exclusions.",
+                            measure="platform_fee_cents", where="revenue_class='platform_fee' AND status='settled'")
             specs[2].update(population="Settled seller-order merchandise consideration; excludes fee and adjustment records and buyer tax.",
                             where="revenue_class='seller_order' AND status='settled'")
         return specs
@@ -143,6 +146,8 @@ class SemanticCompany:
             credit = int(recognized * rng.uniform(0, 0.05))
             fee = int(gross * rng.uniform(0.07, 0.18))
             fee_refund = int(fee * rng.uniform(0, 0.10))
+            # Gross ledger charges and platform fees already include tax. This
+            # is the component removed for net revenue, not a surcharge to add.
             tax_base = fee if self.company == "marketplace" else gross
             tax = int(tax_base * rng.uniform(0.04, 0.13))
             for period, trend in ((_PREVIOUS, 1.0), (_CURRENT, 1.02)):
@@ -167,7 +172,19 @@ class SemanticCompany:
                 db.execute("UPDATE transactions SET available=0 WHERE period=? AND id IN (SELECT id FROM transactions WHERE period=? ORDER BY id DESC LIMIT 12)", (_CURRENT, _CURRENT))
                 db.execute("UPDATE period_coverage SET available_rows=36 WHERE period=?", (_CURRENT,))
             elif name == "definition_conflict":
-                db.execute("INSERT INTO definition_conflicts VALUES (?,?,?,?,?,?)", (self.metric_id, "Consolidation Accounting", "r4", "Invoice billings less issued credits, with tax included and adjustments assigned to invoice month.", "Posted invoice billings across subscriptions and usage, including tax.", "Invoice issue month rather than service or settlement month."))
+                definition, population, time_basis = {
+                    "retail": ("Merchandise and shipping billings less recorded refunds, with sales tax retained.",
+                               "Eligible posted merchandise and shipping, excluding gift cards.",
+                               "Accounting posting month rather than transaction month."),
+                    "saas": ("Invoice billings less issued credits, with sales tax included rather than recognized subscription revenue.",
+                             "Posted subscription and usage invoice billings, including tax.",
+                             "Invoice issue month rather than service month."),
+                    "marketplace": ("Platform commissions and ancillary service fees net of reversals, before tax on fees.",
+                                    "Settled platform-fee and service-fee adjustment records; excludes buyer GMV and seller proceeds.",
+                                    "Fee accounting-posting month rather than settlement month."),
+                }[self.company]
+                db.execute("INSERT INTO definition_conflicts VALUES (?,?,?,?,?,?)", (
+                    self.metric_id, "Consolidation Accounting", "r4", definition, population, time_basis))
 
     def _definition_rows(self) -> list[sqlite3.Row]:
         with self._connect() as db:
@@ -302,13 +319,16 @@ class SemanticCompany:
                     continue
                 if resource == _RESOURCES[2] and self.company == "marketplace" and row["revenue_class"] != "seller_order":
                     continue
+                if resource == _RESOURCES[1] and self.company == "marketplace" and row["revenue_class"] != "platform_fee":
+                    continue
                 amounts = {
                     self.canonical_resource: {
                         "retail": row["gross_cents"] - row["refund_cents"] - row["tax_cents"],
                         "saas": row["recognized_cents"] - row["refund_cents"] - row["credit_cents"],
                         "marketplace": row["platform_fee_cents"] - row["fee_refund_cents"] - row["tax_cents"],
                     }[self.company],
-                    _RESOURCES[1]: row["gross_cents"], _RESOURCES[2]: row["gross_cents"],
+                    _RESOURCES[1]: row["platform_fee_cents"] if self.company == "marketplace" else row["gross_cents"],
+                    _RESOURCES[2]: row["gross_cents"],
                     _RESOURCES[3]: {"retail": row["gross_cents"], "saas": row["recognized_cents"], "marketplace": row["platform_fee_cents"]}[self.company] * 12,
                     _RESOURCES[4]: row["gross_cents"] - row["refund_cents"] - row["tax_cents"] + row["credit_cents"],
                     _RESOURCES[5]: row["gross_cents"] - row["refund_cents"],

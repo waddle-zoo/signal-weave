@@ -146,6 +146,38 @@ def test_seed_company_and_condition_controls_change_source_facts(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_marketplace_gross_is_platform_commissions_not_buyer_gmv(tmp_path):
+    company = SemanticCompany(tmp_path, "marketplace")
+    with company._connect() as db:
+        db.execute("UPDATE transactions SET available=0")
+        for period in ("2026-08", "2026-09"):
+            ids = [row[0] for row in db.execute("SELECT id FROM transactions WHERE period=? ORDER BY id LIMIT 2", (period,))]
+            for row_id, category in zip(ids, ("seller_order", "platform_fee"), strict=True):
+                db.execute("UPDATE transactions SET available=1,eligible=0,status='settled',revenue_class=?, "
+                           "platform_fee_cents=1200,fee_refund_cents=200,tax_cents=100,fx_micros=1000000,activity_bp=10000,gmv_cents=10000 WHERE id=?",
+                           (category, row_id))
+        db.execute("UPDATE period_coverage SET required_rows=2,available_rows=2")
+    # Gross platform fees retain tax/reversals and do not filter eligibility.
+    # The seller-order row's fee-like field is not an additional commission.
+    assert company.expected("metric:gross-revenue")["current"] == Decimal("12.00")
+    snapshot = await company.inspect(source(company, "metric:gross-revenue"))
+    assert snapshot.observations[0].current == 12.00
+
+
+@pytest.mark.parametrize("profile,expected,excluded", [
+    ("retail", "Merchandise and shipping", "subscriptions"),
+    ("saas", "Invoice billings", "seller proceeds"),
+    ("marketplace", "Platform commissions", "subscription revenue"),
+])
+def test_competing_definition_uses_the_companys_business_domain(tmp_path, profile, expected, excluded):
+    company = SemanticCompany(tmp_path, profile)
+    company.set_condition("definition_conflict")
+    note = next(item for item in company.notes() if item["id"] == "competing-semantic-definition")
+    assert expected in note["body"]
+    assert excluded not in note["body"]
+
+
+@pytest.mark.asyncio
 async def test_gap_and_definition_conflict_are_source_evidence_not_private_labels(tmp_path):
     company = SemanticCompany(tmp_path, "marketplace")
     request = source(company)
