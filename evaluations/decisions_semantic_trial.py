@@ -13,6 +13,7 @@ import copy
 import hashlib
 import json
 import os
+import sqlite3
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -53,6 +54,19 @@ PROMPTS = [
 def save(path, value):
     path.write_text(json.dumps(value, indent=2, default=str) + "\n")
     path.chmod(0o600)
+
+
+def save_ledger_snapshot(company, directory, stage):
+    """Retain actual phase inputs outside agent access, not just oracle totals."""
+    path = directory / ("ledger-" + stage + ".sqlite3")
+    with path.open("xb"):
+        pass
+    path.chmod(0o600)
+    with company._connect() as source, sqlite3.connect(path) as destination:
+        source.backup(destination)
+        snapshot_id = company._data_snapshot_id(source)
+    return {"stage": stage, "path": path.name, "data_snapshot_id": snapshot_id,
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
 
 
 def spec(name, description, properties, required):
@@ -352,7 +366,9 @@ async def run(args):
             audit = Audit(path=directory / "setup-trace.jsonl", secrets=(secret,))
             company = SemanticCompany(directory, company_name, seed=protocol["seed"])
             company.set_condition("decline")
-            company_result = {"company": company_name, "readers": []}
+            company_result = {"company": company_name, "readers": [], "ledger_snapshots": [
+                save_ledger_snapshot(company, directory, "onboarding")],
+            }
             result["companies"].append(company_result)
             async with native(args.binary, company, args.key_file, directory, audit, runtime,
                               transport=args.transport) as installed:
@@ -403,6 +419,7 @@ async def run(args):
                         "publication": publication,
                         "independent_values": company.expected(),
                     }
+                    company_result["ledger_snapshots"].append(save_ledger_snapshot(company, directory, "refresh"))
                 for index, prompt in enumerate(PROMPTS[:args.readers]):
                     for arm in (["ordinary_context", "signalweave"] if index % 2 == 0
                                 else ["signalweave", "ordinary_context"]):
@@ -432,6 +449,7 @@ async def run(args):
                 if args.review_handoffs:
                     for condition in ("gap", "definition_conflict"):
                         company.set_condition(condition)
+                        company_result["ledger_snapshots"].append(save_ledger_snapshot(company, directory, "review-" + condition))
                         for arm in ("ordinary_context", "signalweave"):
                             reader = Episode(company, installed if arm == "signalweave" else None,
                                              notes=shared, review_delivery=True)
@@ -454,6 +472,7 @@ async def run(args):
                 if args.sensitivity:
                     for contrast in ("explicit_gross", "conflicting_definition"):
                         company.set_condition("decline" if contrast == "explicit_gross" else "definition_conflict")
+                        company_result["ledger_snapshots"].append(save_ledger_snapshot(company, directory, "sensitivity-" + contrast))
                         prompt = (
                             "This is a different question: report the active source-owned GROSS revenue/billings metric on its declared definition for September against August, not Finance NET revenue. "
                             "Use the source's declared population and tax basis; in a marketplace, platform commissions are not buyer merchandise GMV. "
@@ -485,6 +504,7 @@ async def run(args):
                 company_result["policy_contrasts"] = []
                 for condition in ("quiet", "decline", "gap", "definition_conflict"):
                     company.set_condition(condition)
+                    company_result["ledger_snapshots"].append(save_ledger_snapshot(company, directory, "policy-" + condition))
                     for repeat in range(2):
                         _, packet = await installed.call_tool("evaluate_insight_card", {
                             "card_id": card["id"],
@@ -511,6 +531,7 @@ async def run(args):
                     "entry_id": entry["id"], "expected_revision": entry["revision"], "content": content,
                 })
                 company.set_condition("decline")
+                company_result["ledger_snapshots"].append(save_ledger_snapshot(company, directory, "definition-edit"))
                 _, deferred = await installed.call_tool("evaluate_insight_card", {
                     "card_id": card["id"], "idempotency_key": "semantic-meaning-edit:" + company_name,
                     "response_mode": "full",

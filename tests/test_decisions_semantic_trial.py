@@ -9,6 +9,7 @@ from evaluations.decisions_semantic_trial import (
     grade_policy,
     grade_review,
     has_owner_routes,
+    save_ledger_snapshot,
 )
 
 
@@ -179,6 +180,29 @@ def test_onboarding_preserves_all_owner_routes_without_extra_destinations_or_dup
     for extra in ({"outcome": "notify", "destination": "agent://leadership"},
                   {"outcome": "notify", "destination": "agent://finance"}):
         assert not has_owner_routes({"delivery_methods": [*card["delivery_methods"], extra]})
+
+
+def test_phase_backup_preserves_actual_ledger_before_later_conditions(tmp_path):
+    from evaluations.semantic_company import SemanticCompany
+
+    company = SemanticCompany(tmp_path, "saas")
+    company.set_condition("decline")
+    old = company.expected()
+    record = save_ledger_snapshot(company, tmp_path, "initial")
+    company.publish_measurement_refresh()
+    with company._connect() as db:
+        assert company._data_snapshot_id(db) != record["data_snapshot_id"]
+    import hashlib
+    import sqlite3
+
+    path = tmp_path / record["path"]
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == record["sha256"]
+    with sqlite3.connect(path) as db:
+        assert company._data_snapshot_id(db) == record["data_snapshot_id"]
+        assert db.execute("SELECT DISTINCT activity_bp FROM transactions WHERE period='2026-09'").fetchall() == [(8200,)]
+    assert company.expected() != old
+    with pytest.raises(FileExistsError):
+        save_ledger_snapshot(company, tmp_path, "initial")
 
 
 def test_conflict_gate_keeps_attributed_facts_without_claiming_a_reconciled_answer():
