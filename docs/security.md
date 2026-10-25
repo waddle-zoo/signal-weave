@@ -11,18 +11,23 @@ can be preserved during replacement. This is a dependency exposure, not evidence
 that a SignalWeave user was intercepted.
 
 The v0.2.1 build requires certifi >=2026.10.19 (locked to 2026.10.23), uses uv
-0.13.4, and bootstraps container pip 26.2.2 from the hash published by the
+0.13.5, and bootstraps container pip 26.2.2 from the hash published by the
 [Python security announcement](https://discuss.python.org/t/information-for-python-users-regarding-emudhra-emsign-ca-certificate-security-incident/109576).
 Rebuild existing container images with `docker build --pull --no-cache .`;
 reusing an old image or layer does not repair its trust store. Source builders
 must also update their own pip/uv using that upstream guidance before fetching
 dependencies.
 
-`scripts/check_ca_bundle.py` rejects the affected public root by DER fingerprint.
+`scripts/check_ca_bundle.py` rejects all four incident roots by DER fingerprint,
+including Sectigo/AAA cross-sign trust. Container dependency installation uses
+patched pip's certifi-only verification (`--use-deprecated=legacy-certs`), not
+the base image's additional system store; TLS verification remains enabled.
+CI checks both runtime certifi and pip's vendored bundle. The hash-pinned pip
+bootstrap is verified even if an old base image has an affected trust store.
 The native build checks both its dependency and the actual packaged CA file,
 records the bundle hash in `--build-info`, and requires the files to match.
 Container CI checks the installed bundle too. The public-root negative fixture
-tests detection in isolation and mixed into a safe bundle. This is a targeted
+tests each root in isolation and mixed into a safe bundle. This is a targeted
 regression guard, not a substitute for dependency advisory review.
 
 Before publishing, review open dependency alerts, run `make verify`, require the

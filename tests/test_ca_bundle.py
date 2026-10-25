@@ -6,6 +6,7 @@ It must never be loaded as trust by a test client.
 from __future__ import annotations
 
 import hashlib
+import re
 import ssl
 from pathlib import Path
 
@@ -13,7 +14,12 @@ import certifi
 import pytest
 import tomllib
 
-from scripts.check_ca_bundle import FORBIDDEN_ROOT_SHA256, check_bundle, check_installed_certifi
+from scripts.check_ca_bundle import (
+    FORBIDDEN_ROOT_SHA256,
+    FORBIDDEN_ROOTS_SHA256,
+    check_bundle,
+    check_installed_certifi,
+)
 
 ROOT = Path(__file__).parents[1]
 BAD_ROOT = ROOT / "tests/fixtures/emsign-g3-public-root.pem"
@@ -22,14 +28,14 @@ BAD_ROOT = ROOT / "tests/fixtures/emsign-g3-public-root.pem"
 def test_actual_affected_public_root_is_rejected():
     der = ssl.PEM_cert_to_DER_cert(BAD_ROOT.read_text())
     assert hashlib.sha256(der).hexdigest() == FORBIDDEN_ROOT_SHA256
-    with pytest.raises(ValueError, match="Affected emSign"):
+    with pytest.raises(ValueError, match="Affected incident"):
         check_bundle(BAD_ROOT)
 
 
 def test_affected_root_hidden_in_otherwise_safe_bundle_is_rejected(tmp_path):
     bundle = tmp_path / "cacert.pem"
     bundle.write_bytes(Path(certifi.where()).read_bytes() + BAD_ROOT.read_bytes())
-    with pytest.raises(ValueError, match="Affected emSign"):
+    with pytest.raises(ValueError, match="Affected incident"):
         check_bundle(bundle)
 
 
@@ -69,13 +75,34 @@ def test_source_lock_container_and_workflow_require_patched_trust():
     assert tuple(map(int, locked["version"].split("."))) >= (2026, 10, 19)
     docker = (ROOT / "Dockerfile").read_text()
     assert "pip-26.2.2-py3-none-any.whl#sha256=fd7f4dfa8190e014013b9f08f3e973f4e4c26ffd179a204895533a7254813a70" in docker
-    assert docker.index("pip-26.2.2") < docker.index("pip install --no-cache-dir .")
+    assert docker.index("pip-26.2.2") < docker.index("pip install --use-deprecated=legacy-certs --no-cache-dir .")
     for name in ("ci.yml", "release.yml"):
         workflow = (ROOT / ".github/workflows" / name).read_text()
         uv_steps = workflow.split("uses: astral-sh/setup-uv@")[1:]
         assert uv_steps
-        assert all("version: '0.13.4'" in step.split("\n      - ", 1)[0] for step in uv_steps)
+        assert all("version: '0.13.5'" in step.split("\n      - ", 1)[0] for step in uv_steps)
     assert "Check installed container certificate trust bundle" in (ROOT / ".github/workflows/ci.yml").read_text()
+    assert "Check pip's vendored certificate trust bundle" in (ROOT / ".github/workflows/ci.yml").read_text()
+
+
+INCIDENT_ROOTS = re.findall(
+    r"-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----",
+    (ROOT / "tests/fixtures/emudhra-2026-public-roots.pem").read_text(), re.S,
+)
+
+
+def test_public_incident_fixture_covers_all_four_root_fingerprints():
+    assert len(INCIDENT_ROOTS) == 4
+    assert {hashlib.sha256(ssl.PEM_cert_to_DER_cert(pem)).hexdigest() for pem in INCIDENT_ROOTS} == FORBIDDEN_ROOTS_SHA256
+
+
+@pytest.mark.parametrize("pem", INCIDENT_ROOTS, ids=["direct-tls", "direct-cs", "aaa-cross-sign", "emsign-ecc"])
+@pytest.mark.parametrize("mixed", [False, True], ids=["alone", "mixed"])
+def test_every_incident_root_is_rejected(tmp_path, pem, mixed):
+    bundle = tmp_path / "cacert.pem"
+    bundle.write_text((Path(certifi.where()).read_text() if mixed else "") + pem)
+    with pytest.raises(ValueError, match="Affected incident"):
+        check_bundle(bundle)
 
 
 @pytest.mark.parametrize("packaged", ["safe", "affected", "missing"])
